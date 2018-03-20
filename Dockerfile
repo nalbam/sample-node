@@ -1,6 +1,6 @@
 # Dockerfile
 
-FROM node:6.9.2
+FROM node:9
 
 MAINTAINER me@nalbam.com
 

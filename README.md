@@ -1,7 +1,9 @@
 # sample-node
 ```
-FROM node:9
+FROM node:latest
 EXPOSE 3000
 
-docker pull nalbam/sample-node:latest
+docker pull nalbam/sample-node:latest (266MB)
+docker pull nalbam/sample-node:alpine (92MB)
+docker pull nalbam/sample-node:slin   (23MB)
 ```

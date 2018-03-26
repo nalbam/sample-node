@@ -1,6 +1,6 @@
 # Dockerfile
 
-FROM node:latest
+FROM node:slim
 
 MAINTAINER me@nalbam.com
 

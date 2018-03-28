@@ -1,0 +1,25 @@
+{
+  "name": "sample-node",
+  "version": "0.0.1",
+  "description": "Node.js sample app",
+  "main": "server.js",
+  "dependencies": {
+    "express": "^4.13.4"
+  },
+  "engine": {
+    "node": "*",
+    "npm": "*"
+  },
+  "scripts": {
+    "start": "node server.js",
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/nalbam/sample-node.git"
+  },
+  "author": "Jungyoul Yu <me@nalbam.com>",
+  "bugs": {
+    "url": "http://github.com/nalbam/sample-node/issues"
+  },
+  "homepage": "http://github.com/nalbam/sample-node"
+}

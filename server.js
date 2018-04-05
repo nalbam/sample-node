@@ -1,10 +1,10 @@
-var http = require('http');
+let http = require('http');
 
-var handleRequest = function(request, response) {
-  console.log('Received request for URL: ' + request.url);
-  response.writeHead(200);
-  response.end('<p>Hello Bespin!</p>');
+let handle = function(req, res) {
+  console.log('Received request for URL: ' + req.url);
+  res.writeHead(200);
+  res.end('<p>Hello World!</p>');
 };
 
-var www = http.createServer(handleRequest);
+let www = http.createServer(handle);
 www.listen(3000);

@@ -7,5 +7,5 @@ let handle = function(req, res) {
   res.end('<p>Hello World! - ' + date + '</p>');
 };
 
-let www = http.createServer(handle);
-www.listen(3000);
+let server = http.createServer(handle);
+server.listen(3000);

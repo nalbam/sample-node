@@ -1,10 +1,10 @@
 let http = require('http');
-//let moment = require('moment-timezone');
+let moment = require('moment-timezone');
 
 let handle = function(req, res) {
   console.log('Received request for URL: ' + req.url);
   res.writeHead(200);
-  let date = new Date(); //moment().tz("Asia/Seoul").format();;
+  let date = moment().tz("Asia/Seoul").format();
   res.end('<p>Hello World! - ' + date + '</p>');
 };
 

@@ -10,8 +10,8 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 EXPOSE 3000
 
 COPY server.js .
-COPY package.json .
+#COPY package.json .
 
-RUN npm install
+#RUN npm install
 
 CMD ["node", "server.js"]

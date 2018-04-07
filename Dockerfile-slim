@@ -14,6 +14,6 @@ WORKDIR data
 COPY src/main/node/server.js .
 COPY src/main/node/package.json .
 
-RUN npm install && pwd && ls -al
+RUN npm install -s
 
 CMD ["node", "server.js"]

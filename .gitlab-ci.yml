@@ -13,8 +13,8 @@ build:
     - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com
     - docker build -t $IMAGE .
 
-deploy:
-  stage: deploy
+release:
+  stage: release
   image: nalbam/builder:alpine
   only:
     - master

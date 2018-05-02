@@ -1,28 +1,18 @@
 # gitlab-ci
 
-variables:
-  IMAGE: registry.gitlab.com/nalbam/sample-web:latest
+image: docker:stable
 
-stages:
-  - build
-  - release
+services:
+  - docker:dind
+
+variables:
+  IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME
+
+before_script:
+  - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
 
 build:
   stage: build
-  image: nalbam/builder:alpine
-  only:
-    - master
   script:
-    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com
-    - docker build -t $IMAGE .
-
-release:
-  stage: release
-  image: nalbam/builder:alpine
-  only:
-    - master
-  script:
-    - docker push $IMAGE
-
-after_script:
-  - ls -alh target
+    - docker build -t $IMAGE_TAG .
+    - docker push $IMAGE_TAG

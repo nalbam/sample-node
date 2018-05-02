@@ -1,0 +1,25 @@
+# gitlab-ci
+
+stages:
+  - build
+  - release
+
+build:
+  stage: build
+  image: nalbam/builder:alpine
+  only:
+    - master
+  script:
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com
+    - docker build -t $IMAGE .
+
+deploy:
+  stage: deploy
+  image: nalbam/builder:alpine
+  only:
+    - master
+  script:
+    - docker push $IMAGE
+
+after_script:
+  - ls -alh target

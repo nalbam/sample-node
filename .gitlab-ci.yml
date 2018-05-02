@@ -1,5 +1,8 @@
 # gitlab-ci
 
+variables:
+  IMAGE: registry.gitlab.com/nalbam/sample-web:latest
+
 stages:
   - build
   - release

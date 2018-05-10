@@ -11,8 +11,8 @@ EXPOSE 3000
 
 WORKDIR data
 
-COPY src/main/node/server.js .
-COPY src/main/node/package.json .
+COPY server.js .
+COPY package.json .
 
 RUN npm install -s
 

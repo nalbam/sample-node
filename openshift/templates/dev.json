@@ -1,0 +1,301 @@
+{
+  "kind": "Template",
+  "apiVersion": "v1",
+  "metadata": {
+    "annotations": {
+      "iconClass": "icon-nodejs",
+      "tags": "nodejs",
+      "version": "1.0.0",
+      "description": "sample nodejs application."
+    },
+    "name": "sample-node"
+  },
+  "labels": {
+    "template": "sample-node",
+    "xpaas": "1.0.0"
+  },
+  "message": "A new nodejs application has been created in your project.",
+  "parameters": [
+    {
+      "name": "APPLICATION_NAME",
+      "displayName": "Name",
+      "description": "Identifies the resources created for this application.",
+      "value": "sample-node",
+      "required": true
+    },
+    {
+      "name": "HOSTNAME",
+      "displayName": "Hostname",
+      "description": "Public hostname for the route. If not specified, a hostname is generated.",
+      "value": "",
+      "required": false
+    },
+    {
+      "name": "SOURCE_REPOSITORY_URL",
+      "displayName": "Git Repository URL",
+      "description": "Git source URI for application",
+      "value": "https://github.com/nalbam/sample-node",
+      "required": true
+    },
+    {
+      "name": "SOURCE_REPOSITORY_REF",
+      "displayName": "Git Reference",
+      "description": "Optional branch, tag, or commit.",
+      "value": "master",
+      "required": false
+    },
+    {
+      "name": "CONTEXT_DIR",
+      "displayName": "Context Directory",
+      "description": "Path within Git project to build; empty for root project directory.",
+      "value": "",
+      "required": false
+    },
+    {
+      "name": "GITHUB_WEBHOOK_SECRET",
+      "displayName": "Github Webhook Secret",
+      "description": "GitHub trigger secret",
+      "from": "[a-zA-Z0-9]{8}",
+      "generate": "expression",
+      "required": true
+    },
+    {
+      "name": "GENERIC_WEBHOOK_SECRET",
+      "displayName": "Generic Webhook Secret",
+      "description": "Generic build trigger secret",
+      "from": "[a-zA-Z0-9]{8}",
+      "generate": "expression",
+      "required": true
+    },
+    {
+      "name": "NAMESPACE",
+      "displayName": "Namespace",
+      "description": "The OpenShift Namespace where the ImageStream resides.",
+      "value": "openshift",
+      "required": true
+    },
+    {
+      "name": "NODEJS_VERSION",
+      "displayName": "Version of NodeJS Image",
+      "description": "Version of NodeJS image to be used (6, 8, or latest).",
+      "value": "8",
+      "required": true
+    },
+    {
+      "name": "MEMORY_LIMIT",
+      "displayName": "Memory Limit",
+      "description": "Maximum amount of memory the container can use.",
+      "value": "512Mi",
+      "required": true
+    },
+    {
+      "name": "PROFILE",
+      "displayName": "Profile",
+      "value": "dev",
+      "required": false
+    }
+  ],
+  "objects": [
+    {
+      "kind": "Service",
+      "apiVersion": "v1",
+      "spec": {
+        "ports": [
+          {
+            "port": 8080,
+            "targetPort": 8080
+          }
+        ],
+        "selector": {
+          "deploymentConfig": "${APPLICATION_NAME}"
+        }
+      },
+      "metadata": {
+        "name": "${APPLICATION_NAME}",
+        "labels": {
+          "application": "${APPLICATION_NAME}"
+        },
+        "annotations": {
+          "description": "The application's http port."
+        }
+      }
+    },
+    {
+      "kind": "Route",
+      "apiVersion": "v1",
+      "id": "${APPLICATION_NAME}-http",
+      "metadata": {
+        "name": "${APPLICATION_NAME}",
+        "labels": {
+          "application": "${APPLICATION_NAME}"
+        },
+        "annotations": {
+          "description": "Route for application's http service."
+        }
+      },
+      "spec": {
+        "host": "${HOSTNAME}",
+        "to": {
+          "name": "${APPLICATION_NAME}"
+        }
+      }
+    },
+    {
+      "kind": "ImageStream",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "${APPLICATION_NAME}",
+        "labels": {
+          "application": "${APPLICATION_NAME}"
+        }
+      }
+    },
+    {
+      "kind": "BuildConfig",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "${APPLICATION_NAME}",
+        "labels": {
+          "application": "${APPLICATION_NAME}"
+        }
+      },
+      "spec": {
+        "source": {
+          "type": "Git",
+          "git": {
+            "uri": "${SOURCE_REPOSITORY_URL}",
+            "ref": "${SOURCE_REPOSITORY_REF}"
+          },
+          "contextDir": "${CONTEXT_DIR}"
+        },
+        "strategy": {
+          "type": "Source",
+          "sourceStrategy": {
+            "from": {
+              "kind": "ImageStreamTag",
+              "namespace": "${NAMESPACE}",
+              "name": "nodejs:${NODEJS_VERSION}"
+            }
+          }
+        },
+        "output": {
+          "to": {
+            "kind": "ImageStreamTag",
+            "name": "${APPLICATION_NAME}:latest"
+          }
+        },
+        "triggers": [
+          {
+            "type": "GitHub",
+            "github": {
+              "secret": "${GITHUB_WEBHOOK_SECRET}"
+            }
+          },
+          {
+            "type": "Generic",
+            "generic": {
+              "secret": "${GENERIC_WEBHOOK_SECRET}"
+            }
+          },
+          {
+            "type": "ImageChange",
+            "imageChange": {}
+          },
+          {
+            "type": "ConfigChange"
+          }
+        ]
+      }
+    },
+    {
+      "kind": "DeploymentConfig",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "${APPLICATION_NAME}",
+        "labels": {
+          "application": "${APPLICATION_NAME}"
+        }
+      },
+      "spec": {
+        "strategy": {
+          "type": "Recreate"
+        },
+        "triggers": [
+          {
+            "type": "ImageChange",
+            "imageChangeParams": {
+              "automatic": true,
+              "containerNames": [
+                "${APPLICATION_NAME}"
+              ],
+              "from": {
+                "kind": "ImageStreamTag",
+                "name": "${APPLICATION_NAME}:latest"
+              }
+            }
+          },
+          {
+            "type": "ConfigChange"
+          }
+        ],
+        "replicas": 1,
+        "selector": {
+          "deploymentConfig": "${APPLICATION_NAME}"
+        },
+        "template": {
+          "metadata": {
+            "name": "${APPLICATION_NAME}",
+            "labels": {
+              "deploymentConfig": "${APPLICATION_NAME}",
+              "application": "${APPLICATION_NAME}"
+            }
+          },
+          "spec": {
+            "terminationGracePeriodSeconds": 75,
+            "containers": [
+              {
+                "name": "${APPLICATION_NAME}",
+                "image": "${APPLICATION_NAME}",
+                "imagePullPolicy": "Always",
+                "env": [
+                  {
+                    "name": "PROFILE",
+                    "value": "${PROFILE}"
+                  }
+                ],
+                "ports": [
+                  {
+                    "name": "http",
+                    "containerPort": 8080,
+                    "protocol": "TCP"
+                  }
+                ],
+                "readinessProbe": {
+                  "timeoutSeconds": 3,
+                  "initialDelaySeconds": 3,
+                  "httpGet": {
+                    "path": "/",
+                    "port": 8080
+                  }
+                },
+                "livenessProbe": {
+                  "timeoutSeconds": 3,
+                  "initialDelaySeconds": 30,
+                  "httpGet": {
+                    "path": "/",
+                    "port": 8080
+                  }
+                },
+                "resources": {
+                  "limits": {
+                    "memory": "${MEMORY_LIMIT}"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

@@ -51,8 +51,8 @@
       "spec": {
         "ports": [
           {
-            "port": 8080,
-            "targetPort": 8080
+            "port": 3000,
+            "targetPort": 3000
           }
         ],
         "selector": {
@@ -158,7 +158,7 @@
                 "ports": [
                   {
                     "name": "http",
-                    "containerPort": 8080,
+                    "containerPort": 3000,
                     "protocol": "TCP"
                   }
                 ],
@@ -167,7 +167,7 @@
                   "initialDelaySeconds": 3,
                   "httpGet": {
                     "path": "/",
-                    "port": 8080
+                    "port": 3000
                   }
                 },
                 "livenessProbe": {
@@ -175,7 +175,7 @@
                   "initialDelaySeconds": 30,
                   "httpGet": {
                     "path": "/",
-                    "port": 8080
+                    "port": 3000
                   }
                 },
                 "resources": {

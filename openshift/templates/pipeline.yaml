@@ -8,7 +8,7 @@ spec:
     type: JenkinsPipeline
     jenkinsPipelineStrategy:
       jenkinsfile: |-
-        node('') {
+        node('nodejs') {
           stage 'build'
             openshiftBuild(namespace: 'dev', buildConfig: 'sample-node', showBuildLogs: 'true')
           stage 'deploy DEV'

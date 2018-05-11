@@ -48,10 +48,3 @@ oc start-build sample-node-pipeline -n ops
 ```
 oc delete project ops dev qa
 ```
-
-### Github Webhook url
-```
-Payload URL: https://<host>:8443/oapi/v1/namespaces/dev/buildconfigs/sample-node/webhooks/<secret>/github
-Content Type: application/json
-Secret: (leave blank)
-```

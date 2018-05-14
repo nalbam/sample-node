@@ -89,6 +89,13 @@
       "required": true
     },
     {
+      "name": "NPM_MIRROR",
+      "displayName": "Custom NPM Mirror URL",
+      "description": "The custom NPM mirror URL",
+      "value": "",
+      "required": false
+    },
+    {
       "name": "PROFILE",
       "displayName": "Profile",
       "value": "dev",
@@ -175,7 +182,13 @@
               "kind": "ImageStreamTag",
               "namespace": "${NAMESPACE}",
               "name": "nodejs:${NODEJS_VERSION}"
-            }
+            },
+            "env": [
+              {
+                "name": "NPM_MIRROR",
+                "value": "${NPM_MIRROR}"
+              }
+            ]
           }
         },
         "output": {

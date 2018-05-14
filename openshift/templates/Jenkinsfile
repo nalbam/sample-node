@@ -5,7 +5,7 @@ node('maven') {
     openshiftTag(namespace: 'ops', sourceStream: 'sample-node', sourceTag: 'latest', destinationNamespace: 'dev', destinationStream: 'sample-node', destinationTag: 'latest')
     openshiftDeploy(namespace: 'dev', deploymentConfig: 'sample-node')
     openshiftScale(namespace: 'dev', deploymentConfig: 'sample-node', replicaCount: '2')
-  stage 'Proceeed QA'
+  stage 'Approval QA'
     input 'Proceeed ?'
   stage 'Deploy QA'
     openshiftTag(namespace: 'ops', sourceStream: 'sample-node', sourceTag: 'latest', destinationNamespace: 'qa', destinationStream: 'sample-node', destinationTag: 'latest')

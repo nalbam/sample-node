@@ -31,57 +31,6 @@
       "required": false
     },
     {
-      "name": "SOURCE_REPOSITORY_URL",
-      "displayName": "Git Repository URL",
-      "description": "Git source URI for application",
-      "value": "https://github.com/nalbam/sample-node",
-      "required": true
-    },
-    {
-      "name": "SOURCE_REPOSITORY_REF",
-      "displayName": "Git Reference",
-      "description": "Optional branch, tag, or commit.",
-      "value": "master",
-      "required": false
-    },
-    {
-      "name": "CONTEXT_DIR",
-      "displayName": "Context Directory",
-      "description": "Path within Git project to build; empty for root project directory.",
-      "value": "",
-      "required": false
-    },
-    {
-      "name": "GITHUB_WEBHOOK_SECRET",
-      "displayName": "Github Webhook Secret",
-      "description": "GitHub trigger secret",
-      "from": "[a-zA-Z0-9]{8}",
-      "generate": "expression",
-      "required": true
-    },
-    {
-      "name": "GENERIC_WEBHOOK_SECRET",
-      "displayName": "Generic Webhook Secret",
-      "description": "Generic build trigger secret",
-      "from": "[a-zA-Z0-9]{8}",
-      "generate": "expression",
-      "required": true
-    },
-    {
-      "name": "NAMESPACE",
-      "displayName": "Namespace",
-      "description": "The OpenShift Namespace where the ImageStream resides.",
-      "value": "openshift",
-      "required": true
-    },
-    {
-      "name": "NODEJS_VERSION",
-      "displayName": "Version of NodeJS Image",
-      "description": "Version of NodeJS image to be used (6, 8, or latest).",
-      "value": "8",
-      "required": true
-    },
-    {
       "name": "MEMORY_LIMIT",
       "displayName": "Memory Limit",
       "description": "Maximum amount of memory the container can use.",
@@ -89,16 +38,9 @@
       "required": true
     },
     {
-      "name": "NPM_MIRROR",
-      "displayName": "Custom NPM Mirror URL",
-      "description": "The custom NPM mirror URL",
-      "value": "",
-      "required": false
-    },
-    {
       "name": "PROFILE",
       "displayName": "Profile",
-      "value": "dev",
+      "value": "",
       "required": false
     }
   ],
@@ -155,69 +97,6 @@
         "labels": {
           "application": "${APPLICATION_NAME}"
         }
-      }
-    },
-    {
-      "kind": "BuildConfig",
-      "apiVersion": "v1",
-      "metadata": {
-        "name": "${APPLICATION_NAME}",
-        "labels": {
-          "application": "${APPLICATION_NAME}"
-        }
-      },
-      "spec": {
-        "source": {
-          "type": "Git",
-          "git": {
-            "uri": "${SOURCE_REPOSITORY_URL}",
-            "ref": "${SOURCE_REPOSITORY_REF}"
-          },
-          "contextDir": "${CONTEXT_DIR}"
-        },
-        "strategy": {
-          "type": "Source",
-          "sourceStrategy": {
-            "from": {
-              "kind": "ImageStreamTag",
-              "namespace": "${NAMESPACE}",
-              "name": "nodejs:${NODEJS_VERSION}"
-            },
-            "env": [
-              {
-                "name": "NPM_MIRROR",
-                "value": "${NPM_MIRROR}"
-              }
-            ]
-          }
-        },
-        "output": {
-          "to": {
-            "kind": "ImageStreamTag",
-            "name": "${APPLICATION_NAME}:latest"
-          }
-        },
-        "triggers": [
-          {
-            "type": "GitHub",
-            "github": {
-              "secret": "${GITHUB_WEBHOOK_SECRET}"
-            }
-          },
-          {
-            "type": "Generic",
-            "generic": {
-              "secret": "${GENERIC_WEBHOOK_SECRET}"
-            }
-          },
-          {
-            "type": "ImageChange",
-            "imageChange": {}
-          },
-          {
-            "type": "ConfigChange"
-          }
-        ]
       }
     },
     {

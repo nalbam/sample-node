@@ -19,9 +19,9 @@ node('nodejs') {
     openshiftDeploy(namespace: 'dev', deploymentConfig: app)
     openshiftScale(namespace: 'dev', deploymentConfig: app, replicaCount: '2')
   }
-  stage('Proceeed QA') {
+  stage('Approve QA') {
     timeout(time: 15, unit: 'MINUTES') {
-      input(message: 'Proceeed ?')
+      input(message: 'Approve ?')
     }
   }
   stage('Deploy QA') {

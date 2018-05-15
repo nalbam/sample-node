@@ -7,9 +7,9 @@ echo "GIT_URL      ${env.SOURCE_REPOSITORY_URL}"
 echo "GIT_REF      ${env.SOURCE_REPOSITORY_REF}"
 
 node('nodejs') {
-  def app = "${env.APPLICATION_NAME}"
-  def git_url = "${env.SOURCE_REPOSITORY_URL}"
-  def git_ref = "${env.SOURCE_REPOSITORY_REF}"
+  def app = "${env.APPLICATION_NAME}" as java.lang.Object
+  //def git_url = "${env.SOURCE_REPOSITORY_URL}" as java.lang.Object
+  //def git_ref = "${env.SOURCE_REPOSITORY_REF}" as java.lang.Object
 
   stage('Build Image') {
     openshiftBuild(namespace: 'ops', buildConfig: app, showBuildLogs: 'true')

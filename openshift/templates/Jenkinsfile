@@ -1,18 +1,30 @@
-node('nodejs') {
+#!groovy
+
+echo "APPLICATION  ${env.APPLICATION_NAME}"
+echo "JOB_NAME     ${env.JOB_NAME}"
+echo "BUILD_NUMBER ${env.BUILD_NUMBER}"
+echo "GIT_URL      ${env.SOURCE_REPOSITORY_URL}"
+echo "GIT_REF      ${env.SOURCE_REPOSITORY_REF}"
+
+node('maven') {
+  def app = "${env.APPLICATION_NAME}"
+  def git_url = "${env.SOURCE_REPOSITORY_URL}"
+  def git_ref = "${env.SOURCE_REPOSITORY_REF}"
+
   stage('Build Image') {
-    openshiftBuild(namespace: 'ops', buildConfig: 'sample-node', showBuildLogs: 'true')
+    openshiftBuild(namespace: 'ops', buildConfig: app, showBuildLogs: 'true')
   }
   stage('Deploy DEV') {
-    openshiftTag(namespace: 'ops', sourceStream: 'sample-node', sourceTag: 'latest', destinationNamespace: 'dev', destinationStream: 'sample-node', destinationTag: 'latest')
-    openshiftDeploy(namespace: 'dev', deploymentConfig: 'sample-node')
-    openshiftScale(namespace: 'dev', deploymentConfig: 'sample-node', replicaCount: '2')
+    openshiftTag(namespace: 'ops', sourceStream: app, sourceTag: 'latest', destinationNamespace: 'dev', destinationStream: app, destinationTag: 'latest')
+    openshiftDeploy(namespace: 'dev', deploymentConfig: app)
+    openshiftScale(namespace: 'dev', deploymentConfig: app, replicaCount: '2')
   }
   stage('Proceeed QA') {
     input 'Proceeed ?'
   }
   stage('Deploy QA') {
-    openshiftTag(namespace: 'ops', sourceStream: 'sample-node', sourceTag: 'latest', destinationNamespace: 'qa', destinationStream: 'sample-node', destinationTag: 'latest')
-    openshiftDeploy(namespace: 'qa', deploymentConfig: 'sample-node')
-    openshiftScale(namespace: 'qa', deploymentConfig: 'sample-node', replicaCount: '2')
+    openshiftTag(namespace: 'ops', sourceStream: app, sourceTag: 'latest', destinationNamespace: 'qa', destinationStream: app, destinationTag: 'latest')
+    openshiftDeploy(namespace: 'qa', deploymentConfig: app)
+    openshiftScale(namespace: 'qa', deploymentConfig: app, replicaCount: '2')
   }
 }

@@ -155,7 +155,29 @@
         "strategy": {
           "type": "JenkinsPipeline",
           "jenkinsPipelineStrategy": {
-            "jenkinsfilePath": "openshift/templates/Jenkinsfile"
+            "jenkinsfilePath": "openshift/templates/Jenkinsfile",
+            "env": [
+              {
+                "name": "APPLICATION_NAME",
+                "value": "${APPLICATION_NAME}"
+              },
+              {
+                "name": "SOURCE_REPOSITORY_URL",
+                "value": "${SOURCE_REPOSITORY_URL}"
+              },
+              {
+                "name": "SOURCE_REPOSITORY_REF",
+                "value": "${SOURCE_REPOSITORY_REF}"
+              },
+              {
+                "name": "NODEJS_VERSION",
+                "value": "${NODEJS_VERSION}"
+              },
+              {
+                "name": "NPM_MIRROR",
+                "value": "${NPM_MIRROR}"
+              }
+            ]
           }
         },
         "triggers": [

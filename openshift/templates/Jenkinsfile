@@ -6,7 +6,7 @@ echo "BUILD_NUMBER ${env.BUILD_NUMBER}"
 echo "GIT_URL      ${env.SOURCE_REPOSITORY_URL}"
 echo "GIT_REF      ${env.SOURCE_REPOSITORY_REF}"
 
-node('maven') {
+node('nodejs') {
   def app = "${env.APPLICATION_NAME}"
   def git_url = "${env.SOURCE_REPOSITORY_URL}"
   def git_ref = "${env.SOURCE_REPOSITORY_REF}"

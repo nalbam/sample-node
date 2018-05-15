@@ -168,6 +168,14 @@
               {
                 "name": "SOURCE_REPOSITORY_REF",
                 "value": "${SOURCE_REPOSITORY_REF}"
+              },
+              {
+                "name": "NODEJS_VERSION",
+                "value": "${NODEJS_VERSION}"
+              },
+              {
+                "name": "NPM_MIRROR",
+                "value": "${NPM_MIRROR}"
               }
             ]
           }

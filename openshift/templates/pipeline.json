@@ -80,6 +80,13 @@
       "description": "The custom NPM mirror URL",
       "value": "",
       "required": false
+    },
+    {
+      "name": "SLACK_WEBHOOK_URL",
+      "displayName": "Slack Webhook URL",
+      "description": "Send your notification",
+      "value": "",
+      "required": false
     }
   ],
   "objects": [
@@ -172,6 +179,10 @@
               {
                 "name": "NODEJS_VERSION",
                 "value": "${NODEJS_VERSION}"
+              },
+              {
+                "name": "SLACK_WEBHOOK_URL",
+                "value": "${SLACK_WEBHOOK_URL}"
               }
             ]
           }

@@ -5,14 +5,21 @@ echo "JOB_NAME     ${env.JOB_NAME}"
 echo "BUILD_NUMBER ${env.BUILD_NUMBER}"
 echo "GIT_URL      ${env.SOURCE_REPOSITORY_URL}"
 echo "GIT_REF      ${env.SOURCE_REPOSITORY_REF}"
+echo "JENKINS_URL  ${env.JENKINS_URL}"
 
 node('nodejs') {
   def app = "${env.APPLICATION_NAME}" as java.lang.Object
   //def git_url = "${env.SOURCE_REPOSITORY_URL}" as java.lang.Object
   //def git_ref = "${env.SOURCE_REPOSITORY_REF}" as java.lang.Object
 
+  def jenkins = "https://jenkins-ops.13.125.121.161.xip.io/blue/organizations/jenkins"
+  def job = "${env.JOB_NAME}".replaceAll(/\//, '%2F')
+  def url = "${jenkins}/${job}/detail/ops-${env.APPLICATION_NAME}-pipeline/${env.BUILD_NUMBER}/pipeline/"
+  echo "Pipeline: ${url}"
+
   stage('Build Image') {
     openshiftBuild(namespace: 'ops', buildConfig: app, showBuildLogs: 'true')
+    notify("good", "Build Success: ${env.APPLICATION_NAME} <${url}|#${env.BUILD_NUMBER}>")
   }
   stage('Deploy DEV') {
     openshiftTag(namespace: 'ops', sourceStream: app, sourceTag: 'latest', destinationNamespace: 'dev', destinationStream: app, destinationTag: 'latest')
@@ -20,6 +27,7 @@ node('nodejs') {
     openshiftScale(namespace: 'dev', deploymentConfig: app, replicaCount: '1')
   }
   stage('Proceed QA') {
+    notify("#439FE0", "Proceed QA?: ${env.APPLICATION_NAME} <${url}|#${env.BUILD_NUMBER}>")
     timeout(time: 15, unit: 'MINUTES') {
       input(message: 'Proceed QA?')
     }
@@ -28,5 +36,14 @@ node('nodejs') {
     openshiftTag(namespace: 'ops', sourceStream: app, sourceTag: 'latest', destinationNamespace: 'qa', destinationStream: app, destinationTag: 'latest')
     openshiftDeploy(namespace: 'qa', deploymentConfig: app)
     openshiftScale(namespace: 'qa', deploymentConfig: app, replicaCount: '1')
+  }
+}
+
+def notify(color, message) {
+  try {
+    if (env.SLACK_WEBHOOK_URL) {
+      sh "curl -s http://repo.toast.sh/helper/slack.sh | bash -s -- -u=${env.SLACK_WEBHOOK_URL} --color=${color} '${message}'"
+    }
+  } catch (e) {
   }
 }

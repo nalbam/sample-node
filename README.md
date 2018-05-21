@@ -25,7 +25,7 @@ oc policy add-role-to-user admin admin -n qa
 oc new-app -f https://raw.githubusercontent.com/nalbam/sample-node/master/openshift/templates/deploy.json -n dev \
            -p PROFILE=dev
 oc new-app -f https://raw.githubusercontent.com/nalbam/sample-node/master/openshift/templates/deploy.json -n qa \
-           -p PROFILE=dev
+           -p PROFILE=qa
 ```
 
 ### Create pipeline

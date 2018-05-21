@@ -36,12 +36,6 @@
       "description": "Maximum amount of memory the container can use.",
       "value": "512Mi",
       "required": true
-    },
-    {
-      "name": "PROFILE",
-      "displayName": "Profile",
-      "value": "",
-      "required": false
     }
   ],
   "objects": [
@@ -149,12 +143,6 @@
                 "name": "${APPLICATION_NAME}",
                 "image": "${APPLICATION_NAME}",
                 "imagePullPolicy": "Always",
-                "env": [
-                  {
-                    "name": "PROFILE",
-                    "value": "${PROFILE}"
-                  }
-                ],
                 "ports": [
                   {
                     "name": "http",

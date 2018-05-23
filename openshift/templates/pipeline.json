@@ -80,6 +80,20 @@
       "description": "The custom NPM mirror URL",
       "value": "",
       "required": false
+    },
+    {
+      "name": "JENKINS_URL",
+      "displayName": "Jenkins URL",
+      "description": "The Jenkins URL",
+      "value": "http://jenkins.ops.svc:8080",
+      "required": false
+    },
+    {
+      "name": "SLACK_WEBHOOK_URL",
+      "displayName": "Slack Webhook URL",
+      "description": "Send your notification",
+      "value": "",
+      "required": false
     }
   ],
   "objects": [
@@ -179,6 +193,14 @@
               {
                 "name": "NODEJS_VERSION",
                 "value": "${NODEJS_VERSION}"
+              },
+              {
+                "name": "JENKINS_URL",
+                "value": "${JENKINS_URL}"
+              },
+              {
+                "name": "SLACK_WEBHOOK_URL",
+                "value": "${SLACK_WEBHOOK_URL}"
               }
             ]
           }

@@ -8,6 +8,7 @@ docker pull nalbam/sample-node:slim   #  94MB
 ```
 
 ## Openshift
+
 ### Create Project
 ```bash
 oc new-project ops
@@ -32,10 +33,11 @@ oc new-app jenkins-ephemeral -n ops
 oc policy add-role-to-user edit system:serviceaccount:ops:jenkins -n dev
 oc policy add-role-to-user edit system:serviceaccount:ops:jenkins -n qa
 
-oc new-app -f https://raw.githubusercontent.com/nalbam/sample-node/master/openshift/templates/pipeline.json -n ops \
+oc new-app -f https://raw.githubusercontent.com/nalbam/sample-node/master/openshift/templates/pipeline.json \
            -p SOURCE_REPOSITORY_URL=https://github.com/nalbam/sample-node \
            -p JENKINS_URL=https://jenkins-ops.apps.nalbam.com \
-           -p SLACK_WEBHOOK_URL=https://hooks.slack.com/services/web/hook/token
+           -p SLACK_WEBHOOK_URL=https://hooks.slack.com/services/web/hook/token \
+           -n ops
 ```
 
 ### Start Build

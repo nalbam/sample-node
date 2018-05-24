@@ -75,20 +75,6 @@
       "required": true
     },
     {
-      "name": "NODEJS_VERSION",
-      "displayName": "Version of NodeJS Image",
-      "description": "Version of NodeJS image to be used (6, 8, or latest).",
-      "value": "8",
-      "required": true
-    },
-    {
-      "name": "NPM_MIRROR",
-      "displayName": "Custom NPM Mirror URL",
-      "description": "The custom NPM mirror URL",
-      "value": "",
-      "required": false
-    },
-    {
       "name": "JENKINS_URL",
       "displayName": "Jenkins URL",
       "description": "The Jenkins URL",
@@ -99,6 +85,20 @@
       "name": "SLACK_WEBHOOK_URL",
       "displayName": "Slack Webhook URL",
       "description": "Send your notification",
+      "value": "",
+      "required": false
+    },
+    {
+      "name": "NODEJS_VERSION",
+      "displayName": "Version of NodeJS Image",
+      "description": "Version of NodeJS image to be used (6, 8, or latest).",
+      "value": "8",
+      "required": true
+    },
+    {
+      "name": "NPM_MIRROR",
+      "displayName": "Custom NPM Mirror URL",
+      "description": "The custom NPM mirror URL",
       "value": "",
       "required": false
     }
@@ -183,14 +183,7 @@
         "strategy": {
           "type": "JenkinsPipeline",
           "jenkinsPipelineStrategy": {
-            "jenkinsfilePath": "openshift/templates/Jenkinsfile",
-            "envFrom": [
-              {
-                "configMapRef": {
-                  "name": "pipeline"
-                }
-              }
-            ],
+            "jenkinsfilePath": "openshift/pipeline/Jenkinsfile",
             "env": [
               {
                 "name": "APPLICATION_NAME",
@@ -209,16 +202,16 @@
                 "value": "${SOURCE_REPOSITORY_SECRET}"
               },
               {
-                "name": "NODEJS_VERSION",
-                "value": "${NODEJS_VERSION}"
-              },
-              {
                 "name": "JENKINS_URL",
                 "value": "${JENKINS_URL}"
               },
               {
                 "name": "SLACK_WEBHOOK_URL",
                 "value": "${SLACK_WEBHOOK_URL}"
+              },
+              {
+                "name": "NODEJS_VERSION",
+                "value": "${NODEJS_VERSION}"
               }
             ]
           }

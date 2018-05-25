@@ -19,12 +19,12 @@ node('nodejs') {
   String jenkins = "${env.JENKINS_URL}/blue/organizations/jenkins"
   String job = "${env.JOB_NAME}".replaceAll(/\//, '%2F')
   String url = "${jenkins}/${job}/detail/ops-${env.APPLICATION_NAME}-pipeline/${env.BUILD_NUMBER}/pipeline/"
-  echo "Pipeline: ${url}"
+  echo "PIPELINE    ${url}"
 
   stage('Build Image') {
     openshiftBuild(namespace: 'ops', buildConfig: app, showBuildLogs: 'true')
     openshiftTag(namespace: 'ops', sourceStream: app, sourceTag: 'latest', destinationNamespace: 'ops', destinationStream: app, destinationTag: ver)
-    notify("good", "Build Success: ${env.APPLICATION_NAME} <${url}|#${env.BUILD_NUMBER}>")
+    notify("good", "Build Success: ${app}-${ver} <${url}|#${env.BUILD_NUMBER}>")
   }
   stage('Deploy DEV') {
     openshiftTag(namespace: 'ops', sourceStream: app, sourceTag: ver, destinationNamespace: 'dev', destinationStream: app, destinationTag: 'latest')
@@ -32,7 +32,7 @@ node('nodejs') {
     openshiftScale(namespace: 'dev', deploymentConfig: app, replicaCount: '1')
   }
   stage('Proceed QA') {
-    notify("#439FE0", "Proceed QA?: ${env.APPLICATION_NAME} <${url}|#${env.BUILD_NUMBER}>")
+    notify("#439FE0", "Proceed QA?: ${app}-${ver} <${url}|#${env.BUILD_NUMBER}>")
     timeout(time: 15, unit: 'MINUTES') {
       input(message: 'Proceed QA?')
     }

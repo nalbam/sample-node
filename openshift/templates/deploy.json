@@ -143,13 +143,6 @@
                 "name": "${APPLICATION_NAME}",
                 "image": "${APPLICATION_NAME}",
                 "imagePullPolicy": "Always",
-                "envFrom": [
-                  {
-                    "configMapRef": {
-                      "name": "${APPLICATION_NAME}"
-                    }
-                  }
-                ],
                 "ports": [
                   {
                     "name": "http",

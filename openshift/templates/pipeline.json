@@ -8,10 +8,10 @@
       "version": "1.0.0",
       "description": "sample nodejs application."
     },
-    "name": "bespin-node-pipeline"
+    "name": "sample-node-pipeline"
   },
   "labels": {
-    "template": "bespin-node-pipeline",
+    "template": "sample-node-pipeline",
     "xpaas": "1.0.0"
   },
   "message": "A new nodejs application has been created in your project.",

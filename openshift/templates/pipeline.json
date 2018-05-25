@@ -8,10 +8,10 @@
       "version": "1.0.0",
       "description": "sample nodejs application."
     },
-    "name": "bespin-node-pipeline"
+    "name": "sample-node-pipeline"
   },
   "labels": {
-    "template": "bespin-node-pipeline",
+    "template": "sample-node-pipeline",
     "xpaas": "1.0.0"
   },
   "message": "A new nodejs application has been created in your project.",
@@ -21,13 +21,6 @@
       "displayName": "Name",
       "description": "Identifies the resources created for this application.",
       "value": "sample-node",
-      "required": true
-    },
-    {
-      "name": "NAMESPACE",
-      "displayName": "Namespace",
-      "description": "The OpenShift Namespace where the ImageStream resides.",
-      "value": "openshift",
       "required": true
     },
     {
@@ -140,7 +133,7 @@
           "sourceStrategy": {
             "from": {
               "kind": "ImageStreamTag",
-              "namespace": "${NAMESPACE}",
+              "namespace": "openshift",
               "name": "nodejs:${NODEJS_VERSION}"
             },
             "env": [

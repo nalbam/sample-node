@@ -42,6 +42,15 @@
     {
       "kind": "Service",
       "apiVersion": "v1",
+      "metadata": {
+        "name": "${APPLICATION_NAME}",
+        "labels": {
+          "application": "${APPLICATION_NAME}"
+        },
+        "annotations": {
+          "description": "The application's http port."
+        }
+      },
       "spec": {
         "ports": [
           {
@@ -51,15 +60,6 @@
         ],
         "selector": {
           "deploymentConfig": "${APPLICATION_NAME}"
-        }
-      },
-      "metadata": {
-        "name": "${APPLICATION_NAME}",
-        "labels": {
-          "application": "${APPLICATION_NAME}"
-        },
-        "annotations": {
-          "description": "The application's http port."
         }
       }
     },

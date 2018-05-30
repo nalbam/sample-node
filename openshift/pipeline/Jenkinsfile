@@ -33,7 +33,7 @@ node('nodejs') {
     } else {
       ver = "${ver}-SNAPSHOT"
     }
-    echo "VERSION ${pom.version}"
+    echo "VERSION ${ver}"
   }
   stage('Build Image') {
     openshiftBuild(namespace: 'ops', buildConfig: app, showBuildLogs: 'true')

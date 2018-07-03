@@ -8,7 +8,7 @@ let handle = function (req, res) {
     let host = os.hostname();
     let date = moment().tz("Asia/Seoul").format();
     res.writeHead(200);
-    res.end('<h1>Hello Node.js!</h1><p><img src="' + logo + '"></p><p>' + host + '</p><p>' + date + '</p>');
+    res.end('<p><img src="' + logo + '"></p><p>' + host + '</p><p>' + date + '</p>');
 };
 
 let server = http.createServer(handle);

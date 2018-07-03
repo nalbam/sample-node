@@ -12,6 +12,7 @@ EXPOSE 3000
 WORKDIR data
 
 COPY server.js .
+COPY logo_nodejs.png .
 COPY package.json .
 
 RUN npm install -s

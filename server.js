@@ -4,7 +4,7 @@ let os = require('os'),
 
 let handle = function (req, res) {
     console.log('Received request for URL: ' + req.url);
-    let logo = 'https://cdn.nalbam.com/logo/logo_nodejs.png';
+    let logo = 'https://cdn.nalbam.com/logo/nodejs.png';
     let host = os.hostname();
     let date = moment().tz("Asia/Seoul").format();
     res.writeHead(200);

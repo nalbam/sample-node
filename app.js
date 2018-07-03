@@ -4,6 +4,7 @@ const os = require('os'),
 
 const app = express();
 app.set('view engine', 'ejs');
+app.use('/favicon.ico', express.static('views/favicon.ico'));
 
 app.get('/', function (req, res) {
     let host = os.hostname();

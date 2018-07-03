@@ -1,4 +1,5 @@
 let os = require('os'),
+    fs = require('fs'),
     http = require('http'),
     moment = require("moment-timezone");
 

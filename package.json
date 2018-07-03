@@ -4,6 +4,8 @@
   "description": "Node.js sample app",
   "main": "server.js",
   "dependencies": {
+    "ejs": "^2.6.1",
+    "express": "^4.16.3",
     "moment-timezone": "^0.5.14"
   },
   "engine": {

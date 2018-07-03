@@ -12,6 +12,7 @@ EXPOSE 3000
 WORKDIR data
 
 COPY app.js /data/
+COPY favicon.ico /data/
 COPY package.json /data/
 COPY views/* /data/views/
 

@@ -11,9 +11,9 @@ EXPOSE 3000
 
 WORKDIR data
 
-COPY app.js .
-COPY package.json .
-COPY views .
+COPY app.js ./
+COPY package.json ./
+COPY views/ ./
 
 RUN npm install -s
 

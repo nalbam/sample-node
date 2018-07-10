@@ -2,7 +2,7 @@
   "name": "sample-node",
   "version": "0.0.1",
   "description": "Node.js sample app",
-  "main": "server.js",
+  "main": "app.js",
   "dependencies": {
     "ejs": "^2.6.1",
     "express": "^4.16.3",
@@ -13,7 +13,7 @@
     "npm": "*"
   },
   "scripts": {
-    "start": "node server.js"
+    "start": "node app.js"
   },
   "repository": {
     "type": "git",

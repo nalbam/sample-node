@@ -29,9 +29,16 @@ app.get('/', function (req, res) {
     res.render('index.ejs', {host: host, date: date});
 });
 
-app.get('/counter/:name', function (req, res) {
+app.get('/incr/:name', function (req, res) {
     const name = req.params.name;
     return client.incr(`counter:${name}`, (err, result) => {
+        return res.status(200).json({ name: `${name}`, count: result });
+    });
+});
+
+app.get('/decr/:name', function (req, res) {
+    const name = req.params.name;
+    return client.decr(`counter:${name}`, (err, result) => {
         return res.status(200).json({ name: `${name}`, count: result });
     });
 });

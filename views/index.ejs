@@ -13,16 +13,19 @@
     <section class="jumbotron text-center">
         <div class="container">
             <h1><img src="https://cdn.nalbam.com/logo/nodejs.png"></h1>
-            <h3><%= host %></h3>
-            <p><%= date %></p>
+            <h3 id="host"><%= host %></h3>
+            <p id="date"><%= date %></p>
 
-            <a href="#" class="btn btn-primary my-like"><i class="far fa-thumbs-up"></i> 0</a>
-            <a href="#" class="btn btn-danger my-dislike"><i class="far fa-thumbs-down"></i> 0</a>
+            <p>
+                <button class="btn btn-primary btn-thumbs-up"><i class="far fa-thumbs-up"></i> <span id="thumbs-up-count">0</span></button>
+                <button class="btn btn-danger btn-thumbs-down"><i class="far fa-thumbs-down"></i> <span id="thumbs-down-count">0</span></button>
+            </p>
         </div>
     </section>
 </main>
 
 <script src="//code.jquery.com/jquery-3.3.1.slim.min.js"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.2/js/bootstrap.min.js"></script>
+<script src="//stackpath.bootstrapcdn.com/bootstrap/4.1.2/js/bootstrap.min.js"></script>
+<script src="counter.js"></script>
 </body>
 </html>

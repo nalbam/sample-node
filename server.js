@@ -11,6 +11,7 @@ const app = express();
 app.use(responseTime());
 app.set('view engine', 'ejs');
 app.use('/favicon.ico', express.static('views/favicon.ico'));
+app.use('/counter.js', express.static('views/counter.js'));
 
 // redis
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';

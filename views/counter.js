@@ -1,6 +1,4 @@
-let API_URL = "https://sample-node.apps.opspresso.com";
-
-//$('#host').html(guid);
+let API_URL = "http://localhost:3000";
 
 function _get_counter(v) {
     let url = API_URL + '/counter/' + v;
@@ -9,7 +7,7 @@ function _get_counter(v) {
         type: 'GET',
         dataType: 'json',
         success: function (res, status) {
-            console.log('_get () : ' + status);
+            console.log('_get_counter (' + v + ') : ' + status);
 
             if (res) {
                 $('#thumbs-' + res.name + '-count').html(res.count);
@@ -25,7 +23,7 @@ function _post_counter(v, c) {
         type: 'POST',
         dataType: 'json',
         success: function (res, status) {
-            console.log('_get () : ' + status);
+            console.log('_post_counter (' + v + ', ' + c + ') : ' + status);
 
             if (res) {
                 $('#thumbs-' + res.name + '-count').html(res.count);
@@ -40,9 +38,8 @@ $(function () {
     setInterval(function () {
         _get_counter('up');
         _get_counter('down');
-    }, 30000);
+    }, 1000);
 });
-
 
 $(function () {
     $('.btn-thumbs-up').click(function () {

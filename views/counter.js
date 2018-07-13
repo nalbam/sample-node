@@ -1,5 +1,5 @@
 
-let API_URL="https://sample-node.apps.opspresso.com";
+let API_URL = "https://sample-node.apps.opspresso.com";
 
 let guid = function() {
     let nav = window.navigator;

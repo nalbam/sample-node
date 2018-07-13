@@ -1,4 +1,4 @@
-let API_URL = "http://localhost:3000";
+let API_URL = "https://sample-node.apps.opspresso.com";
 
 function _get_counter(v) {
     let url = API_URL + '/counter/' + v;

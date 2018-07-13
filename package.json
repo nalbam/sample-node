@@ -1,19 +1,21 @@
 {
   "name": "sample-node",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Node.js sample app",
-  "main": "app.js",
+  "main": "server.js",
   "dependencies": {
     "ejs": "^2.6.1",
     "express": "^4.16.3",
-    "moment-timezone": "^0.5.14"
+    "moment-timezone": "^0.5.21",
+    "redis": "^2.8.0",
+    "response-time": "^2.3.2"
   },
   "engine": {
     "node": "*",
     "npm": "*"
   },
   "scripts": {
-    "start": "node app.js"
+    "start": "node server.js"
   },
   "repository": {
     "type": "git",

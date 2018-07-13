@@ -11,10 +11,10 @@ EXPOSE 3000
 
 WORKDIR data
 
-COPY app.js /data/
+COPY server.js /data/
 COPY package.json /data/
 COPY views/* /data/views/
 
 RUN npm install -s
 
-CMD ["node", "app.js"]
+CMD ["node", "server.js"]

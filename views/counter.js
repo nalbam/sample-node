@@ -1,22 +1,54 @@
-
 let API_URL = "https://sample-node.apps.opspresso.com";
 
-let guid = function() {
-    let nav = window.navigator;
-    let screen = window.screen;
-    let guid = nav.mimeTypes.length;
-    guid += nav.userAgent.replace(/\D+/g, '');
-    guid += nav.plugins.length;
-    guid += screen.height || '';
-    guid += screen.width || '';
-    guid += screen.pixelDepth || '';
-    return guid;
-};
-
-let set_cookie = function(name, value, exp) {
-    let date = new Date();
-    date.setTime(date.getTime() + (exp * 24 * 60 * 60 * 1000));
-    document.cookie = name + '=' + value + ';expires=' + date.toUTCString() + ';path=/';
-};
-
 //$('#host').html(guid);
+
+function _get_counter(v) {
+    let url = API_URL + '/counter/' + v;
+    $.ajax({
+        url: url,
+        type: 'GET',
+        dataType: 'json',
+        success: function (res, status) {
+            console.log('_get () : ' + status);
+
+            if (res) {
+                $('#thumbs-' + res.name + '-count').html(res.count);
+            }
+        }
+    });
+}
+
+function _post_counter(v, c) {
+    let url = API_URL + '/counter/' + v + '/' + c;
+    $.ajax({
+        url: url,
+        type: 'POST',
+        dataType: 'json',
+        success: function (res, status) {
+            console.log('_get () : ' + status);
+
+            if (res) {
+                $('#thumbs-' + res.name + '-count').html(res.count);
+            }
+        }
+    });
+}
+
+$(function () {
+    _get_counter('up');
+    _get_counter('down');
+    setInterval(function () {
+        _get_counter('up');
+        _get_counter('down');
+    }, 30000);
+});
+
+
+$(function () {
+    $('.btn-thumbs-up').click(function () {
+        _post_counter('up', 'incr');
+    });
+    $('.btn-thumbs-down').click(function () {
+        _post_counter('down', 'decr');
+    });
+});

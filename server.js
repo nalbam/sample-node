@@ -1,15 +1,16 @@
 const os = require('os'),
+    cors = require('cors'),
     express = require('express'),
     moment = require("moment-timezone"),
-    redis = require('redis'),
-    responseTime = require('response-time');
+    redis = require('redis');
 
 // REDIS_HOST=localhost node server.js
 
 // express
 const app = express();
-app.use(responseTime());
 app.set('view engine', 'ejs');
+
+app.use(cors());
 app.use('/favicon.ico', express.static('views/favicon.ico'));
 app.use('/counter.js', express.static('views/counter.js'));
 
@@ -29,14 +30,21 @@ app.get('/', function (req, res) {
     res.render('index.ejs', {host: host, date: date});
 });
 
-app.get('/incr/:name', function (req, res) {
+app.get('/counter/:name', function (req, res) {
+    const name = req.params.name;
+    return client.get(`counter:${name}`, (err, result) => {
+        return res.status(200).json({ name: `${name}`, count: result == null ? 0 : result });
+    });
+});
+
+app.post('/counter/:name/incr', function (req, res) {
     const name = req.params.name;
     return client.incr(`counter:${name}`, (err, result) => {
         return res.status(200).json({ name: `${name}`, count: result });
     });
 });
 
-app.get('/decr/:name', function (req, res) {
+app.post('/counter/:name/decr', function (req, res) {
     const name = req.params.name;
     return client.decr(`counter:${name}`, (err, result) => {
         return res.status(200).json({ name: `${name}`, count: result });

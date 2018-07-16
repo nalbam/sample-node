@@ -17,7 +17,7 @@ app.use('/favicon.ico', express.static('views/favicon.ico'));
 app.use('/counter.js', express.static('views/counter.js'));
 
 // redis
-const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
+const REDIS_URL = process.env.REDIS_URL || 'redis://redis-master:6379';
 const client = redis.createClient(REDIS_URL);
 client.on('connect', () => {
     console.log(`connected to redis: ${REDIS_URL}`);

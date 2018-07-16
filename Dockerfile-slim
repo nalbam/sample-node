@@ -7,11 +7,9 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 EXPOSE 3000
 
-WORKDIR data
+COPY src /data
 
-COPY server.js /data/
-COPY package.json /data/
-COPY views/* /data/views/
+WORKDIR data
 
 RUN npm install -s
 

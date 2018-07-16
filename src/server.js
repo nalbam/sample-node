@@ -1,7 +1,7 @@
 const os = require('os'),
     cors = require('cors'),
     express = require('express'),
-    moment = require("moment-timezone"),
+    moment = require('moment-timezone'),
     redis = require('redis');
 
 // REDIS_HOST=localhost node server.js
@@ -18,7 +18,7 @@ app.use('/counter.js', express.static('views/counter.js'));
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 const client = redis.createClient(REDIS_URL);
 client.on('connect', () => {
-    console.log(`connected to redis`);
+    console.log(`connected to redis: ${REDIS_URL}`);
 });
 client.on('error', err => {
     console.log(`${err}`);
@@ -26,7 +26,7 @@ client.on('error', err => {
 
 app.get('/', function (req, res) {
     let host = os.hostname();
-    let date = moment().tz("Asia/Seoul").format();
+    let date = moment().tz('Asia/Seoul').format();
     res.render('index.ejs', {host: host, date: date});
 });
 

@@ -13,5 +13,5 @@ docker pull nalbam/sample-node:alpine #  25MB
 ## npm install
 
 ```bash
-npm install --save ejs express moment-timezone redis response-time
+npm install --save cors ejs express moment-timezone redis
 ```

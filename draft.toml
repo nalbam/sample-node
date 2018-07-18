@@ -1,7 +1,10 @@
 [environments]
   [environments.development]
-    name = "sample-node"
+    name = "sample"
     namespace = "default"
-    wait = false
+    wait = true
     watch = false
-    watch_delay = 2
+    watch-delay = 2
+    auto-connect = false
+    dockerfile = ""
+    chart = ""

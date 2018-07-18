@@ -1,4 +1,4 @@
-apiVersion: apps/v1
+apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: {{ template "fullname" . }}
@@ -9,6 +9,8 @@ spec:
   replicas: {{ .Values.replicaCount }}
   template:
     metadata:
+      annotations:
+        buildID: {{ .Values.buildID }}
       labels:
         draft: {{ default "draft-app" .Values.draft }}
         app: {{ template "fullname" . }}

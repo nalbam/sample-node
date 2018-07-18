@@ -1,6 +1,6 @@
 [environments]
   [environments.development]
-    name = "sample"
+    name = "sample-node"
     namespace = "default"
     wait = true
     watch = false

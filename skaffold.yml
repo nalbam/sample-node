@@ -3,20 +3,8 @@ kind: Config
 build:
   artifacts:
   - imageName: registry-devops.apps.opspresso.com/sample/sample-node
-    workspace: .
-    docker: {}
-  local: {}
 deploy:
-  kubectl:
-    manifests:
-profiles:
-- name: dev
-  build:
-    artifacts:
-    - docker: {}
-    local: {}
-  deploy:
-    helm:
-      releases:
-      - name: sample-node
-        chartPath: charts/javascript
+  helm:
+    releases:
+    - name: sample-node
+      chartPath: charts/javascript

@@ -3,7 +3,6 @@
 const os = require('os'),
     cors = require('cors'),
     express = require('express'),
-    bodyParser = require('body-parser'),
     moment = require('moment-timezone'),
     redis = require('redis');
 
@@ -14,7 +13,7 @@ const app = express();
 app.set('view engine', 'ejs');
 
 app.use(cors());
-app.use(bodyParser.json());
+app.use(express.json());
 app.use('/favicon.ico', express.static('views/favicon.ico'));
 app.use('/counter.js', express.static('views/counter.js'));
 
@@ -44,7 +43,7 @@ app.get('/cache/:name', function (req, res) {
 app.post('/cache/:name', function (req, res) {
     const name = req.params.name;
     const json = JSON.stringify(req.body);
-    console.log(`req.body: ${json}`);
+    //console.log(`req.body: ${json}`);
     return client.set(`cache:${name}`, json, (err, result) => {
         return res.status(200).json(result == null ? {} : result);
     });

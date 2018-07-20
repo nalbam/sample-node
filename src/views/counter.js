@@ -1,51 +1,33 @@
 let API_URL = 'https://sample-node.apps.opspresso.com';
 
-function _get_counter(v) {
-    let url = API_URL + `/counter/${v}`;
+function _counter(name, type) {
+    let url = API_URL + `/counter/${name}`;
     $.ajax({
         url: url,
-        type: 'GET',
-        dataType: 'json',
+        type: type,
         success: function (res, status) {
-            console.log(`_get_counter (${v}) : ${status}`);
-
+            console.log(`_counter (${name}) : ${status}`);
             if (res) {
-                $(`#thumbs-${res.name}-count`).html(res.count);
-            }
-        }
-    });
-}
-
-function _post_counter(v, c) {
-    let url = API_URL + `/counter/${v}/${c}`;
-    $.ajax({
-        url: url,
-        type: 'POST',
-        dataType: 'json',
-        success: function (res, status) {
-            console.log(`_post_counter (${v}, ${c}) : ${status}`);
-
-            if (res) {
-                $(`#thumbs-${res.name}-count`).html(res.count);
+                $(`#thumbs-${name}-count`).html(res);
             }
         }
     });
 }
 
 $(function () {
-    _get_counter('up');
-    _get_counter('down');
+    _counter('up', 'get');
+    _counter('down', 'get');
     setInterval(function () {
-        _get_counter('up');
-        _get_counter('down');
+        _counter('up', 'get');
+        _counter('down', 'get');
     }, 1000);
 });
 
 $(function () {
     $('.btn-thumbs-up').click(function () {
-        _post_counter('up', 'incr');
+        _counter('up', 'post');
     });
     $('.btn-thumbs-down').click(function () {
-        _post_counter('down', 'decr');
+        _counter('down', 'delete');
     });
 });

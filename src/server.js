@@ -52,21 +52,21 @@ app.post('/cache/:name', function (req, res) {
 app.get('/counter/:name', function (req, res) {
     const name = req.params.name;
     return client.get(`counter:${name}`, (err, result) => {
-        return res.status(200).json({ name: `${name}`, count: result == null ? 0 : result });
+        return res.set('Content-Type', 'text/plain').status(200).send(result == null ? '0' : result);
     });
 });
 
-app.post('/counter/:name/incr', function (req, res) {
+app.post('/counter/:name', function (req, res) {
     const name = req.params.name;
     return client.incr(`counter:${name}`, (err, result) => {
-        return res.status(200).json({ name: `${name}`, count: result });
+        return res.set('Content-Type', 'text/plain').status(200).send(result == null ? '0' : result);
     });
 });
 
-app.post('/counter/:name/decr', function (req, res) {
+app.delete('/counter/:name', function (req, res) {
     const name = req.params.name;
     return client.decr(`counter:${name}`, (err, result) => {
-        return res.status(200).json({ name: `${name}`, count: result });
+        return res.set('Content-Type', 'text/plain').status(200).send(result == null ? '0' : result);
     });
 });
 

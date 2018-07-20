@@ -31,3 +31,4 @@ package-lock.json
 *.pid
 *.log
 *.tmp
+VERSION

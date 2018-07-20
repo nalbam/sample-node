@@ -1,4 +1,4 @@
 apiVersion: v1
 description: A Helm chart for Kubernetes
-name: javascript
-version: v0.1.0
+name: sample-node
+version: v0.1.1

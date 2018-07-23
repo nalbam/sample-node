@@ -69,21 +69,24 @@ app.post('/cache/:name', function (req, res) {
 app.get('/counter/:name', function (req, res) {
     const name = req.params.name;
     return client.get(`counter:${name}`, (err, result) => {
-        return res.type('plain').send(result == null ? '0' : result.toString());
+        res.setHeader('Content-Type', 'text/plain; charset=UTF-8');
+        return res.send(result == null ? '0' : result.toString());
     });
 });
 
 app.post('/counter/:name', function (req, res) {
     const name = req.params.name;
     return client.incr(`counter:${name}`, (err, result) => {
-        return res.type('plain').send(result == null ? '0' : result.toString());
+        res.setHeader('Content-Type', 'text/plain; charset=UTF-8');
+        return res.send(result == null ? '0' : result.toString());
     });
 });
 
 app.delete('/counter/:name', function (req, res) {
     const name = req.params.name;
     return client.decr(`counter:${name}`, (err, result) => {
-        return res.type('plain').send(result == null ? '0' : result.toString());
+        res.setHeader('Content-Type', 'text/plain; charset=UTF-8');
+        return res.send(result == null ? '0' : result.toString());
     });
 });
 

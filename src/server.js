@@ -19,7 +19,24 @@ app.use('/counter.js', express.static('views/counter.js'));
 
 // redis
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
-const client = redis.createClient(REDIS_URL);
+const retry_strategy = function(options) {
+    if (options.error && (options.error.code === 'ECONNREFUSED' || options.error.code === 'NR_CLOSED')) {
+        // Try reconnecting after 5 seconds
+        console.error('The server refused the connection. Retrying connection...');
+        return 5000;
+    }
+    if (options.total_retry_time > 1000 * 60 * 60) {
+        // End reconnecting after a specific timeout and flush all commands with an individual error
+        return new Error('Retry time exhausted');
+    }
+    if (options.attempt > 50) {
+        // End reconnecting with built in error
+        return undefined;
+    }
+    // reconnect after
+    return Math.min(options.attempt * 100, 3000);
+};
+const client = redis.createClient(REDIS_URL, {retry_strategy: retry_strategy});
 client.on('connect', () => {
     console.log(`connected to redis: ${REDIS_URL}`);
 });

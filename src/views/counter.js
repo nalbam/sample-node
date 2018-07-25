@@ -1,4 +1,4 @@
-let API_URL = 'https://sample-node.apps.opspresso.com';
+let API_URL = '';
 
 function _counter(name, type) {
     let url = API_URL + `/counter/${name}`;

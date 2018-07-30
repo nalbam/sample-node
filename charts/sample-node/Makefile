@@ -4,6 +4,7 @@ CURRENT=$(shell pwd)
 NAME := $(shell sed -n 's/^name: //p' Chart.yaml)
 VERSION := $(shell cat /home/jenkins/VERSION)
 
+BASE_DOMAIN := $(shell cat /home/jenkins/BASE_DOMAIN)
 CHARTMUSEUM := $(shell cat /home/jenkins/CHARTMUSEUM)
 REGISTRY := $(shell cat /home/jenkins/REGISTRY)
 
@@ -12,6 +13,7 @@ out:
 	# "CURRENT: ${CURRENT}"
 	# "NAME: ${NAME}"
 	# "VERSION: ${VERSION}"
+	# "BASE_DOMAIN: ${BASE_DOMAIN}"
 	# "CHARTMUSEUM: ${CHARTMUSEUM}"
 	# "REGISTRY: ${REGISTRY}"
 
@@ -42,6 +44,7 @@ ifeq ($(OS),Darwin)
 	sed -i "" -e "s|tag: .*|tag: $(VERSION)|" values.yaml
 else ifeq ($(OS),Linux)
 	sed -i -e "s/version: .*/version: $(VERSION)/" Chart.yaml
+	sed -i -e "s|basedomain: .*|basedomain: $(BASE_DOMAIN)|" values.yaml
 	sed -i -e "s|repository: .*|repository: $(REGISTRY)\/$(NAME)|" values.yaml
 	sed -i -e "s|tag: .*|tag: $(VERSION)|" values.yaml
 else

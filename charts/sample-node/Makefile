@@ -32,7 +32,7 @@ install: clean build
 upgrade: clean build
 	helm upgrade ${NAME} .
 
-release: clean build
+release: clean build tag
 	helm push . chartmuseum
 
 delete:

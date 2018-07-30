@@ -33,8 +33,7 @@ upgrade: clean build
 release: clean
 	helm dependency build
 	helm lint
-	helm init --client-only
-	helm push charts/${NAME}/ chartmuseum
+	helm push . chartmuseum
 
 delete:
 	helm delete --purge ${NAME}

@@ -2,10 +2,10 @@ OS := $(shell uname)
 CURRENT=$(pwd)
 
 NAME := $(shell sed -n 's/^name: //p' Chart.yaml)
-VERSION := $(shell cat ../../../../VERSION)
+VERSION := $(shell cat /home/jenkins/VERSION)
 
-CHARTMUSEUM := $(shell cat ../../../../CHARTMUSEUM)
-REGISTRY := $(shell cat ../../../../REGISTRY)
+CHARTMUSEUM := $(shell cat /home/jenkins/CHARTMUSEUM)
+REGISTRY := $(shell cat /home/jenkins/REGISTRY)
 
 out:
 	echo "OS: ${OS}"

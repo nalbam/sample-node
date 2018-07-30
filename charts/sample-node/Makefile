@@ -34,19 +34,17 @@ release: clean
 	helm dependency build
 	helm lint
 	helm init --client-only
-	helm package .
-	curl --fail --data-binary "@$(NAME)-$(VERSION).tgz" $(CHARTMUSEUM)/api/charts
-	rm -rf ${NAME}*.tgz%
+	helm push charts/${NAME}/ chartmuseum
 
 delete:
 	helm delete --purge ${NAME}
 
 tag:
 ifeq ($(OS),Darwin)
-	sed -i "" -e "s/version:.*/version: $(VERSION)/" Chart.yaml
+	sed -i "" -e "s/version: .*/version: $(VERSION)/" Chart.yaml
 	sed -i "" -e "s|tag: .*|tag: $(VERSION)|" values.yaml
 else ifeq ($(OS),Linux)
-	sed -i -e "s/version:.*/version: $(VERSION)/" Chart.yaml
+	sed -i -e "s/version: .*/version: $(VERSION)/" Chart.yaml
 	sed -i -e "s|repository: .*|repository: $(REGISTRY)\/$(NAME)|" values.yaml
 	sed -i -e "s|tag: .*|tag: $(VERSION)|" values.yaml
 else

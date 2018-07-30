@@ -30,9 +30,7 @@ install: clean build
 upgrade: clean build
 	helm upgrade ${NAME} .
 
-release: clean
-	helm dependency build
-	helm lint
+release: clean build
 	helm push . chartmuseum
 
 delete:

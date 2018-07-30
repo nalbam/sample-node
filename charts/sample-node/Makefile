@@ -24,6 +24,7 @@ clean:
 build: clean
 	rm -rf requirements.lock
 	helm dependency build
+	helm init --client-only
 	helm lint
 
 install: clean build

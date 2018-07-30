@@ -1,5 +1,5 @@
 OS := $(shell uname)
-CURRENT=$(pwd)
+CURRENT=$(shell pwd)
 
 NAME := $(shell sed -n 's/^name: //p' Chart.yaml)
 VERSION := $(shell cat /home/jenkins/VERSION)

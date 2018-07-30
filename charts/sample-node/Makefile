@@ -8,12 +8,12 @@ CHARTMUSEUM := $(shell cat /home/jenkins/CHARTMUSEUM)
 REGISTRY := $(shell cat /home/jenkins/REGISTRY)
 
 out:
-	echo "OS: ${OS}"
-	echo "CURRENT: ${CURRENT}"
-	echo "NAME: ${NAME}"
-	echo "VERSION: ${VERSION}"
-	echo "CHARTMUSEUM: ${CHARTMUSEUM}"
-	echo "REGISTRY: ${REGISTRY}"
+	# "OS: ${OS}"
+	# "CURRENT: ${CURRENT}"
+	# "NAME: ${NAME}"
+	# "VERSION: ${VERSION}"
+	# "CHARTMUSEUM: ${CHARTMUSEUM}"
+	# "REGISTRY: ${REGISTRY}"
 
 clean:
 	rm -rf charts
@@ -53,7 +53,7 @@ else
 	echo "platfrom $(OS) not supported to release from"
 	exit -1
 endif
-	git add --all
-	git commit -m "release $(VERSION)" --allow-empty # if first release then no verion update is performed
-	git tag -fa v$(VERSION) -m "Release version $(VERSION)"
-	git push origin v$(VERSION)
+	# git add --all
+	# git commit -m "release $(VERSION)" --allow-empty # if first release then no verion update is performed
+	# git tag -fa v$(VERSION) -m "Release version $(VERSION)"
+	# git push origin v$(VERSION)

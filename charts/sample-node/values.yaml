@@ -24,4 +24,4 @@ ingress:
 basedomain: apps.opspresso.com
 env:
 - name: REDIS_URL
-  value: "redis://redis-master:6379"
+  value: "redis://redis-master.default:6379"

@@ -1,14 +1,12 @@
 # Default values for node.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
-nameOverride: sample-node
-replicaCount: 1
+replicaCount: 2
 image:
-  repository: docker-registory/sample-node
+  repository: acme
   tag: latest
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 service:
-  name: node
   type: ClusterIP
   externalPort: 80
   internalPort: 3000

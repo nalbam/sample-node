@@ -2,7 +2,7 @@ OS := $(shell uname)
 CURRENT=$(shell pwd)
 
 NAME := $(shell sed -n 's/^name: //p' Chart.yaml)
-VERSION := $(shell cat /home/jenkins/VERSION)-$(shell git rev-parse --short=6 HEAD)
+VERSION := $(shell cat /home/jenkins/VERSION)
 
 BASE_DOMAIN := $(shell cat /home/jenkins/BASE_DOMAIN)
 CHARTMUSEUM := $(shell cat /home/jenkins/CHARTMUSEUM)

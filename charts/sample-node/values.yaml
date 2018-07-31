@@ -1,6 +1,7 @@
 # Default values for node.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
+nameOverride: sample-node
 replicaCount: 1
 image:
   repository: docker-registory/sample-node

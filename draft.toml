@@ -1,6 +1,6 @@
 [environments]
   [environments.development]
-    name = "sample-node-development"
+    name = "sample-node"
     namespace = "default"
     wait = true
     watch = false
@@ -9,7 +9,7 @@
     dockerfile = ""
     chart = ""
   [environments.staging]
-    name = "sample-node-staging"
+    name = "sample-node"
     namespace = "staging"
     wait = true
     watch = false

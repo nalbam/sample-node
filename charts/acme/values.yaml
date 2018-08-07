@@ -28,3 +28,7 @@ hpa:
 env:
 - name: REDIS_URL
   value: "redis://redis-master.default:6379"
+configmap:
+  enabled: false
+secret:
+  enabled: false

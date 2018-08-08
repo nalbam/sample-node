@@ -1,7 +1,4 @@
-# Default values for node.
-# This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
-replicaCount: 2
+replicaCount: 1
 image:
   repository: acme
   tag: latest
@@ -22,7 +19,7 @@ ingress:
   basedomain: apps.opspresso.com
 hpa:
   enabled: true
-  min: 2
+  min: 1
   max: 30
   cpu: 50
 env:

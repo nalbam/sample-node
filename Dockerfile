@@ -1,18 +1,15 @@
 # Dockerfile
 
-FROM node:latest
-
-MAINTAINER me@nalbam.com
+FROM node:10
 
 ENV TZ=Asia/Seoul
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 EXPOSE 3000
 
-WORKDIR data
+ADD src /data
 
-COPY server.js .
-COPY package.json .
+WORKDIR data
 
 RUN npm install -s
 

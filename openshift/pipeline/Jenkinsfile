@@ -10,42 +10,66 @@ echo "JENKINS_URL  ${env.JENKINS_URL}"
 echo "SLACK_URL    ${env.SLACK_WEBHOOK_URL}"
 
 node('nodejs') {
-  String app = "${env.APPLICATION_NAME}"
+  def app = "${env.APPLICATION_NAME}"
+  def ver = "1.0.0"
 
-  //String git_url = "${env.SOURCE_REPOSITORY_URL}"
-  //String git_ref = "${env.SOURCE_REPOSITORY_REF}"
+  def git_url = "${env.SOURCE_REPOSITORY_URL}"
+  def git_ref = "${env.SOURCE_REPOSITORY_REF}"
 
-  String jenkins = "${env.JENKINS_URL}/blue/organizations/jenkins"
-  String job = "${env.JOB_NAME}".replaceAll(/\//, '%2F')
-  String url = "${jenkins}/${job}/detail/ops-${env.APPLICATION_NAME}-pipeline/${env.BUILD_NUMBER}/pipeline/"
-  echo "Pipeline: ${url}"
+  def jenkins = "${env.JENKINS_URL}/blue/organizations/jenkins"
+  def job = "${env.JOB_NAME}".replaceAll(/\//, '%2F')
+  def url = "${jenkins}/${job}/detail/ops-${env.APPLICATION_NAME}-pipeline/${env.BUILD_NUMBER}/pipeline/"
+  echo "PIPELINE ${url}"
 
+  stage('Checkout') {
+    if (env.SOURCE_REPOSITORY_SECRET) {
+      git(url: git_url, branch: git_ref, credentialsId: "ops-${env.SOURCE_REPOSITORY_SECRET}")
+    } else {
+      git(url: git_url, branch: git_ref)
+    }
+    def rev = sh(script: "git rev-parse --short=6 HEAD", returnStdout: true)
+    if (git_ref == 'master') {
+      ver = "${ver}-${rev}"
+    } else {
+      ver = "${ver}-SNAPSHOT"
+    }
+    echo "VERSION ${ver}"
+  }
   stage('Build Image') {
     openshiftBuild(namespace: 'ops', buildConfig: app, showBuildLogs: 'true')
-    notify("good", "Build Success: ${env.APPLICATION_NAME} <${url}|#${env.BUILD_NUMBER}>")
+    openshiftTag(namespace: 'ops', sourceStream: app, sourceTag: 'latest', destinationNamespace: 'ops', destinationStream: app, destinationTag: ver)
+    notify("good", "Build Success: ${app}-${ver} <${url}|#${env.BUILD_NUMBER}>")
   }
   stage('Deploy DEV') {
-    openshiftTag(namespace: 'ops', sourceStream: app, sourceTag: 'latest', destinationNamespace: 'dev', destinationStream: app, destinationTag: 'latest')
+    try {
+      sh "oc new-app -f ./openshift/templates/deploy.yml -n dev"
+    } catch (ignored) {
+    }
+    openshiftTag(namespace: 'ops', sourceStream: app, sourceTag: ver, destinationNamespace: 'dev', destinationStream: app, destinationTag: 'latest')
     openshiftDeploy(namespace: 'dev', deploymentConfig: app)
-    openshiftScale(namespace: 'dev', deploymentConfig: app, replicaCount: '1')
+    //openshiftScale(namespace: 'dev', deploymentConfig: app, replicaCount: '1')
   }
   stage('Proceed QA') {
-    notify("#439FE0", "Proceed QA?: ${env.APPLICATION_NAME} <${url}|#${env.BUILD_NUMBER}>")
+    notify("#439FE0", "Proceed QA?: ${app}-${ver} <${url}|#${env.BUILD_NUMBER}>")
     timeout(time: 15, unit: 'MINUTES') {
-      input(message: 'Proceed QA?')
+      input(message: "Proceed QA?: ${app}-${ver}")
     }
   }
   stage('Deploy QA') {
-    openshiftTag(namespace: 'ops', sourceStream: app, sourceTag: 'latest', destinationNamespace: 'qa', destinationStream: app, destinationTag: 'latest')
+    try {
+      sh "oc new-app -f ./openshift/templates/deploy.yml -n qa"
+    } catch (ignored) {
+    }
+    openshiftTag(namespace: 'ops', sourceStream: app, sourceTag: ver, destinationNamespace: 'qa', destinationStream: app, destinationTag: 'latest')
     openshiftDeploy(namespace: 'qa', deploymentConfig: app)
-    openshiftScale(namespace: 'qa', deploymentConfig: app, replicaCount: '1')
+    //openshiftScale(namespace: 'qa', deploymentConfig: app, replicaCount: '1')
   }
 }
 
 def notify(color, message) {
   try {
     if (env.SLACK_WEBHOOK_URL) {
-      sh "curl -s http://toast.sh/helper/slack.sh | bash -s -- -u=${env.SLACK_WEBHOOK_URL} --color=${color} '${message}'"
+      sh "curl -s https://toast.sh/helper/slack.sh | bash -s -- -u=${env.SLACK_WEBHOOK_URL} --color=${color} '${message}'"
     }
   } catch (ignored) {
   }

@@ -1,10 +1,14 @@
 {
   "name": "sample-node",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Node.js sample app",
   "main": "server.js",
   "dependencies": {
-    "moment-timezone": "^0.5.14"
+    "cors": "^2.8.4",
+    "ejs": "^2.6.1",
+    "express": "^4.16.3",
+    "moment-timezone": "^0.5.21",
+    "redis": "^2.8.0"
   },
   "engine": {
     "node": "*",

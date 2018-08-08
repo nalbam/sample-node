@@ -3,9 +3,9 @@
 ## Docker
 
 ```bash
-docker pull nalbam/sample-node:latest # 268MB
-docker pull nalbam/sample-node:slim   #  69MB
-docker pull nalbam/sample-node:alpine #  25MB
+docker pull nalbam/sample-node:latest # 269MB
+docker pull nalbam/sample-node:slim   #  70MB
+docker pull nalbam/sample-node:alpine #  27MB
 ```
 
 * <https://hub.docker.com/r/nalbam/sample-node/>

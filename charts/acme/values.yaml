@@ -27,7 +27,7 @@ hpa:
   cpu: 50
 env:
 - name: REDIS_URL
-  value: "redis://redis-master.default:6379"
+  value: "redis://sample-redis.default:6379"
 configmap:
   enabled: false
 secret:

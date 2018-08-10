@@ -11,6 +11,4 @@ ADD src /data
 
 WORKDIR data
 
-RUN npm install -s
-
 CMD ["node", "server.js"]

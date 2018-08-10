@@ -139,11 +139,10 @@ podTemplate(label: label, containers: [
     }
   }
 }
-
-def notify(color, message) {
+def notify(COLOR, MESSAGE) {
   try {
-    if (env.SLACK_WEBHOOK_URL) {
-      sh "curl -sL toast.sh/helper/slack.sh | bash -s -- --token=$SLACK_TOKEN --color=$color '$message'"
+    if (SLACK_TOKEN) {
+      sh "curl -sL toast.sh/helper/slack.sh | bash -s -- --token=$SLACK_TOKEN --color=$COLOR '$MESSAGE'"
     }
   } catch (ignored) {
   }

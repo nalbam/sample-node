@@ -47,8 +47,8 @@ podTemplate(label: label, containers: [
         """
       }
     }
-    def JENKINS = readFile "/home/jenkins/JENKINS"
-    def PIPELINE = "https://$JENKINS/blue/organizations/jenkins/$JOB_NAME/detail/$JOB_NAME/$BUILD_NUMBER/pipeline"
+    // def JENKINS = readFile "/home/jenkins/JENKINS"
+    // def PIPELINE = "https://$JENKINS/blue/organizations/jenkins/$JOB_NAME/detail/$JOB_NAME/$BUILD_NUMBER/pipeline"
     def LANG = readFile "/home/jenkins/SOURCE_LANG"
     if (LANG == 'java') {
       stage("Build") {

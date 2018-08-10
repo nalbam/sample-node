@@ -10,11 +10,8 @@
     "moment-timezone": "^0.5.21",
     "redis": "^2.8.0"
   },
-  "engine": {
-    "node": "*",
-    "npm": "*"
-  },
   "scripts": {
+    "build": "npm install -s",
     "start": "node server.js"
   },
   "repository": {

@@ -63,7 +63,7 @@ podTemplate(label: label, containers: [
             mvn package -s .m2/settings.xml
           """
         }
-        notify("good", "Build Success: $IMAGE_NAME-$VERSION <$PIPELINE|#$BUILD_NUMBER>")
+        //notify("good", "Build Success: $IMAGE_NAME-$VERSION <$PIPELINE|#$BUILD_NUMBER>")
       }
     }
     else if (LANG == 'nodejs') {
@@ -75,7 +75,7 @@ podTemplate(label: label, containers: [
             npm run build
           """
         }
-        notify("good", "Build Success: $IMAGE_NAME-$VERSION <$PIPELINE|#$BUILD_NUMBER>")
+        //notify("good", "Build Success: $IMAGE_NAME-$VERSION <$PIPELINE|#$BUILD_NUMBER>")
       }
     }
     else {
@@ -139,11 +139,11 @@ podTemplate(label: label, containers: [
     }
   }
 }
-def notify(COLOR, MESSAGE) {
-  try {
-    if (SLACK_TOKEN) {
-      sh "curl -sL toast.sh/helper/slack.sh | bash -s -- --token=$SLACK_TOKEN --color=$COLOR '$MESSAGE'"
-    }
-  } catch (ignored) {
-  }
-}
+// def notify(COLOR, MESSAGE) {
+//   try {
+//     if (SLACK_TOKEN) {
+//       sh "curl -sL toast.sh/helper/slack.sh | bash -s -- --token=$SLACK_TOKEN --color=$COLOR '$MESSAGE'"
+//     }
+//   } catch (ignored) {
+//   }
+// }

@@ -3,6 +3,10 @@
   "version": "0.0.2",
   "description": "Node.js sample app",
   "main": "server.js",
+  "scripts": {
+    "build": "npm install -s",
+    "start": "node server.js"
+  },
   "dependencies": {
     "cors": "^2.8.4",
     "ejs": "^2.6.1",
@@ -10,17 +14,13 @@
     "moment-timezone": "^0.5.21",
     "redis": "^2.8.0"
   },
-  "scripts": {
-    "build": "npm install -s",
-    "start": "node server.js"
-  },
   "repository": {
     "type": "git",
     "url": "http://github.com/nalbam/sample-node.git"
   },
   "author": "Jungyoul Yu <me@nalbam.com>",
+  "homepage": "http://github.com/nalbam/sample-node",
   "bugs": {
     "url": "http://github.com/nalbam/sample-node/issues"
-  },
-  "homepage": "http://github.com/nalbam/sample-node"
+  }
 }

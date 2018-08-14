@@ -25,32 +25,37 @@ podTemplate(label: label, containers: [
   hostPathVolume(mountPath: "/home/jenkins/.helm", hostPath: "/home/jenkins/.helm")
 ]) {
   node(label) {
-    stage("Checkout") {
-      if (REPOSITORY_SECRET) {
-        git(url: "$REPOSITORY_URL", branch: "$BRANCH_NAME", credentialsId: "$REPOSITORY_SECRET")
-      } else {
-        git(url: "$REPOSITORY_URL", branch: "$BRANCH_NAME")
-      }
-    }
     stage("Prepare") {
       container("builder") {
         sh """
-          bash /root/extra/build-init.sh $IMAGE_NAME $BRANCH_NAME
+          bash /root/extra/prepare.sh $IMAGE_NAME $BRANCH_NAME
         """
         VERSION = readFile "/home/jenkins/VERSION"
-        SOURCE_LANG = readFile "/home/jenkins/SOURCE_LANG"
-        SOURCE_ROOT = readFile "/home/jenkins/SOURCE_ROOT"
         BASE_DOMAIN = readFile "/home/jenkins/BASE_DOMAIN"
         JENKINS = readFile "/home/jenkins/JENKINS"
         REGISTRY = readFile "/home/jenkins/REGISTRY"
         PIPELINE = "https://$JENKINS/blue/organizations/jenkins/$JOB_NAME/detail/$JOB_NAME/$BUILD_NUMBER/pipeline"
-        if (SOURCE_LANG == 'java') {
-          def NEXUS = readFile "/home/jenkins/NEXUS"
-          if (NEXUS) {
-            def NEXUS_PUBLIC = "https://$NEXUS/repository/maven-public/"
-            sh "sed -i 's|<!-- ### configured mirrors ### -->|<mirror><id>mirror</id><url>$NEXUS_PUBLIC</url><mirrorOf>*</mirrorOf></mirror>|' .m2/settings.xml"
-          }
+      }
+    }
+    stage("Checkout") {
+      try {
+        if (REPOSITORY_SECRET) {
+          git(url: "$REPOSITORY_URL", branch: "$BRANCH_NAME", credentialsId: "$REPOSITORY_SECRET")
+        } else {
+          git(url: "$REPOSITORY_URL", branch: "$BRANCH_NAME")
         }
+      } catch (e) {
+        container("builder") {
+          checkout_failure(IMAGE_NAME, PIPELINE)
+        }
+        throw e
+      }
+      container("builder") {
+        sh """
+          bash /root/extra/detect.sh
+        """
+        SOURCE_LANG = readFile "/home/jenkins/SOURCE_LANG"
+        SOURCE_ROOT = readFile "/home/jenkins/SOURCE_ROOT"
         sh """
           sed -i -e "s/name: .*/name: $IMAGE_NAME/" charts/acme/Chart.yaml
           sed -i -e "s/version: .*/version: $VERSION/" charts/acme/Chart.yaml
@@ -61,36 +66,42 @@ podTemplate(label: label, containers: [
         """
       }
     }
-    if (SOURCE_LANG == 'java') {
-      stage("Build") {
+    stage("Build") {
+      if (SOURCE_LANG == "java") {
         container("maven") {
-          sh """
-            cd $SOURCE_ROOT
-            mvn package -s .m2/settings.xml
-          """
-          notify("good", "Build Success: $IMAGE_NAME-$VERSION <$PIPELINE|#$BUILD_NUMBER>")
+          try {
+            sh """
+              cd $SOURCE_ROOT
+              mvn package -s /home/jenkins/settings.xml
+            """
+            build_success(IMAGE_NAME, VERSION, PIPELINE)
+          } catch (e) {
+            build_failure(IMAGE_NAME, PIPELINE)
+            throw e
+          }
         }
       }
-    }
-    else if (SOURCE_LANG == 'nodejs') {
-      stage("Build") {
+      else if (SOURCE_LANG == "nodejs") {
         container("node") {
-          sh """
-            cd $SOURCE_ROOT
-            npm run build
-          """
-          notify("good", "Build Success: $IMAGE_NAME-$VERSION <$PIPELINE|#$BUILD_NUMBER>")
+          try {
+            sh """
+              cd $SOURCE_ROOT
+              npm run build
+            """
+            build_success(IMAGE_NAME, VERSION, PIPELINE)
+          } catch (e) {
+            build_failure(IMAGE_NAME, PIPELINE)
+            throw e
+          }
         }
       }
-    }
-    else {
-      stage("Build") {
+      else {
         sh """
           echo "skipped."
         """
       }
     }
-    if (BRANCH_NAME != 'master') {
+    if (BRANCH_NAME != "master") {
       stage("Deploy Development") {
         container("builder") {
           def NAMESPACE = "development"
@@ -103,43 +114,48 @@ podTemplate(label: label, containers: [
         }
       }
     }
-    if (BRANCH_NAME == 'master') {
+    if (BRANCH_NAME == "master") {
       stage("Build Image") {
-        container("docker") {
-          sh """
-            docker build -t $REGISTRY/$IMAGE_NAME:$VERSION .
-            docker push $REGISTRY/$IMAGE_NAME:$VERSION
-          """
-        }
-      }
-      stage("Build Charts") {
-        container("builder") {
-          sh """
-            bash /root/extra/helm-init.sh
-            cd charts/$IMAGE_NAME
-            helm lint .
-            helm push . chartmuseum
-            helm repo update
-            helm search $IMAGE_NAME
-          """
-        }
+        parallel(
+          "Build Docker": {
+            container("docker") {
+              sh """
+                docker build -t $REGISTRY/$IMAGE_NAME:$VERSION .
+                docker push $REGISTRY/$IMAGE_NAME:$VERSION
+              """
+            }
+          },
+          "Build Charts": {
+            container("builder") {
+              sh """
+                bash /root/extra/helm-init.sh
+                cd charts/$IMAGE_NAME
+                helm lint .
+                helm push . chartmuseum
+                helm repo update
+                helm search $IMAGE_NAME
+              """
+            }
+          }
+        )
       }
       stage("Staging") {
         container("builder") {
           def NAMESPACE = "staging"
           sh """
             helm upgrade --install $IMAGE_NAME-$NAMESPACE chartmuseum/$IMAGE_NAME \
-                         --version $VERSION --namespace $NAMESPACE --devel \
-                         --set fullnameOverride=$IMAGE_NAME-$NAMESPACE
+                        --version $VERSION --namespace $NAMESPACE --devel \
+                        --set fullnameOverride=$IMAGE_NAME-$NAMESPACE
             helm history $IMAGE_NAME-$NAMESPACE
           """
         }
       }
-      stage('Proceed') {
+      stage("Confirm") {
         container("builder") {
-          notify("#439FE0", "Proceed Production?: $IMAGE_NAME-$VERSION <$PIPELINE|#$BUILD_NUMBER>")
-          timeout(time: 60, unit: 'MINUTES') {
-            input(message: "Proceed Production?: $IMAGE_NAME-$VERSION")
+          def NAMESPACE = "production"
+          deploy_confirm(IMAGE_NAME, VERSION, NAMESPACE, PIPELINE)
+          timeout(time: 60, unit: "MINUTES") {
+            input(message: "$IMAGE_NAME $VERSION to $NAMESPACE")
           }
         }
       }
@@ -148,8 +164,8 @@ podTemplate(label: label, containers: [
           def NAMESPACE = "production"
           sh """
             helm upgrade --install $IMAGE_NAME-$NAMESPACE chartmuseum/$IMAGE_NAME \
-                         --version $VERSION --namespace $NAMESPACE --devel \
-                         --set fullnameOverride=$IMAGE_NAME-$NAMESPACE
+                        --version $VERSION --namespace $NAMESPACE --devel \
+                        --set fullnameOverride=$IMAGE_NAME-$NAMESPACE
             helm history $IMAGE_NAME-$NAMESPACE
           """
         }
@@ -157,10 +173,25 @@ podTemplate(label: label, containers: [
     }
   }
 }
-def notify(COLOR, MESSAGE) {
+def checkout_failure(IMAGE_NAME, PIPELINE) {
+  notify("danger", "Checkout Failure", "`$IMAGE_NAME`", "$env.JOB_NAME <$PIPELINE|#$env.BUILD_NUMBER>")
+}
+def build_failure(IMAGE_NAME, PIPELINE) {
+  notify("danger", "Build Failure", "`$IMAGE_NAME`", "$env.JOB_NAME <$PIPELINE|#$env.BUILD_NUMBER>")
+}
+def build_success(IMAGE_NAME, VERSION, PIPELINE) {
+  notify("good", "Build Success", "`$IMAGE_NAME` `$VERSION` :heavy_check_mark:", "$env.JOB_NAME <$PIPELINE|#$env.BUILD_NUMBER>")
+}
+def deploy_confirm(IMAGE_NAME, VERSION, STAGE, PIPELINE) {
+  notify("warning", "Deply Confirm", "`$IMAGE_NAME` `$VERSION` :rocket: `$STAGE`", "$env.JOB_NAME <$PIPELINE|#$env.BUILD_NUMBER>")
+}
+def notify(COLOR, TITLE, MESSAGE, LINK) {
   try {
     if (SLACK_TOKEN) {
-      sh "curl -sL toast.sh/helper/slack.sh | bash -s -- --token=$SLACK_TOKEN --color=$COLOR '$MESSAGE'"
+      sh """
+        curl -sL toast.sh/helper/slack.sh | bash -s -- --token='$SLACK_TOKEN' \
+             --color='$COLOR' --title='$TITLE' --footer='$LINK' '$MESSAGE'
+      """
     }
   } catch (ignored) {
   }

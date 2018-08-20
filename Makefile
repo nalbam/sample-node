@@ -1,10 +1,10 @@
 OS := $(shell uname)
 
-NAME := $(shell cat $(HOME)NAME)
-VERSION := $(shell cat $(HOME)VERSION)
+NAME := $(shell cat $(HOME)/NAME)
+VERSION := $(shell cat $(HOME)/VERSION)
 
-REGISTRY := $(shell cat $(HOME)REGISTRY)
-CHARTMUSEUM := $(shell cat $(HOME)CHARTMUSEUM)
+REGISTRY := $(shell cat $(HOME)/REGISTRY)
+CHARTMUSEUM := $(shell cat $(HOME)/CHARTMUSEUM)
 
 draft-init:
 	draft version

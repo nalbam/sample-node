@@ -15,7 +15,7 @@ endif
 
 draft-up: draft-init
 	sed -i -e "s/NAMESPACE/$(NAMESPACE)/g" draft.toml
-	sed -i -e "s/NAME/$(NAME)-$(NAMESPACE))/g" draft.toml
+	sed -i -e "s/NAME/$(NAME)-$(NAMESPACE)/g" draft.toml
 	draft up -e $(NAMESPACE)
 
 helm-init:

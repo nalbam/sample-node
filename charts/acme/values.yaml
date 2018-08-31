@@ -9,23 +9,16 @@ service:
   internalPort: 3000
 resources:
   limits:
-    cpu: 400m
+    cpu: 200m
     memory: 256Mi
   requests:
     cpu: 200m
-    memory: 128Mi
+    memory: 256Mi
 ingress:
   enabled: true
-  basedomain: apps.opspresso.com
+  basedomain: opspresso.com
 hpa:
   enabled: true
   min: 1
   max: 30
   cpu: 50
-env:
-- name: REDIS_URL
-  value: "redis://sample-redis.default:6379"
-configmap:
-  enabled: false
-secret:
-  enabled: false

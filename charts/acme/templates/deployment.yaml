@@ -23,10 +23,9 @@ spec:
         - containerPort: {{ .Values.service.internalPort }}
         resources:
 {{ toYaml .Values.resources | indent 10 }}
-        env:
-{{ toYaml .Values.env | indent 10 }}
+{{- if or .Values.configmap.enabled .Values.secret.enabled -}}
         envFrom:
-{{ toYaml .Values.envFrom | indent 10 }}
+{{- end -}}
 {{- if .Values.configmap.enabled -}}
         - configMapRef:
             name: {{ template "fullname" . }}

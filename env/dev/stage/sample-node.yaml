@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sample-node-stage
+data:
+  PROFILE: stage
+  REDIS_URL: redis://sample-redis.default:6379

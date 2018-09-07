@@ -28,3 +28,7 @@ env:
 envFrom:
   # - configMapRef:
   #   name: sample-config
+configmap:
+  enabled: false
+secret:
+  enabled: false

@@ -3,5 +3,4 @@ kind: ConfigMap
 metadata:
   name: REPLACE-FULLNAME
 data:
-  PROFILE: dev
   REDIS_URL: redis://sample-redis.default:6379

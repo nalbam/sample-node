@@ -23,14 +23,14 @@ spec:
         - containerPort: {{ .Values.service.internalPort }}
         resources:
 {{ toYaml .Values.resources | indent 10 }}
-{{- if or .Values.configmap.enabled .Values.secret.enabled -}}
+{{ if or .Values.configmap.enabled .Values.secret.enabled }}
         envFrom:
-{{- end -}}
-{{- if .Values.configmap.enabled -}}
+{{ end }}
+{{ if .Values.configmap.enabled }}
           - configMapRef:
               name: {{ template "fullname" . }}
-{{- end -}}
-{{- if .Values.secret.enabled -}}
+{{ end }}
+{{ if .Values.secret.enabled }}
           - secretRef:
               name: {{ template "fullname" . }}
-{{- end -}}
+{{ end }}

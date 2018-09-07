@@ -27,12 +27,4 @@ env:
   #   value: "Hello from the environment"
 envFrom:
   # - configMapRef:
-  #   name: sample-config-map
-configmap:
-  enabled: false
-  # data:
-  #   PROFILE: profile
-secret:
-  enabled: false
-  # data:
-  #   PASSWORD: cGFzc3dvcmQ=
+  #   name: sample-config

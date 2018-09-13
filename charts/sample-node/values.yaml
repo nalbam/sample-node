@@ -1,10 +1,10 @@
 replicaCount: 1
 image:
-  repository: acme
+  repository: docker-registry.127.0.0.1.nip.io/sample-node
   tag: latest
   pullPolicy: Always
 service:
-  type: ClusterIP
+  type: NodePort
   externalPort: 80
   internalPort: 3000
 resources:
@@ -16,7 +16,7 @@ resources:
     memory: 256Mi
 ingress:
   enabled: true
-  basedomain: opspresso.com
+  basedomain: 127.0.0.1.nip.io
 hpa:
   enabled: true
   min: 1

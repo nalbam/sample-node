@@ -14,9 +14,26 @@ $RECYCLE.BIN/
 # Mac
 .DS_Store
 
+# Java
+.project
+.classpath
+.factorypath
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+
+# Maven
+target/
+build/
+bin/
+
 # Nodejs
 node_modules/
 package-lock.json
+dist/
 
 # JetBrains
 .idea/
@@ -25,10 +42,8 @@ package-lock.json
 # Eclipse
 .settings/
 .metadata/
-.project
 
 # Temp
 *.pid
 *.log
 *.tmp
-VERSION

@@ -26,6 +26,10 @@ spec:
         env:
           - name: PROFILE
             value: {{ .Values.profile }}
+{{ if .Values.redis.enabled }}
+          - name: REDIS_URL
+            value: "redis://{{ template "fullname" . }}-redis:6379"
+{{ end }}
 {{ if or .Values.configmap.enabled .Values.secret.enabled }}
         envFrom:
 {{ end }}

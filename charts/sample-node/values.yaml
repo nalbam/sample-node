@@ -23,6 +23,8 @@ hpa:
   max: 5
   cpu: 50
 profile: default
+redis:
+  enabled: true
 configmap:
   enabled: false
 secret:

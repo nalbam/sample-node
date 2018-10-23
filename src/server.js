@@ -50,6 +50,14 @@ app.get('/', function (req, res) {
     res.render('index.ejs', {host: host, date: date});
 });
 
+app.get('/stress', function (req, res) {
+    let sum = 0;
+    for (let i = 0; i < 1000000; i++) {
+        sum += Math.sqrt(i);
+    }
+    return res.status(200).json({sum : sum});
+});
+
 app.get('/cache/:name', function (req, res) {
     const name = req.params.name;
     return client.get(`cache:${name}`, (err, result) => {

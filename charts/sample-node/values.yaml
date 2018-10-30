@@ -6,6 +6,8 @@ image:
 canary:
   enabled: false
   tag: latest
+istio:
+  enabled: true
 service:
   type: ClusterIP
   externalPort: 80

@@ -6,8 +6,6 @@ const os = require('os'),
     moment = require('moment-timezone'),
     redis = require('redis');
 
-// REDIS_HOST=localhost node server.js
-
 // express
 const app = express();
 app.set('view engine', 'ejs');
@@ -17,8 +15,11 @@ app.use(express.json());
 app.use('/favicon.ico', express.static('views/favicon.ico'));
 app.use('/counter.js', express.static('views/counter.js'));
 
+// env
+const PROFILE = process.env.PROFILE || 'default';
+const REDIS_URL = process.env.REDIS_URL || `redis://sample-node-${PROFILE}-redis:6379`;
+
 // redis
-const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 const retry_strategy = function(options) {
     if (options.error && (options.error.code === 'ECONNREFUSED' || options.error.code === 'NR_CLOSED')) {
         // Try reconnecting after 5 seconds

@@ -18,14 +18,14 @@ readinessProbe:
   httpGet:
     path: /
     port: 3000
-  initialDelaySeconds: 30
+  initialDelaySeconds: 15
   periodSeconds: 15
   failureThreshold: 6
 livenessProbe:
   httpGet:
     path: /
     port: 3000
-  initialDelaySeconds: 30
+  initialDelaySeconds: 15
   periodSeconds: 15
   failureThreshold: 6
 ingress:
@@ -38,8 +38,6 @@ hpa:
   cpu: 65
   mem: 65
 profile: default
-redis:
-  enabled: true
 configmap:
   enabled: false
 secret:

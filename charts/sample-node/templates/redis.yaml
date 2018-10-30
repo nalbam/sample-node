@@ -1,23 +1,23 @@
-{{- if .Values.redis.enabled -}}
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: {{ template "fullname" . }}-redis
-  labels:
-    draft: {{ default "draft-app" .Values.draft }}
-    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
-    app: {{ template "fullname" . }}-redis
+  # labels:
+  #   draft: {{ default "draft-app" .Values.draft }}
+  #   chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
+  #   app: {{ template "fullname" . }}-redis
 spec:
   replicas: 1
   template:
     metadata:
       labels:
-        draft: {{ default "draft-app" .Values.draft }}
+        # draft: {{ default "draft-app" .Values.draft }}
+        # chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
         app: {{ template "fullname" . }}-redis
-        version: {{ .Values.image.tag }}
+        version: master
     spec:
       containers:
-      - name: master
+      - name: redis
         image: redis
         ports:
         - containerPort: 6379
@@ -46,4 +46,3 @@ spec:
     targetPort: 6379
   selector:
     app: {{ template "fullname" . }}-redis
-{{- end -}}

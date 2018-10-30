@@ -1,11 +1,12 @@
+{{- if .Values.canary.enabled -}}
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: {{ template "fullname" . }}
-  labels:
-    draft: {{ default "draft-app" .Values.draft }}
-    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
-    app: {{ template "fullname" . }}
+  name: {{ template "fullname" . }}-canary
+  # labels:
+  #   draft: {{ default "draft-app" .Values.draft }}
+  #   chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
+  #   app: {{ template "fullname" . }}
 spec:
   replicas: {{ .Values.replicaCount }}
   template:
@@ -13,8 +14,10 @@ spec:
       annotations:
         buildID: {{ .Values.buildID }}
       labels:
+        # draft: {{ default "draft-app" .Values.draft }}
+        # chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
         app: {{ template "fullname" . }}
-        version: master
+        version: canary
     spec:
       containers:
       - name: {{ .Chart.Name }}
@@ -41,4 +44,5 @@ spec:
 {{ if .Values.secret.enabled }}
           - secretRef:
               name: {{ template "fullname" . }}
+{{ end }}
 {{ end }}

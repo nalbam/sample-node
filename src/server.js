@@ -35,7 +35,7 @@ const retry_strategy = function(options) {
         return undefined;
     }
     // reconnect after
-    return Math.min(options.attempt * 100, 3000);
+    return Math.min(options.attempt * 100, 5000);
 };
 const client = redis.createClient(REDIS_URL, {retry_strategy: retry_strategy});
 client.on('connect', () => {
@@ -46,14 +46,14 @@ client.on('error', err => {
 });
 
 app.get('/', function (req, res) {
-    console.log(`${req.method} ${req.path}`);
+    // console.log(`${req.method} ${req.path}`);
     let host = os.hostname();
     let date = moment().tz('Asia/Seoul').format();
     res.render('index.ejs', {host: host, date: date});
 });
 
 app.get('/stress', function (req, res) {
-    console.log(`${req.method} ${req.path}`);
+    // console.log(`${req.method} ${req.path}`);
     let sum = 0;
     for (let i = 0; i < 1000000; i++) {
         sum += Math.sqrt(i);
@@ -62,50 +62,72 @@ app.get('/stress', function (req, res) {
 });
 
 app.get('/cache/:name', function (req, res) {
-    console.log(`${req.method} ${req.path}`);
+    // console.log(`${req.method} ${req.path}`);
     const name = req.params.name;
     return client.get(`cache:${name}`, (err, result) => {
+        if (err) {
+            console.error(`${err}`);
+            return res.status(500).json({status:500, message:err.message,});
+        }
         return res.status(200).json(result == null ? {} : JSON.parse(result));
     });
 });
 
 app.post('/cache/:name', function (req, res) {
-    console.log(`${req.method} ${req.path}`);
+    // console.log(`${req.method} ${req.path}`);
     const name = req.params.name;
     const json = JSON.stringify(req.body);
     //console.log(`req.body: ${json}`);
     return client.set(`cache:${name}`, json, (err, result) => {
+        if (err) {
+            console.error(`${err}`);
+            return res.status(500).json({status:500, message:err.message,});
+        }
         return res.status(200).json(result == null ? {} : result);
     });
 });
 
 app.get('/counter/:name', function (req, res) {
-    console.log(`${req.method} ${req.path}`);
+    // console.log(`${req.method} ${req.path}`);
     const name = req.params.name;
     return client.get(`counter:${name}`, (err, result) => {
         res.setHeader('Content-Type', 'text/plain; charset=UTF-8');
+        if (err) {
+            console.error(`${err}`);
+            return res.status(500).send(err.message);
+        }
         return res.send(result == null ? '0' : result.toString());
     });
 });
 
 app.post('/counter/:name', function (req, res) {
-    console.log(`${req.method} ${req.path}`);
+    // console.log(`${req.method} ${req.path}`);
     const name = req.params.name;
     return client.incr(`counter:${name}`, (err, result) => {
         res.setHeader('Content-Type', 'text/plain; charset=UTF-8');
+        if (err) {
+            console.error(`${err}`);
+            return res.status(500).send(err.message);
+        }
         return res.send(result == null ? '0' : result.toString());
     });
 });
 
 app.delete('/counter/:name', function (req, res) {
-    console.log(`${req.method} ${req.path}`);
+    // console.log(`${req.method} ${req.path}`);
     const name = req.params.name;
     return client.decr(`counter:${name}`, (err, result) => {
         res.setHeader('Content-Type', 'text/plain; charset=UTF-8');
+        if (err) {
+            console.error(`${err}`);
+            return res.status(500).send(err.message);
+        }
         return res.send(result == null ? '0' : result.toString());
     });
 });
 
 app.listen(3000, function () {
+    console.log(`PROFILE: ${PROFILE}`);
+    console.log(`REDIS_URL: ${REDIS_URL}`);
     console.log('Listening on port 3000!');
 });

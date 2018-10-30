@@ -127,7 +127,5 @@ app.delete('/counter/:name', function (req, res) {
 });
 
 app.listen(3000, function () {
-    console.log(`PROFILE: ${PROFILE}`);
-    console.log(`REDIS_URL: ${REDIS_URL}`);
-    console.log('Listening on port 3000!');
+    console.log(`[${PROFILE}] Listening on port 3000!`);
 });

@@ -2,17 +2,15 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: {{ template "fullname" . }}-redis
-  # labels:
-  #   draft: {{ default "draft-app" .Values.draft }}
-  #   chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
-  #   app: {{ template "fullname" . }}-redis
+  labels:
+    draft: {{ default "draft-app" .Values.draft }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
+    app: {{ template "fullname" . }}-redis
 spec:
   replicas: 1
   template:
     metadata:
       labels:
-        # draft: {{ default "draft-app" .Values.draft }}
-        # chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
         app: {{ template "fullname" . }}-redis
         version: master
     spec:
@@ -41,7 +39,7 @@ metadata:
     app: {{ template "fullname" . }}-redis
 spec:
   ports:
-  - name: redis
+  - name: tcp
     port: 6379
     targetPort: 6379
   selector:

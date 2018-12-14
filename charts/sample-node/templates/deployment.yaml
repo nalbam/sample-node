@@ -40,20 +40,9 @@ spec:
               secretKeyRef:
                 name: {{ template "fullname" . }}
                 key: AES_KEY
-          - name: aws_access_key
+          - name: DEMO
             valueFrom:
               secretKeyRef:
                 name: {{ template "fullname" . }}
-                key: aws_access_key
+                key: DEMO
   # -- coruscant-env -- end -- #
-# {{ if or .Values.configmap.enabled .Values.secret.enabled }}
-#         envFrom:
-# {{ end }}
-# {{ if .Values.configmap.enabled }}
-#           - configMapRef:
-#               name: {{ template "fullname" . }}
-# {{ end }}
-# {{ if .Values.secret.enabled }}
-#           - secretRef:
-#               name: {{ template "fullname" . }}
-# {{ end }}

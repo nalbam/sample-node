@@ -34,7 +34,7 @@ spec:
         env:
           - name: PROFILE
             value: {{ .Values.profile }}
-  # -- coruscant-env -- start -- #
+# -- valve-env -- start -- #
           - name: AES_KEY
             valueFrom:
               secretKeyRef:
@@ -45,4 +45,4 @@ spec:
               secretKeyRef:
                 name: {{ template "fullname" . }}
                 key: DEMO
-  # -- coruscant-env -- end -- #
+# -- valve-env -- end -- #

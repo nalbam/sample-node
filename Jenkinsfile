@@ -1,6 +1,6 @@
 def IMAGE_NAME = "sample-node"
 def REPOSITORY_URL = "git@github.com:nalbam/sample-node.git"
-def REPOSITORY_SECRET = "nalbam-secret"
+def REPOSITORY_SECRET = "bespin-poc-ssh"
 def SLACK_TOKEN = ""
 
 @Library("github.com/opsnow-tools/valve-butler")

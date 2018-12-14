@@ -18,6 +18,7 @@ app.use('/counter.js', express.static('views/counter.js'));
 // env
 const PROFILE = process.env.PROFILE || 'default';
 const REDIS_URL = process.env.REDIS_URL || `redis://sample-node-${PROFILE}-redis:6379`;
+const DEMO = process.env.DEMO || 'demo';
 
 // redis
 const retry_strategy = function(options) {
@@ -49,7 +50,8 @@ app.get('/', function (req, res) {
     // console.log(`${req.method} ${req.path}`);
     let host = os.hostname();
     let date = moment().tz('Asia/Seoul').format();
-    res.render('index.ejs', {host: host, date: date});
+    let demo = DEMO;
+    res.render('index.ejs', {host: host, date: date, demo: demo});
 });
 
 app.get('/stress', function (req, res) {

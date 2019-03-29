@@ -1,21 +1,27 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ template "fullname" . }}-redis
+  name: {{ include "fullname" . }}-redis
   labels:
-    draft: {{ default "draft-app" .Values.draft }}
-    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
-    app: {{ template "fullname" . }}-redis
+    app: {{ include "fullname" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/name: {{ include "fullname" . }}-redis
+    helm.sh/chart: {{ include "chart" . }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: {{ template "fullname" . }}-redis
+      app: {{ include "fullname" . }}-redis
+      # app.kubernetes.io/instance: {{ .Release.Name }}
+      # app.kubernetes.io/name: {{ include "fullname" . }}-redis
   template:
     metadata:
       labels:
-        app: {{ template "fullname" . }}-redis
-        version: master
+        app: {{ include "fullname" . }}-redis
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/managed-by: {{ .Release.Service }}
+        app.kubernetes.io/name: {{ include "fullname" . }}-redis
     spec:
       containers:
       - name: redis

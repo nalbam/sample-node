@@ -35,7 +35,7 @@ ingress:
     # nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
   labels: {}
 
-hpa:
+autoscaling:
   enabled: true
   min: 1
   max: 5
@@ -56,6 +56,7 @@ readinessProbe:
     port: 3000
   initialDelaySeconds: 3
   periodSeconds: 10
+  failureThreshold: 3
 
 livenessProbe:
   httpGet:
@@ -63,6 +64,7 @@ livenessProbe:
     port: 3000
   initialDelaySeconds: 3
   periodSeconds: 10
+  failureThreshold: 3
 # livenessProbe:
 #   exec:
 #     command:
@@ -75,6 +77,9 @@ livenessProbe:
 #     port: 3000
 #   initialDelaySeconds: 3
 #   periodSeconds: 10
+
+# hostNetwork: true
+# dnsPolicy: ClusterFirstWithHostNet
 
 nodeSelector: {}
 

@@ -5,14 +5,28 @@
   "main": "server.js",
   "scripts": {
     "build": "npm install -s",
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "jest"
   },
   "dependencies": {
-    "cors": "^2.8.4",
+    "cors": "^2.8.5",
     "ejs": "^2.6.1",
-    "express": "^4.16.3",
-    "moment-timezone": "^0.5.21",
+    "express": "^4.16.4",
+    "moment-timezone": "^0.5.23",
     "redis": "^2.8.0"
+  },
+  "devDependencies": {
+    "jest": "^23.6.0",
+    "jest-sonar-reporter": "^2.0.0",
+    "sonarqube-scanner": "^2.1.2"
+  },
+  "jest": {
+    "testResultsProcessor": "jest-sonar-reporter"
+  },
+  "jestSonar": {
+    "reportPath": "reports",
+    "reportFile": "test-reporter.xml",
+    "indent": 4
   },
   "repository": {
     "type": "git",

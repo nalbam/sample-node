@@ -3,6 +3,6 @@
 FROM node:10-slim
 EXPOSE 3000
 WORKDIR /data
-RUN npm run build
 CMD ["npm", "run", "start"]
 ADD . /data
+RUN npm run build

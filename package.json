@@ -1,6 +1,6 @@
 {
   "name": "sample-node",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Node.js sample app",
   "main": "server.js",
   "scripts": {
@@ -27,14 +27,5 @@
     "reportPath": "reports",
     "reportFile": "test-reporter.xml",
     "indent": 4
-  },
-  "repository": {
-    "type": "git",
-    "url": "http://github.com/nalbam/sample-node.git"
-  },
-  "author": "Jungyoul Yu <me@nalbam.com>",
-  "homepage": "http://github.com/nalbam/sample-node",
-  "bugs": {
-    "url": "http://github.com/nalbam/sample-node/issues"
   }
 }

@@ -16,9 +16,11 @@ app.use('/favicon.ico', express.static('views/favicon.ico'));
 app.use('/counter.js', express.static('views/counter.js'));
 
 // env
+const PORT = process.env.PORT || 3000;
 const PROFILE = process.env.PROFILE || 'default';
-const REDIS_URL = process.env.REDIS_URL || `redis://sample-node-${PROFILE}-redis:6379`;
-const DEMO = process.env.DEMO || 'demo';
+const NAMESPACE = process.env.NAMESPACE || 'default';
+const REDIS_URL = process.env.REDIS_URL || `redis://sample-node-${NAMESPACE}-redis:6379`;
+const MESSAGE = process.env.MESSAGE || PROFILE;
 
 // redis
 const retry_strategy = function(options) {
@@ -50,8 +52,8 @@ app.get('/', function (req, res) {
     // console.log(`${req.method} ${req.path}`);
     let host = os.hostname();
     let date = moment().tz('Asia/Seoul').format();
-    let demo = DEMO;
-    res.render('index.ejs', {host: host, date: date, demo: demo});
+    let message = MESSAGE;
+    res.render('index.ejs', {host: host, date: date, message: message});
 });
 
 app.get('/stress', function (req, res) {
@@ -128,6 +130,7 @@ app.delete('/counter/:name', function (req, res) {
     });
 });
 
-app.listen(3000, function () {
-    console.log(`[${PROFILE}] Listening on port 3000!`);
+app.listen(PORT, function () {
+    console.log(`[${PROFILE}] Listening on port ${PORT}!`);
+    console.log(`connecting to redis: ${REDIS_URL}`);
 });

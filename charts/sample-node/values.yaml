@@ -2,6 +2,8 @@ replicaCount: 1
 
 profile: default
 
+namespace: development
+
 image:
   repository: docker-registry.127.0.0.1.nip.io:30500/sample-node
   tag: latest
@@ -65,6 +67,7 @@ livenessProbe:
   initialDelaySeconds: 3
   periodSeconds: 10
   failureThreshold: 3
+
 # livenessProbe:
 #   exec:
 #     command:
@@ -79,7 +82,7 @@ livenessProbe:
 #   periodSeconds: 10
 
 # hostNetwork: true
-# dnsPolicy: ClusterFirstWithHostNet
+# dnsPolicy: Default
 
 nodeSelector: {}
 

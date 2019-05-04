@@ -18,8 +18,7 @@ app.use('/counter.js', express.static('views/counter.js'));
 // env
 const PORT = process.env.PORT || 3000;
 const PROFILE = process.env.PROFILE || 'default';
-const NAMESPACE = process.env.NAMESPACE || 'default';
-const REDIS_URL = process.env.REDIS_URL || `redis://sample-node-${NAMESPACE}-redis:6379`;
+const REDIS_URL = process.env.REDIS_URL || `redis://sample-node-redis:6379`;
 const MESSAGE = process.env.MESSAGE || PROFILE;
 
 // redis

@@ -20,6 +20,7 @@ const PORT = process.env.PORT || 3000;
 const PROFILE = process.env.PROFILE || 'default';
 const REDIS_URL = process.env.REDIS_URL || `redis://sample-node-redis:6379`;
 const MESSAGE = process.env.MESSAGE || PROFILE;
+const IMAGE_TAG = process.env.IMAGE_TAG || '0.0.0';
 
 // redis
 const retry_strategy = function(options) {
@@ -51,8 +52,7 @@ app.get('/', function (req, res) {
     // console.log(`${req.method} ${req.path}`);
     let host = os.hostname();
     let date = moment().tz('Asia/Seoul').format();
-    let message = MESSAGE;
-    res.render('index.ejs', {host: host, date: date, message: message});
+    res.render('index.ejs', {host: host, date: date, message: MESSAGE, version: IMAGE_TAG});
 });
 
 app.get('/stress', function (req, res) {

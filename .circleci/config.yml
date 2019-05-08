@@ -52,10 +52,6 @@ workflows:
   apply:
     jobs:
       - package
-      # - approval:
-      #     type: approval
-      #     requires:
-      #       - package
       - release:
           requires:
             - package

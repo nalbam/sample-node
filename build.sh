@@ -58,10 +58,6 @@ _replace() {
 }
 
 _prepare() {
-    if [ ! -f ${SHELL_DIR}/VERSION ]; then
-        _error "not found ./VERSION"
-    fi
-
     # target
     mkdir -p ${SHELL_DIR}/target/dist
 
@@ -70,6 +66,10 @@ _prepare() {
 }
 
 _package() {
+    if [ ! -f ${SHELL_DIR}/VERSION ]; then
+        _error "not found VERSION"
+    fi
+
     _result "BRANCH=${BRANCH}"
     _result "PR_NUM=${PR_NUM}"
     _result "PR_URL=${PR_URL}"

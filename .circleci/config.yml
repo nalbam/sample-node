@@ -52,6 +52,9 @@ workflows:
   apply:
     jobs:
       - package
+      - publish:
+          requires:
+            - package
       - release:
           requires:
             - package

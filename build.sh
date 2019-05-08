@@ -82,7 +82,7 @@ _package() {
 
     # latest versions
     GITHUB="https://api.github.com/repos/${USERNAME}/${REPONAME}/releases"
-    VERSION=$(curl -s ${GITHUB} | grep "tag_name" | grep "${MAJOR}.${MINOR}." | sort -r | head -1 | cut -d'"' -f4 | cut -d'-' -f1)
+    VERSION=$(curl -s ${GITHUB} | grep "tag_name" | grep "${MAJOR}.${MINOR}." | head -1 | cut -d'"' -f4 | cut -d'-' -f1)
 
     if [ -z ${VERSION} ]; then
         VERSION="${MAJOR}.${MINOR}.0"

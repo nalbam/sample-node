@@ -58,12 +58,8 @@ _replace() {
 }
 
 _prepare() {
-    if [ ! -f ${SHELL_DIR}/VERSION ]; then
-        _error "not found ./VERSION"
-    fi
-
     # target
-    mkdir -p ${SHELL_DIR}/target/dist
+    mkdir -p ${SHELL_DIR}/target
 
     # 755
     find ./** | grep [.]sh | xargs chmod 755
@@ -82,7 +78,7 @@ _release() {
         return
     fi
     if [ ! -f ${SHELL_DIR}/target/VERSION ]; then
-        return
+        _error "not found ./VERSION"
     fi
 
     if [ -f ${SHELL_DIR}/target/PRE ]; then

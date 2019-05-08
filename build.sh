@@ -59,7 +59,7 @@ _replace() {
 
 _prepare() {
     # target
-    mkdir -p ${SHELL_DIR}/target
+    mkdir -p ${SHELL_DIR}/target/dist
 
     # 755
     find ./** | grep [.]sh | xargs chmod 755
@@ -88,8 +88,9 @@ _release() {
     fi
 
     VERSION=$(cat ${SHELL_DIR}/target/VERSION | xargs)
-
     _result "VERSION=${VERSION}"
+
+    echo "${VERSION}" > ${SHELL_DIR}/target/dist/${VERSION}
 
     _command "go get github.com/tcnksm/ghr"
     go get github.com/tcnksm/ghr

@@ -88,6 +88,8 @@ _package() {
         VERSION="${MAJOR}.${MINOR}.0"
     fi
 
+    _result "VERSION=${VERSION}"
+
     # new version
     if [ "${BRANCH}" == "master" ]; then
         VERSION=$(echo ${VERSION} | perl -pe 's/^(([v\d]+\.)*)(\d+)(.*)$/$1.($3+1).$4/e')

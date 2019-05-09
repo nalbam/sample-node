@@ -30,7 +30,7 @@ jobs:
           name: Publish
           command: |
             chmod 755 ./works/target/builder.sh
-            ./works/target/builder.sh publish
+            ./works/target/builder.sh publish ./works
   release:
     docker:
       - image: circleci/golang
@@ -41,7 +41,7 @@ jobs:
           name: Release
           command: |
             chmod 755 ./works/target/builder.sh
-            ./works/target/builder.sh release
+            ./works/target/builder.sh release ./works
   slack:
     docker:
       - image: circleci/python
@@ -52,7 +52,7 @@ jobs:
           name: Slack
           command: |
             chmod 755 ./works/target/builder.sh
-            ./works/target/builder.sh slack
+            ./works/target/builder.sh slack ./works
 
 # Advanced Settings
 # - Build forked pull requests

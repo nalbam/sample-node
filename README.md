@@ -15,4 +15,5 @@ docker pull nalbam/sample-node
 
 ```bash
 npm install --save cors ejs express moment-timezone redis
+npm install --save-dev jest
 ```

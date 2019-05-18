@@ -71,7 +71,7 @@ _prepare() {
     mkdir -p ${RUN_PATH}/target/release
 }
 
-_build() {
+_docker() {
     if [ -z ${DOCKER_PASS} ]; then
         return
     fi
@@ -98,8 +98,8 @@ _build() {
 _prepare
 
 case ${CMD} in
-    build|package)
-        _build
+    docker|build|package)
+        _docker
 esac
 
 _success

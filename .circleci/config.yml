@@ -17,11 +17,10 @@ jobs:
             mkdir target
             curl -sLo target/builder.sh toast.sh/builder
             bash ./target/builder.sh
-            bash ./build.sh
       - persist_to_workspace:
           root: ~/works
           paths:
-            - target
+            - .
   publish:
     docker:
       - image: opspresso/awscli
@@ -44,7 +43,7 @@ jobs:
           name: Release
           command: |
             bash ./target/builder.sh
-  trigger:
+  docker:
     docker:
       - image: circleci/python
     working_directory: ~/works
@@ -52,9 +51,9 @@ jobs:
       - attach_workspace:
           at: ~/works
       - run:
-          name: Release
+          name: Docker
           command: |
-            bash ./target/builder.sh
+            bash ./build.sh
   slack:
     docker:
       - image: circleci/python
@@ -83,7 +82,7 @@ workflows:
       - release:
           requires:
             - build
-      - trigger:
+      - docker:
           requires:
             - release
       - slack:

@@ -71,7 +71,7 @@ _prepare() {
     mkdir -p ${RUN_PATH}/target/release
 }
 
-_package() {
+_build() {
     if [ -z ${DOCKER_PASS} ]; then
         return
     fi
@@ -99,7 +99,7 @@ _prepare
 
 case ${CMD} in
     build|package)
-        _package
+        _build
 esac
 
 _success

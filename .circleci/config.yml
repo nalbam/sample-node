@@ -5,10 +5,12 @@ version: 2
 jobs:
   package:
     docker:
-      - image: opspresso/builder
+      - image: circleci/python
     working_directory: ~/works
     steps:
       - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
       - run:
           name: Package
           command: |

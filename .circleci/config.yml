@@ -5,7 +5,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: circleci/nodejs
+      - image: circleci/node
     working_directory: ~/works
     steps:
       - checkout

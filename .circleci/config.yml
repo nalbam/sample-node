@@ -5,7 +5,7 @@ version: 2
 jobs:
   package:
     docker:
-      - image: circleci/python
+      - image: opspresso/builder
     working_directory: ~/works
     steps:
       - checkout

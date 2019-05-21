@@ -20,7 +20,7 @@ const PORT = process.env.PORT || 3000;
 const PROFILE = process.env.PROFILE || 'default';
 const REDIS_URL = process.env.REDIS_URL || `redis://sample-node-redis:6379`;
 const MESSAGE = process.env.MESSAGE || PROFILE;
-const IMAGE_TAG = process.env.IMAGE_TAG || '0.0.0';
+const IMAGE_TAG = process.env.IMAGE_TAG || 'v0.0.0';
 
 // redis
 const retry_strategy = function(options) {

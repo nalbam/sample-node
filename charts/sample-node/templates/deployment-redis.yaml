@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: {{ include "fullname" . }}-redis
   labels:
-    app: {{ include "fullname" . }}
+    app: {{ include "fullname" . }}-redis
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
     app.kubernetes.io/name: {{ include "fullname" . }}-redis
@@ -22,6 +22,7 @@ spec:
         app.kubernetes.io/instance: {{ .Release.Name }}
         app.kubernetes.io/managed-by: {{ .Release.Service }}
         app.kubernetes.io/name: {{ include "fullname" . }}-redis
+        version: stable
     spec:
       containers:
       - name: redis

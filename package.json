@@ -10,9 +10,11 @@
   },
   "dependencies": {
     "cors": "^2.8.5",
+    "dd-trace": "^0.11.2",
     "ejs": "^2.6.1",
     "express": "^4.16.4",
     "moment-timezone": "^0.5.23",
+    "newrelic": "^5.9.1",
     "redis": "^2.8.0"
   },
   "devDependencies": {

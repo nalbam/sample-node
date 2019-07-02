@@ -1,5 +1,21 @@
 'use strict';
 
+const TRACER = process.env.TRACER || 'none';
+
+// datadog tracer
+if (TRACER === 'all' || TRACER === 'datadog') {
+    require('dd-trace').init({
+        hostname: process.env.DD_AGENT_HOST,
+        port: process.env.DD_AGENT_PORT,
+        analytics: true
+    })
+}
+
+// newrelic tracer
+if (TRACER === 'all' || TRACER === 'newrelic') {
+    require('newrelic');
+}
+
 const os = require('os'),
     cors = require('cors'),
     express = require('express'),
@@ -56,7 +72,7 @@ app.get('/', function (req, res) {
 });
 
 app.get('/stress', function (req, res) {
-    console.log(`${req.method} ${req.path}`);
+    // console.log(`${req.method} ${req.path}`);
     let sum = 0;
     for (let i = 0; i < 1000000; i++) {
         sum += Math.sqrt(i);
@@ -65,7 +81,7 @@ app.get('/stress', function (req, res) {
 });
 
 app.get('/cache/:name', function (req, res) {
-    console.log(`${req.method} ${req.path}`);
+    // console.log(`${req.method} ${req.path}`);
     const name = req.params.name;
     return client.get(`cache:${name}`, (err, result) => {
         if (err) {
@@ -77,7 +93,7 @@ app.get('/cache/:name', function (req, res) {
 });
 
 app.post('/cache/:name', function (req, res) {
-    console.log(`${req.method} ${req.path}`);
+    // console.log(`${req.method} ${req.path}`);
     const name = req.params.name;
     const json = JSON.stringify(req.body);
     //console.log(`req.body: ${json}`);
@@ -91,7 +107,7 @@ app.post('/cache/:name', function (req, res) {
 });
 
 app.get('/counter/:name', function (req, res) {
-    console.log(`${req.method} ${req.path}`);
+    // console.log(`${req.method} ${req.path}`);
     const name = req.params.name;
     return client.get(`counter:${name}`, (err, result) => {
         res.setHeader('Content-Type', 'text/plain; charset=UTF-8');
@@ -104,7 +120,7 @@ app.get('/counter/:name', function (req, res) {
 });
 
 app.post('/counter/:name', function (req, res) {
-    console.log(`${req.method} ${req.path}`);
+    // console.log(`${req.method} ${req.path}`);
     const name = req.params.name;
     return client.incr(`counter:${name}`, (err, result) => {
         res.setHeader('Content-Type', 'text/plain; charset=UTF-8');
@@ -117,7 +133,7 @@ app.post('/counter/:name', function (req, res) {
 });
 
 app.delete('/counter/:name', function (req, res) {
-    console.log(`${req.method} ${req.path}`);
+    // console.log(`${req.method} ${req.path}`);
     const name = req.params.name;
     return client.decr(`counter:${name}`, (err, result) => {
         res.setHeader('Content-Type', 'text/plain; charset=UTF-8');

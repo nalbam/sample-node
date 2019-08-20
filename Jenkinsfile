@@ -82,7 +82,7 @@ podTemplate(label: label, containers: [
         container("builder") {
           try {
             // deploy(cluster, namespace, sub_domain, profile)
-            builder.deploy("dev", "${SERVICE_GROUP}-dev", "${IMAGE_NAME}-dev", "dev")
+            builder.deploy("", "${SERVICE_GROUP}-dev", "${IMAGE_NAME}-dev", "dev")
             builder.success(SLACK_TOKEN_DEV, "Deploy DEV")
           } catch (e) {
             builder.failure(SLACK_TOKEN_DEV, "Deploy DEV")
@@ -110,7 +110,7 @@ podTemplate(label: label, containers: [
         container("builder") {
           try {
             // deploy(cluster, namespace, sub_domain, profile)
-            builder.deploy("dev", "${SERVICE_GROUP}-stage", "${IMAGE_NAME}-stage", "stage")
+            builder.deploy("", "${SERVICE_GROUP}-stage", "${IMAGE_NAME}-stage", "stage")
             builder.success([SLACK_TOKEN_DEV,SLACK_TOKEN_DQA], "Deploy STAGE")
           } catch (e) {
             builder.failure([SLACK_TOKEN_DEV,SLACK_TOKEN_DQA], "Deploy STAGE")
@@ -130,7 +130,7 @@ podTemplate(label: label, containers: [
         container("builder") {
           try {
             // deploy(cluster, namespace, sub_domain, profile)
-            builder.deploy("prod", "${SERVICE_GROUP}-prod", "${IMAGE_NAME}", "prod")
+            builder.deploy("", "${SERVICE_GROUP}-prod", "${IMAGE_NAME}", "prod")
             builder.success([SLACK_TOKEN_DEV,SLACK_TOKEN_DQA], "Deploy PROD")
           } catch (e) {
             builder.failure([SLACK_TOKEN_DEV,SLACK_TOKEN_DQA], "Deploy PROD")

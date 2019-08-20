@@ -1,6 +1,6 @@
 # Dockerfile
 
-FROM node:10
+FROM node:12
 EXPOSE 3000
 WORKDIR /data
 CMD ["npm", "run", "start"]

@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "cors": "^2.8.5",
-    "dd-trace": "^0.11.2",
+    "dd-trace": "^0.14.1",
     "ejs": "^2.6.1",
     "express": "^4.16.4",
     "moment-timezone": "^0.5.23",

@@ -52,16 +52,16 @@ podTemplate(label: label, containers: [
         }
       }
     }
-    // stage("Tests") {
-    //   container("node") {
-    //     try {
-    //       butler.npm_test()
-    //     } catch (e) {
-    //       butler.failure(SLACK_TOKEN_DEV, "Tests")
-    //       throw e
-    //     }
-    //   }
-    // }
+    stage("Tests") {
+      container("node") {
+        try {
+          butler.npm_test()
+        } catch (e) {
+          butler.failure(SLACK_TOKEN_DEV, "Tests")
+          throw e
+        }
+      }
+    }
     // stage("Code Analysis") {
     //   container("maven") {
     //     try {

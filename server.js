@@ -34,12 +34,12 @@ app.use('/counter.js', express.static('views/counter.js'));
 // env
 const PORT = process.env.PORT || 3000;
 const PROFILE = process.env.PROFILE || 'default';
+const VERSION = process.env.VERSION || 'v0.0.0';
 const REDIS_URL = process.env.REDIS_URL || `redis://sample-node-redis:6379`;
 const MESSAGE = process.env.MESSAGE || PROFILE;
-const IMAGE_TAG = process.env.IMAGE_TAG || 'v0.0.0';
 
 // redis
-const retry_strategy = function(options) {
+const retry_strategy = function (options) {
     if (options.error && (options.error.code === 'ECONNREFUSED' || options.error.code === 'NR_CLOSED')) {
         // Try reconnecting after 5 seconds
         console.error('The server refused the connection. Retrying connection...');
@@ -56,7 +56,9 @@ const retry_strategy = function(options) {
     // reconnect after
     return Math.min(options.attempt * 100, 5000);
 };
-const client = redis.createClient(REDIS_URL, {retry_strategy: retry_strategy});
+const client = redis.createClient(REDIS_URL, {
+    retry_strategy: retry_strategy
+});
 client.on('connect', () => {
     console.log(`connected to redis: ${REDIS_URL}`);
 });
@@ -68,7 +70,12 @@ app.get('/', function (req, res) {
     // console.log(`${req.method} ${req.path}`);
     let host = os.hostname();
     let date = moment().tz('Asia/Seoul').format();
-    res.render('index.ejs', {host: host, date: date, message: MESSAGE, version: IMAGE_TAG});
+    res.render('index.ejs', {
+        host: host,
+        date: date,
+        message: MESSAGE,
+        version: VERSION
+    });
 });
 
 app.get('/stress', function (req, res) {
@@ -77,7 +84,9 @@ app.get('/stress', function (req, res) {
     for (let i = 0; i < 1000000; i++) {
         sum += Math.sqrt(i);
     }
-    return res.status(200).json({sum : sum});
+    return res.status(200).json({
+        sum: sum
+    });
 });
 
 app.get('/cache/:name', function (req, res) {
@@ -86,7 +95,10 @@ app.get('/cache/:name', function (req, res) {
     return client.get(`cache:${name}`, (err, result) => {
         if (err) {
             console.error(`${err}`);
-            return res.status(500).json({status:500, message:err.message,});
+            return res.status(500).json({
+                status: 500,
+                message: err.message,
+            });
         }
         return res.status(200).json(result == null ? {} : JSON.parse(result));
     });
@@ -100,7 +112,10 @@ app.post('/cache/:name', function (req, res) {
     return client.set(`cache:${name}`, json, (err, result) => {
         if (err) {
             console.error(`${err}`);
-            return res.status(500).json({status:500, message:err.message,});
+            return res.status(500).json({
+                status: 500,
+                message: err.message,
+            });
         }
         return res.status(200).json(result == null ? {} : result);
     });

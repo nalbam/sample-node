@@ -17,3 +17,5 @@ spec:
       targetPort: 6379
   selector:
     app: {{ include "fullname" . }}-redis
+    # app.kubernetes.io/instance: {{ .Release.Name }}
+    # app.kubernetes.io/name: {{ include "fullname" . }}-redis

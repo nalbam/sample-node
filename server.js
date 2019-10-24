@@ -78,6 +78,20 @@ app.get('/', function (req, res) {
     });
 });
 
+app.get('/read', function (req, res) {
+    // console.log(`${req.method} ${req.path}`);
+    return res.status(200).json({
+        result: 'read'
+    });
+});
+
+app.get('/live', function (req, res) {
+    // console.log(`${req.method} ${req.path}`);
+    return res.status(200).json({
+        result: 'live'
+    });
+});
+
 app.get('/stress', function (req, res) {
     // console.log(`${req.method} ${req.path}`);
     let sum = 0;

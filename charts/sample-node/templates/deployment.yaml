@@ -67,7 +67,7 @@ spec:
             value: {{ .Values.profile }}
           - name: NAMESPACE
             value: {{ .Values.namespace }}
-          - name: IMAGE_TAG
+          - name: VERSION
             value: {{ .Values.image.tag }}
 {{- with .Values.env }}
 {{ toYaml . | indent 10 }}

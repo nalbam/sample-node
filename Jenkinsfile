@@ -101,7 +101,7 @@ podTemplate(label: label, containers: [
       stage("Deploy DEV") {
         container("builder") {
           try {
-            // deploy(cluster, namespace, sub_domain, profile)
+            // deploy(cluster, namespace, sub_domain, profile, values_path)
             butler.deploy("local", "${SERVICE_GROUP}-dev", "${IMAGE_NAME}-dev", "dev")
             butler.success(SLACK_TOKEN_DEV, "Deploy DEV")
           } catch (e) {
@@ -129,7 +129,7 @@ podTemplate(label: label, containers: [
       // stage("Deploy STAGE") {
       //   container("builder") {
       //     try {
-      //       // deploy(cluster, namespace, sub_domain, profile)
+      //       // deploy(cluster, namespace, sub_domain, profile, values_path)
       //       butler.deploy("local", "${SERVICE_GROUP}-stage", "${IMAGE_NAME}-stage", "stage")
       //       butler.success([SLACK_TOKEN_DEV,SLACK_TOKEN_DQA], "Deploy STAGE")
       //     } catch (e) {
@@ -149,7 +149,7 @@ podTemplate(label: label, containers: [
       stage("Deploy PROD") {
         container("builder") {
           try {
-            // deploy(cluster, namespace, sub_domain, profile)
+            // deploy(cluster, namespace, sub_domain, profile, values_path)
             butler.deploy("local", "${SERVICE_GROUP}-prod", "${IMAGE_NAME}", "prod")
             butler.success([SLACK_TOKEN_DEV,SLACK_TOKEN_DQA], "Deploy PROD")
           } catch (e) {

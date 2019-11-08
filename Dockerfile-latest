@@ -3,6 +3,6 @@
 FROM node:12
 EXPOSE 3000
 WORKDIR /data
-RUN npm run build
 ADD . /data
+RUN npm run build
 CMD ["node", "server.js"]

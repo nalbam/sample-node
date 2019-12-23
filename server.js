@@ -1,20 +1,20 @@
 'use strict';
 
-const TRACER = process.env.TRACER || 'none';
+// const TRACER = process.env.TRACER || 'none';
 
-// datadog tracer
-if (TRACER === 'all' || TRACER === 'datadog') {
-    require('dd-trace').init({
-        hostname: process.env.DD_AGENT_HOST,
-        port: process.env.DD_AGENT_PORT,
-        analytics: true
-    })
-}
+// // datadog tracer
+// if (TRACER === 'all' || TRACER === 'datadog') {
+//     require('dd-trace').init({
+//         hostname: process.env.DD_AGENT_HOST,
+//         port: process.env.DD_AGENT_PORT,
+//         analytics: true
+//     })
+// }
 
-// newrelic tracer
-if (TRACER === 'all' || TRACER === 'newrelic') {
-    require('newrelic');
-}
+// // newrelic tracer
+// if (TRACER === 'all' || TRACER === 'newrelic') {
+//     require('newrelic');
+// }
 
 const os = require('os'),
     cors = require('cors'),
@@ -71,6 +71,16 @@ app.get('/', function (req, res) {
     let host = os.hostname();
     let date = moment().tz('Asia/Seoul').format();
     res.render('index.ejs', {
+        host: host,
+        date: date,
+        message: MESSAGE,
+        version: VERSION
+    });
+});
+
+app.get('/health', function (req, res) {
+    // console.log(`${req.method} ${req.path}`);
+    return res.status(200).json({
         host: host,
         date: date,
         message: MESSAGE,

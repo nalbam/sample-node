@@ -99,11 +99,11 @@ podTemplate(label: label, containers: [
           }
         )
       }
-      stage("Deploy DEV") {
+      stage("Deploy SPOT") {
         container("builder") {
           try {
             // deploy(cluster, namespace, sub_domain, profile, values_path)
-            builder.deploy("local", "${SERVICE_GROUP}-dev", "${IMAGE_NAME}-dev", "dev")
+            builder.deploy("spot", "${SERVICE_GROUP}", "${IMAGE_NAME}", "dev")
             builder.success(SLACK_TOKEN_DEV, "Deploy DEV")
           } catch (e) {
             builder.failure(SLACK_TOKEN_DEV, "Deploy DEV")
@@ -111,6 +111,30 @@ podTemplate(label: label, containers: [
           }
         }
       }
+      // stage("Deploy LOCAL") {
+      //   container("builder") {
+      //     try {
+      //       // deploy(cluster, namespace, sub_domain, profile, values_path)
+      //       builder.deploy("local", "${SERVICE_GROUP}", "${IMAGE_NAME}", "dev")
+      //       builder.success(SLACK_TOKEN_DEV, "Deploy DEV")
+      //     } catch (e) {
+      //       builder.failure(SLACK_TOKEN_DEV, "Deploy DEV")
+      //       throw e
+      //     }
+      //   }
+      // }
+      // stage("Deploy DEV") {
+      //   container("builder") {
+      //     try {
+      //       // deploy(cluster, namespace, sub_domain, profile, values_path)
+      //       builder.deploy("dev", "${SERVICE_GROUP}-dev", "${IMAGE_NAME}-dev", "dev")
+      //       builder.success(SLACK_TOKEN_DEV, "Deploy DEV")
+      //     } catch (e) {
+      //       builder.failure(SLACK_TOKEN_DEV, "Deploy DEV")
+      //       throw e
+      //     }
+      //   }
+      // }
       // stage("Request STAGE") {
       //   container("builder") {
       //     builder.proceed(SLACK_TOKEN_DEV, "Request STAGE", "stage")
@@ -131,7 +155,7 @@ podTemplate(label: label, containers: [
       //   container("builder") {
       //     try {
       //       // deploy(cluster, namespace, sub_domain, profile, values_path)
-      //       builder.deploy("spot", "${SERVICE_GROUP}-stage", "${IMAGE_NAME}-stage", "stage")
+      //       builder.deploy("stage", "${SERVICE_GROUP}-stage", "${IMAGE_NAME}-stage", "stage")
       //       builder.success([SLACK_TOKEN_DEV,SLACK_TOKEN_DQA], "Deploy STAGE")
       //     } catch (e) {
       //       builder.failure([SLACK_TOKEN_DEV,SLACK_TOKEN_DQA], "Deploy STAGE")
@@ -139,26 +163,26 @@ podTemplate(label: label, containers: [
       //     }
       //   }
       // }
-      stage("Proceed PROD") {
-        container("builder") {
-          builder.proceed(SLACK_TOKEN_DQA, "Deploy PROD", "prod")
-          timeout(time: 60, unit: "MINUTES") {
-            input(message: "${builder.name} ${builder.version} to prod")
-          }
-        }
-      }
-      stage("Deploy PROD") {
-        container("builder") {
-          try {
-            // deploy(cluster, namespace, sub_domain, profile, values_path)
-            builder.deploy("spot", "${SERVICE_GROUP}-prod", "${IMAGE_NAME}", "prod")
-            builder.success([SLACK_TOKEN_DEV,SLACK_TOKEN_DQA], "Deploy PROD")
-          } catch (e) {
-            builder.failure([SLACK_TOKEN_DEV,SLACK_TOKEN_DQA], "Deploy PROD")
-            throw e
-          }
-        }
-      }
+      // stage("Proceed PROD") {
+      //   container("builder") {
+      //     builder.proceed(SLACK_TOKEN_DQA, "Deploy PROD", "prod")
+      //     timeout(time: 60, unit: "MINUTES") {
+      //       input(message: "${builder.name} ${builder.version} to prod")
+      //     }
+      //   }
+      // }
+      // stage("Deploy PROD") {
+      //   container("builder") {
+      //     try {
+      //       // deploy(cluster, namespace, sub_domain, profile, values_path)
+      //       builder.deploy("prod", "${SERVICE_GROUP}-prod", "${IMAGE_NAME}", "prod")
+      //       builder.success([SLACK_TOKEN_DEV,SLACK_TOKEN_DQA], "Deploy PROD")
+      //     } catch (e) {
+      //       builder.failure([SLACK_TOKEN_DEV,SLACK_TOKEN_DQA], "Deploy PROD")
+      //       throw e
+      //     }
+      //   }
+      // }
     }
   }
 }

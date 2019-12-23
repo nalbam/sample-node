@@ -80,6 +80,8 @@ app.get('/', function (req, res) {
 
 app.get('/health', function (req, res) {
     // console.log(`${req.method} ${req.path}`);
+    let host = os.hostname();
+    let date = moment().tz('Asia/Seoul').format();
     return res.status(200).json({
         host: host,
         date: date,

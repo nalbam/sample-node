@@ -1,6 +1,6 @@
 # Dockerfile
 
-FROM node:12
+FROM node:13
 EXPOSE 3000
 WORKDIR /data
 ADD . /data

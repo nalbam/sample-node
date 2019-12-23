@@ -115,6 +115,20 @@ app.get('/stress', function (req, res) {
     });
 });
 
+app.get('/fault/:rate', function (req, res) {
+    // console.log(`${req.method} ${req.path}`);
+    const rate = req.params.rate;
+    if (Math.random() * 100 > rate) {
+        return res.status(200).json({
+            result: 'ok'
+        });
+    } else {
+        return res.status(500).json({
+            result: 'fault'
+        });
+    }
+});
+
 app.get('/cache/:name', function (req, res) {
     // console.log(`${req.method} ${req.path}`);
     const name = req.params.name;

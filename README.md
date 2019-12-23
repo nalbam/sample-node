@@ -17,5 +17,3 @@ docker pull nalbam/sample-node
 npm install --save cors ejs express moment-timezone redis
 npm install --save-dev jest
 ```
-
-* bump

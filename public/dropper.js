@@ -1,6 +1,6 @@
 var dropper = {
 	maxCount: 500,
-	interval: 10,
+	interval: 100,
 	frameInterval: 15,
 	radius: 10,
 	speed: 15,

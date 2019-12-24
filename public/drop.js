@@ -1,5 +1,5 @@
 var drop = {
-	maxCount: 360,
+	maxCount: 500,
 	interval: 10,
 	frameInterval: 15,
 	speed: 2,

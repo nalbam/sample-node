@@ -14,6 +14,7 @@ var drop = {
 	var lastFrameTime = Date.now();
 	var context = null;
 
+	var colors = ["30,144,255", "107,142,35", "255,215,0", "255,192,203", "106,90,205", "173,216,230", "238,130,238", "152,251,152", "70,130,180", "244,164,96", "210,105,30", "220,20,60"];
 	var versions = [];
 	var particles = [];
 	var pointer = 0;
@@ -35,19 +36,22 @@ var drop = {
 	}
 
 	function getColor(v) {
+		var index;
 		var version;
 		var color;
 
 		for (var i = 0; i < versions.length; i++) {
 			version = versions[i];
 			if (version.v == v) {
+				index = i;
 				color = version.c;
 				break;
 			}
 		}
 
 		if (!color) {
-			color = `rgba(${Math.random() * 250},${Math.random() * 250},${Math.random() * 250},${drop.alpha})`;
+			// color = `rgba(${Math.random() * 250},${Math.random() * 250},${Math.random() * 250},${drop.alpha})`;
+			color = colors[versions.length];
 			version = {};
 			version.v = v;
 			version.c = color;
@@ -88,13 +92,8 @@ var drop = {
 	}
 
 	function runAnimation() {
-// 		var now = Date.now();
-// 		var delta = now - lastFrameTime;
-// 		if (delta > drop.frameInterval) {
-			context.clearRect(0, 0, window.innerWidth, window.innerHeight);
-			updateParticles(context);
-// 			lastFrameTime = now - (delta % drop.frameInterval);
-// 		}
+		context.clearRect(0, 0, window.innerWidth, window.innerHeight);
+		updateParticles(context);
 		animationTimer = requestAnimationFrame(runAnimation);
 	}
 

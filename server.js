@@ -28,8 +28,7 @@ app.set('view engine', 'ejs');
 
 app.use(cors());
 app.use(express.json());
-app.use('/favicon.ico', express.static('views/favicon.ico'));
-app.use('/counter.js', express.static('views/counter.js'));
+app.use(express.static('public'));
 
 // env
 const PORT = process.env.PORT || 3000;
@@ -71,6 +70,18 @@ app.get('/', function (req, res) {
     let host = os.hostname();
     let date = moment().tz('Asia/Seoul').format();
     res.render('index.ejs', {
+        host: host,
+        date: date,
+        message: MESSAGE,
+        version: VERSION
+    });
+});
+
+app.get('/drop', function (req, res) {
+    // console.log(`${req.method} ${req.path}`);
+    let host = os.hostname();
+    let date = moment().tz('Asia/Seoul').format();
+    res.render('drop.ejs', {
         host: host,
         date: date,
         message: MESSAGE,

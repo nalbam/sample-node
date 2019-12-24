@@ -6,7 +6,7 @@ function _counter(name, type) {
         url: url,
         type: type,
         success: function (res, status) {
-            console.log(`_counter (${name}) : ${status}`);
+            // console.log(`_counter (${name}) : ${status}`);
             if (res) {
                 $(`#thumbs-${name}-count`).html(res);
             }

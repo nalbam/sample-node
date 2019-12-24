@@ -93,7 +93,7 @@ var dropper = {
 			particle = particles[i_particle];
 		}
 
-		particle.x = Math.random() * (width - (dropper.radius * 2)) + dropper.radius;
+		particle.x = parseInt(Math.random() * parseInt(width / dropper.radius)) * dropper.radius;
 		particle.y = dropper.radius * -2;
 		particle.r = dropper.radius;
 		particle.color = getColor(version);

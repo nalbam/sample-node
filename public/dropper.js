@@ -15,7 +15,9 @@ var dropper = {
 	var lastFrameTime = Date.now();
 	var context = null;
 
-	var colors = ["30,144,255", "107,142,35", "255,215,0", "255,192,203", "106,90,205", "173,216,230", "238,130,238", "152,251,152", "70,130,180", "244,164,96", "210,105,30", "220,20,60"];
+	// https://www.html.am/html-codes/color/color-scheme.cfm
+	// SteelBlue, ForestGreen, DarkOrange, SlateGray, DeepPink, DarkCyan, Crimson
+	var colors = ["70,130,180", "34,139,34", "255,140,0", "112,128,144", "255,20,147", "0,139,139", "220,20,60"];
 
 	var particles = [];
 	var i_particle = -1;

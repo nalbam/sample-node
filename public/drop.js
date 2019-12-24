@@ -51,7 +51,7 @@ var drop = {
 
 		if (!color) {
 			// color = `rgba(${Math.random() * 250},${Math.random() * 250},${Math.random() * 250},${drop.alpha})`;
-			color = colors[versions.length];
+			color =`rgba(${colors[versions.length]},${drop.alpha})`;
 			version = {};
 			version.v = v;
 			version.c = color;

@@ -32,12 +32,15 @@ var dropper = {
 			url: url,
 			type: 'get',
 			success: function (res, status) {
-				console.log(`health : ${status}`);
-				if (res && res.result === 'ok') {
+				// console.log(`health : ${status}`);
+				if (res) {
 					resetParticle(res.version);
 				} else {
 					resetParticle(null);
 				}
+			},
+			error: function (err) {
+				resetParticle(null);
 			}
 		});
 

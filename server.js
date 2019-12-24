@@ -124,7 +124,7 @@ app.get('/fault/:rate', function (req, res) {
         });
     } else {
         return res.status(500).json({
-            result: 'fault'
+            result: 'error'
         });
     }
 });

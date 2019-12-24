@@ -35,8 +35,8 @@ const PORT = process.env.PORT || 3000;
 const PROFILE = process.env.PROFILE || 'default';
 const VERSION = process.env.VERSION || 'v0.0.0';
 const MESSAGE = process.env.MESSAGE || PROFILE;
-const REDIS_URL = process.env.REDIS_URL || `redis://sample-node-redis:6379`;
 const FAULT_RATE = process.env.FAULT_RATE || 0;
+const REDIS_URL = process.env.REDIS_URL || `redis://sample-node-redis:6379`;
 
 // redis
 const retry_strategy = function (options) {

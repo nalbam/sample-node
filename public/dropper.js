@@ -4,7 +4,7 @@ var dropper = {
 	frameInterval: 15,
 	radius: 10,
 	speed: 10,
-	alpha: 0.8,
+	alpha: 0.9,
 	start: null
 };
 
@@ -18,6 +18,7 @@ var dropper = {
 	// https://www.html.am/html-codes/color/color-scheme.cfm
 	// DodgerBlue, DarkOrange, ForestGreen, MediumPurple
 	var colors = ["30,144,255", "255,140,0", "34,139,34", "147,112,219"];
+	var error = "220,20,60"; // Crimson
 
 	var particles = [];
 	var i_particle = -1;
@@ -32,8 +33,10 @@ var dropper = {
 			type: 'get',
 			success: function (res, status) {
 				// console.log(`health : ${status}`);
-				if (res) {
+				if (res && status < 400) {
 					resetParticle(res.version);
+				} else {
+					resetParticle("");
 				}
 			}
 		});
@@ -44,6 +47,10 @@ var dropper = {
 	function getColor(v) {
 		var version;
 		var color;
+
+		if (v === "") {
+			return `rgba(${error},${dropper.alpha})`;
+		}
 
 		for (var i = 0; i < versions.length; i++) {
 			version = versions[i];

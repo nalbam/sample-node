@@ -31,8 +31,8 @@ var dropper = {
 		$.ajax({
 			url: url,
 			type: 'get',
-			always: function (res, status) {
-				// console.log(`health : ${status}`);
+			success: function (res, status) {
+				console.log(`health : ${status}`);
 				if (res && res.result === 'ok') {
 					resetParticle(res.version);
 				} else {

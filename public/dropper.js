@@ -15,9 +15,12 @@ var dropper = {
 	var context = null;
 
 	var colors = ["30,144,255", "107,142,35", "255,215,0", "255,192,203", "106,90,205", "173,216,230", "238,130,238", "152,251,152", "70,130,180", "244,164,96", "210,105,30", "220,20,60"];
-	var versions = [];
+
 	var particles = [];
-	var pointer = 0;
+	var i_particle = -1;
+
+	var versions = [];
+	var i_version = parseInt(Math.random() * colors.length);
 
 	function health() {
 		let url = `${location.protocol}//${location.host}/health`;
@@ -36,22 +39,26 @@ var dropper = {
 	}
 
 	function getColor(v) {
-		var index;
 		var version;
 		var color;
 
 		for (var i = 0; i < versions.length; i++) {
 			version = versions[i];
 			if (version.v == v) {
-				index = i;
+				i_version = i;
 				color = version.c;
 				break;
 			}
 		}
 
 		if (!color) {
-			// color = `rgba(${Math.random() * 250},${Math.random() * 250},${Math.random() * 250},${dropper.alpha})`;
-			color =`rgba(${colors[versions.length]},${dropper.alpha})`;
+			i_version++;
+			if (i_version >= colors.length) {
+				i_version = i_version % colors.length;
+			}
+
+			color = `rgba(${colors[i_version]},${dropper.alpha})`;
+
 			version = {};
 			version.v = v;
 			version.c = color;
@@ -66,15 +73,16 @@ var dropper = {
 		var height = window.innerHeight;
 		var particle;
 
-		if (pointer >= dropper.maxCount) {
-			pointer = 0;
+		i_particle++;
+		if (i_particle >= dropper.maxCount) {
+			i_particle = 0;
 		}
 
-		if (particles.length <= pointer) {
+		if (particles.length <= i_particle) {
 			particle = {};
 			// particles.push(particle);
 		} else {
-			particle = particles[pointer];
+			particle = particles[i_particle];
 		}
 
 		particle.x = parseInt(Math.random() * width);
@@ -82,13 +90,11 @@ var dropper = {
 		particle.color = getColor(version);
 		particle.diameter = 20; // Math.random() * 5 + 10;
 
-		if (particles.length <= pointer) {
+		if (particles.length <= i_particle) {
 			particles.push(particle);
 		}
 
-		// console.log(`drop ${ pointer}/${particles.length} ${particle.x} ${particle.y}`);
-
-		pointer++;
+		// console.log(`drop ${i_particle}/${particles.length} ${particle.x} ${particle.y}`);
 	}
 
 	function runAnimation() {

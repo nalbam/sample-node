@@ -16,8 +16,8 @@ var dropper = {
 	var context = null;
 
 	// https://www.html.am/html-codes/color/color-scheme.cfm
-	// SteelBlue, ForestGreen, DarkOrange, SlateGray, DeepPink, DarkCyan, Crimson
-	var colors = ["70,130,180", "34,139,34", "255,140,0", "112,128,144", "255,20,147", "0,139,139", "220,20,60"];
+	// SteelBlue, ForestGreen, DarkOrange, DeepPink
+	var colors = ["70,130,180", "34,139,34", "255,140,0", "255,20,147"];
 
 	var particles = [];
 	var i_particle = -1;

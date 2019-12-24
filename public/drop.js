@@ -31,7 +31,7 @@ var drop = {
 			}
 		});
 
-		window.setTimeout(health, drop.interval);
+		// window.setTimeout(health, drop.interval);
 	}
 
 	function getColor(v) {
@@ -131,7 +131,9 @@ var drop = {
 			context = canvas.getContext("2d");
 		}
 
-		health();
+        setInterval(function () {
+            health();
+        }, drop.interval);
 
 		runAnimation();
 	}

@@ -83,6 +83,7 @@ var dropper = {
 	function resetParticle(version) {
 		var width = window.innerWidth;
 		var height = window.innerHeight;
+		var column = parseInt(width / (dropper.radius * 3));
 		var particle;
 
 		i_particle++;
@@ -96,7 +97,7 @@ var dropper = {
 			particle = particles[i_particle];
 		}
 
-		particle.x = parseInt(Math.random() * parseInt(width / (dropper.radius * 2))) * (dropper.radius * 2);
+		particle.x = parseInt(Math.random() * column) * (dropper.radius * 2) + (width / 6);
 		particle.y = dropper.radius * -1;
 		particle.r = dropper.radius;
 		particle.color = getColor(version);

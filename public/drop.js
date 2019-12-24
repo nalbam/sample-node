@@ -1,4 +1,4 @@
-var drop = {
+var dropper = {
 	maxCount: 500,
 	interval: 10,
 	frameInterval: 15,
@@ -8,7 +8,7 @@ var drop = {
 };
 
 (function () {
-	drop.start = startDrop;
+	dropper.start = startDrop;
 
 	var animationTimer = null;
 	var lastFrameTime = Date.now();
@@ -32,7 +32,7 @@ var drop = {
 			}
 		});
 
-		// window.setTimeout(health, drop.interval);
+		// window.setTimeout(health, dropper.interval);
 	}
 
 	function getColor(v) {
@@ -50,8 +50,8 @@ var drop = {
 		}
 
 		if (!color) {
-			// color = `rgba(${Math.random() * 250},${Math.random() * 250},${Math.random() * 250},${drop.alpha})`;
-			color =`rgba(${colors[versions.length]},${drop.alpha})`;
+			// color = `rgba(${Math.random() * 250},${Math.random() * 250},${Math.random() * 250},${dropper.alpha})`;
+			color =`rgba(${colors[versions.length]},${dropper.alpha})`;
 			version = {};
 			version.v = v;
 			version.c = color;
@@ -66,7 +66,7 @@ var drop = {
 		var height = window.innerHeight;
 		var particle;
 
-		if (pointer >= drop.maxCount) {
+		if (pointer >= dropper.maxCount) {
 			pointer = 0;
 		}
 
@@ -108,7 +108,7 @@ var drop = {
 				window.oRequestAnimationFrame ||
 				window.msRequestAnimationFrame ||
 				function (callback) {
-					return window.setTimeout(callback, drop.frameInterval);
+					return window.setTimeout(callback, dropper.frameInterval);
 				};
 		})();
 
@@ -129,9 +129,9 @@ var drop = {
 			context = canvas.getContext("2d");
 		}
 
-        setInterval(function () {
-            health();
-        }, drop.interval);
+		setInterval(function () {
+			health();
+		}, dropper.interval);
 
 		runAnimation();
 	}
@@ -141,7 +141,7 @@ var drop = {
 		var x, y, x2, y2;
 		for (var i = 0; i < particles.length; i++) {
 			particle = particles[i];
-			particle.y += (particle.diameter + drop.speed) * 0.5;
+			particle.y += (particle.diameter + dropper.speed) * 0.5;
 
 			x2 = particle.x;
 			x = x2 + particle.diameter / 2;
@@ -158,4 +158,4 @@ var drop = {
 	}
 })();
 
-drop.start();
+dropper.start();

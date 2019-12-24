@@ -33,7 +33,7 @@ var dropper = {
 			type: 'get',
 			success: function (res, status) {
 				// console.log(`health : ${status}`);
-				if (res && status < 400) {
+				if (res && res.result === 'ok') {
 					resetParticle(res.version);
 				} else {
 					resetParticle("");

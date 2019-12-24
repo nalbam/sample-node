@@ -100,7 +100,19 @@ var dropper = {
 
 	function runAnimation() {
 		context.clearRect(0, 0, window.innerWidth, window.innerHeight);
-		updateParticles();
+
+		var particle;
+
+		for (var i = 0; i < particles.length; i++) {
+			particle = particles[i];
+			particle.y += dropper.speed;
+
+			context.beginPath();
+			context.arc(particle.x, particle.y, particle.r, 0, 2 * Math.PI);
+			context.fillStyle = particle.color;
+			context.fill();
+		}
+
 		animationTimer = requestAnimationFrame(runAnimation);
 	}
 
@@ -141,20 +153,6 @@ var dropper = {
 		}, dropper.interval);
 
 		runAnimation();
-	}
-
-	function updateParticles() {
-		var particle;
-
-		for (var i = 0; i < particles.length; i++) {
-			particle = particles[i];
-			particle.y += dropper.speed;
-
-			context.beginPath();
-			context.arc(particle.x, particle.y, particle.r, 0, 2 * Math.PI);
-			context.fillStyle = particle.color;
-			context.fill();
-		}
 	}
 })();
 

@@ -34,8 +34,9 @@ app.use(express.static('public'));
 const PORT = process.env.PORT || 3000;
 const PROFILE = process.env.PROFILE || 'default';
 const VERSION = process.env.VERSION || 'v0.0.0';
-const REDIS_URL = process.env.REDIS_URL || `redis://sample-node-redis:6379`;
 const MESSAGE = process.env.MESSAGE || PROFILE;
+const REDIS_URL = process.env.REDIS_URL || `redis://sample-node-redis:6379`;
+const FAULT_RATE = process.env.FAULT_RATE || 0;
 
 // redis
 const retry_strategy = function (options) {
@@ -79,26 +80,24 @@ app.get('/', function (req, res) {
 
 app.get('/drop', function (req, res) {
     // console.log(`${req.method} ${req.path}`);
-    let host = os.hostname();
-    let date = moment().tz('Asia/Seoul').format();
     res.render('drop.ejs', {
-        host: host,
-        date: date,
-        message: MESSAGE,
         version: VERSION
     });
 });
 
 app.get('/health', function (req, res) {
     // console.log(`${req.method} ${req.path}`);
-    let host = os.hostname();
-    let date = moment().tz('Asia/Seoul').format();
-    return res.status(200).json({
-        host: host,
-        date: date,
-        message: MESSAGE,
-        version: VERSION
-    });
+    if (Math.random() * 100 >= FAULT_RATE) {
+        return res.status(200).json({
+            result: 'ok',
+            version: VERSION
+        });
+    } else {
+        return res.status(500).json({
+            result: 'error',
+            version: VERSION
+        });
+    }
 });
 
 app.get('/read', function (req, res) {
@@ -129,7 +128,7 @@ app.get('/stress', function (req, res) {
 app.get('/fault/:rate', function (req, res) {
     // console.log(`${req.method} ${req.path}`);
     const rate = req.params.rate;
-    if (Math.random() * 100 > rate) {
+    if (Math.random() * 100 >= rate) {
         return res.status(200).json({
             result: 'ok'
         });

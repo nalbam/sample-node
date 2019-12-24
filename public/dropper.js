@@ -1,9 +1,10 @@
 var dropper = {
 	maxCount: 500,
+	radius: 10,
+	alpha: 0.9,
+	speed: 2,
 	interval: 10,
 	frameInterval: 15,
-	speed: 2,
-	alpha: 1.0,
 	start: null
 };
 
@@ -86,8 +87,8 @@ var dropper = {
 		}
 
 		particle.x = parseInt(Math.random() * width);
-		particle.y = -5;
-		particle.r = 20;
+		particle.y = dropper.radius * -2;
+		particle.r = dropper.radius;
 		particle.color = getColor(version);
 
 		if (particles.length <= i_particle) {
@@ -144,8 +145,7 @@ var dropper = {
 
 	function updateParticles() {
 		var particle;
-		var x, y;
-		
+
 		for (var i = 0; i < particles.length; i++) {
 			particle = particles[i];
 			particle.y += (particle.r + dropper.speed) * 0.5;
@@ -154,18 +154,6 @@ var dropper = {
 			context.arc(particle.x, particle.y, particle.r, 0, 2 * Math.PI);
 			context.fillStyle = particle.color;
 			context.fill();
-			
-// 			x2 = particle.x;
-// 			x = x2 + particle.diameter / 2;
-// 			y = particle.y;
-// 			y2 = y + particle.diameter / 2;
-
-// 			context.beginPath();
-// 			context.lineWidth = particle.diameter;
-// 			context.strokeStyle = particle.color;
-// 			context.moveTo(x, y);
-// 			context.lineTo(x2, y2);
-// 			context.stroke();
 		}
 	}
 })();

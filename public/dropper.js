@@ -1,10 +1,10 @@
 var dropper = {
 	maxCount: 500,
-	radius: 10,
-	alpha: 0.9,
-	speed: 2,
 	interval: 10,
 	frameInterval: 15,
+	radius: 10,
+	speed: 10,
+	alpha: 0.8,
 	start: null
 };
 
@@ -148,7 +148,7 @@ var dropper = {
 
 		for (var i = 0; i < particles.length; i++) {
 			particle = particles[i];
-			particle.y += (particle.r + dropper.speed) * 0.5;
+			particle.y += dropper.speed;
 
 			context.beginPath();
 			context.arc(particle.x, particle.y, particle.r, 0, 2 * Math.PI);

@@ -55,7 +55,6 @@ var dropper = {
 		for (var i = 0; i < versions.length; i++) {
 			version = versions[i];
 			if (version.v == v) {
-				i_version = i;
 				color = version.c;
 				break;
 			}

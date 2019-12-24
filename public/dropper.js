@@ -87,8 +87,8 @@ var dropper = {
 
 		particle.x = parseInt(Math.random() * width);
 		particle.y = -5;
+		particle.r = 20;
 		particle.color = getColor(version);
-		particle.diameter = 20; // Math.random() * 5 + 10;
 
 		if (particles.length <= i_particle) {
 			particles.push(particle);
@@ -99,7 +99,7 @@ var dropper = {
 
 	function runAnimation() {
 		context.clearRect(0, 0, window.innerWidth, window.innerHeight);
-		updateParticles(context);
+		updateParticles();
 		animationTimer = requestAnimationFrame(runAnimation);
 	}
 
@@ -142,24 +142,30 @@ var dropper = {
 		runAnimation();
 	}
 
-	function updateParticles(context) {
+	function updateParticles() {
 		var particle;
-		var x, y, x2, y2;
+		var x, y;
+		
 		for (var i = 0; i < particles.length; i++) {
 			particle = particles[i];
-			particle.y += (particle.diameter + dropper.speed) * 0.5;
-
-			x2 = particle.x;
-			x = x2 + particle.diameter / 2;
-			y = particle.y;
-			y2 = y + particle.diameter / 2;
+			particle.y += (particle.r + dropper.speed) * 0.5;
 
 			context.beginPath();
-			context.lineWidth = particle.diameter;
-			context.strokeStyle = particle.color;
-			context.moveTo(x, y);
-			context.lineTo(x2, y2);
-			context.stroke();
+			context.arc(particle.x, particle.y, particle.r, 0, 2 * Math.PI);
+			context.fillStyle = particle.color;
+			context.fill();
+			
+// 			x2 = particle.x;
+// 			x = x2 + particle.diameter / 2;
+// 			y = particle.y;
+// 			y2 = y + particle.diameter / 2;
+
+// 			context.beginPath();
+// 			context.lineWidth = particle.diameter;
+// 			context.strokeStyle = particle.color;
+// 			context.moveTo(x, y);
+// 			context.lineTo(x2, y2);
+// 			context.stroke();
 		}
 	}
 })();

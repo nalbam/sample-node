@@ -3,7 +3,7 @@ var dropper = {
 	interval: 10,
 	frameInterval: 15,
 	radius: 10,
-	speed: 10,
+	speed: 15,
 	alpha: 0.9,
 	start: null
 };

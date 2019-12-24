@@ -74,7 +74,7 @@ var drop = {
 		}
 
 		particle.x = parseInt(Math.random() * width);
-		particle.y = -height;
+		particle.y = -5;
 		particle.color = getColor(version);
 		particle.diameter = 20; // Math.random() * 5 + 10;
 
@@ -88,14 +88,13 @@ var drop = {
 	}
 
 	function runAnimation() {
-		var now = Date.now();
-		var delta = now - lastFrameTime;
-		if (delta > drop.frameInterval) {
+// 		var now = Date.now();
+// 		var delta = now - lastFrameTime;
+// 		if (delta > drop.frameInterval) {
 			context.clearRect(0, 0, window.innerWidth, window.innerHeight);
-			updateParticles();
-			drawParticles(context);
-			lastFrameTime = now - (delta % drop.frameInterval);
-		}
+			updateParticles(context);
+// 			lastFrameTime = now - (delta % drop.frameInterval);
+// 		}
 		animationTimer = requestAnimationFrame(runAnimation);
 	}
 
@@ -138,12 +137,12 @@ var drop = {
 		runAnimation();
 	}
 
-	function drawParticles(context) {
+	function updateParticles(context) {
 		var particle;
 		var x, y, x2, y2;
 		for (var i = 0; i < particles.length; i++) {
 			particle = particles[i];
-			// particle.y += (particle.diameter + drop.speed) * 0.5;
+			particle.y += (particle.diameter + drop.speed) * 0.5;
 
 			x2 = particle.x;
 			x = x2 + particle.diameter / 2;
@@ -156,14 +155,6 @@ var drop = {
 			context.moveTo(x, y);
 			context.lineTo(x2, y2);
 			context.stroke();
-		}
-	}
-
-	function updateParticles() {
-		var particle;
-		for (var i = 0; i < particles.length; i++) {
-			particle = particles[i];
-			particle.y += (particle.diameter + drop.speed) * 0.5;
 		}
 	}
 })();

@@ -36,7 +36,7 @@ var dropper = {
 				if (res && res.result === 'ok') {
 					resetParticle(res.version);
 				} else {
-					resetParticle("");
+					resetParticle(null);
 				}
 			}
 		});
@@ -48,7 +48,7 @@ var dropper = {
 		var version;
 		var color;
 
-		if (v === "") {
+		if (!v) {
 			return `rgba(${error},${dropper.alpha})`;
 		}
 
@@ -90,7 +90,6 @@ var dropper = {
 
 		if (particles.length <= i_particle) {
 			particle = {};
-			// particles.push(particle);
 		} else {
 			particle = particles[i_particle];
 		}

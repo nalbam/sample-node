@@ -204,6 +204,19 @@ class Dropper {
             console.log(`drop ${this.particles.length} ${particle.x} ${particle.y} ${v}`);
         }
     }
+
+    log() {
+        var e = document.getElementById("drop-log");
+        if (e) {
+            var version;
+            var t = `${this.particles.length}`;
+            for (var i = 0; i < this.versions.length; i++) {
+                version = this.versions[i];
+                t += ` | ${version.v} (${version.x})`;
+            }
+            e.innerText = t;
+        }
+    }
 }
 
 let dropper = new Dropper();
@@ -232,3 +245,7 @@ function health() {
 setInterval(function () {
     health();
 }, dropper.interval);
+
+setInterval(function () {
+    dropper.log();
+}, 1000);

@@ -1,175 +1,184 @@
-var dropper = {
-	maxCount: 500,
-	interval: 10,
-	frameInterval: 15,
-	radius: 10,
-	speed: 15,
-	alpha: 0.9,
-	start: null
-};
+/**
+ * dropper.js
+ */
 
-(function () {
-	dropper.start = startDrop;
+class Dropper {
+    constructor() {
+        this.init();
+    }
 
-	var animationTimer = null;
-	var lastFrameTime = Date.now();
-	var context = null;
+    init() {
+        var canvas = document.getElementById("drop-canvas");
+        if (canvas === null) {
+            var width = window.innerWidth;
+            var height = window.innerHeight;
+            canvas = document.createElement("canvas");
+            canvas.setAttribute("id", "drop-canvas");
+            canvas.setAttribute("style", "display:block;z-index:999999;pointer-events:none;position:fixed;top:0");
+            document.body.prepend(canvas);
+            canvas.width = width;
+            canvas.height = height;
+            window.addEventListener("resize", function () {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }, true);
+        }
 
-	// https://www.html.am/html-codes/color/color-scheme.cfm
-	// DodgerBlue, DarkOrange, ForestGreen, MediumPurple
-	var colors = ["30,144,255", "255,140,0", "34,139,34", "147,112,219"];
-	var error = "220,20,60"; // Crimson
+        this.canvas = canvas;
+        this.context = canvas.getContext("2d");
 
-	var particles = [];
-	var i_particle = -1;
+        this.particles = [];
+        this.versions = [];
 
-	var versions = [];
-	var i_version = parseInt(Math.random() * colors.length);
+        // DodgerBlue, DarkOrange, ForestGreen, MediumPurple
+        this.colors = ["30,144,255", "255,140,0", "34,139,34", "147,112,219"];
+        this.error = "220,20,60"; // Crimson
 
-	function health() {
-		let url = `${location.protocol}//${location.host}/health`;
-		$.ajax({
-			url: url,
-			type: 'get',
-			success: function (res, status) {
-				// console.log(`health : ${status}`);
-				if (res) {
-					resetParticle(res.version);
-				} else {
-					resetParticle(null);
-				}
-			},
-			error: function (err) {
-				resetParticle(null);
-			}
-		});
+        this.interval = 10;
 
-		// window.setTimeout(health, dropper.interval);
-	}
+        this.radius = 10;
+        this.alpha = 0.9;
+        this.speed = 1;
+    }
 
-	function getColor(v) {
-		var version;
-		var color;
+    start() {
+        if (!this.time) {
+            this.time = performance.now();
+        }
 
-		if (!v) {
-			return `rgba(${error},${dropper.alpha})`;
-		}
+        if (!this.running) {
+            this.running = true;
+            requestAnimationFrame(this.step.bind(this));
+        }
+    }
 
-		for (var i = 0; i < versions.length; i++) {
-			version = versions[i];
-			if (version.v == v) {
-				color = version.c;
-				break;
-			}
-		}
+    step(timestamp) {
+        if (!this.running) {
+            return;
+        }
 
-		if (!color) {
-			i_version++;
-			if (i_version >= colors.length) {
-				i_version = i_version % colors.length;
-			}
+        var diff = timestamp - this.time;
+        this.time = timestamp;
 
-			color = `rgba(${colors[i_version]},${dropper.alpha})`;
+        this.draw(diff);
 
-			version = {};
-			version.v = v;
-			version.c = color;
-			versions.push(version);
-		}
+        requestAnimationFrame(this.step.bind(this));
+    }
 
-		return color;
-	}
+    draw(diff) {
+        var width = window.innerWidth;
+        var height = window.innerHeight;
 
-	function resetParticle(version) {
-		var width = window.innerWidth;
-		var height = window.innerHeight;
-		var column = parseInt(width / (dropper.radius * 3));
-		var particle;
+        var particle;
 
-		i_particle++;
-		if (i_particle >= dropper.maxCount) {
-			i_particle = 0;
-		}
+        this.context.clearRect(0, 0, width, height);
 
-		if (particles.length <= i_particle) {
-			particle = {};
-		} else {
-			particle = particles[i_particle];
-		}
+        for (var i = 0; i < this.particles.length; i++) {
+            particle = this.particles[i];
 
-		particle.x = parseInt(Math.random() * column) * (dropper.radius * 2) + (width / 6);
-		particle.y = dropper.radius * -1;
-		particle.r = dropper.radius;
-		particle.color = getColor(version);
+            particle.y += (diff * this.speed);
 
-		if (particles.length <= i_particle) {
-			particles.push(particle);
-		}
+            if (particle.y > height) {
+                this.del(particle.v, i);
+                i--;
+                continue;
+            }
 
-		// console.log(`drop ${i_particle}/${particles.length} ${particle.x} ${particle.y}`);
-	}
+            this.context.beginPath();
+            this.context.arc(particle.x, particle.y, particle.r, 0, 2 * Math.PI);
+            this.context.fillStyle = particle.color;
+            this.context.fill();
+        }
+    }
 
-	function runAnimation() {
-		var height = window.innerHeight;
-		var particle;
+    find(v) {
+        var version;
+        for (var i = 0; i < this.versions.length; i++) {
+            version = this.versions[i];
+            if (version.v === v) {
+                version.i = i;
+                break;
+            }
+        }
+        return version;
+    }
 
-		context.clearRect(0, 0, window.innerWidth, window.innerHeight);
+    color(v) {
+        var version = this.find(v);
+        var color;
 
-		for (var i = 0; i < particles.length; i++) {
-			particle = particles[i];
-			particle.y += dropper.speed;
+        if (version) {
+            color = version.c;
 
-			if (particle.y > height) {
-				continue;
-			}
+            version.x++;
+        } else {
+            color = `rgba(${this.error},${this.alpha})`;
 
-			context.beginPath();
-			context.arc(particle.x, particle.y, particle.r, 0, 2 * Math.PI);
-			context.fillStyle = particle.color;
-			context.fill();
-		}
+            version = {};
+            version.v = v;
+            version.c = color;
+            version.x = 1;
+            this.versions.push(version);
+        }
 
-		animationTimer = requestAnimationFrame(runAnimation);
-	}
+        return color;
+    }
 
-	function startDrop() {
-		var width = window.innerWidth;
-		var height = window.innerHeight;
+    del(v, i) {
+        this.particles.splice(i, 1);
 
-		window.requestAnimationFrame = (function () {
-			return window.requestAnimationFrame ||
-				window.webkitRequestAnimationFrame ||
-				window.mozRequestAnimationFrame ||
-				window.oRequestAnimationFrame ||
-				window.msRequestAnimationFrame ||
-				function (callback) {
-					return window.setTimeout(callback, dropper.frameInterval);
-				};
-		})();
+        var version = this.find(v);
 
-		var canvas = document.getElementById("drop-canvas");
-		if (canvas === null) {
-			canvas = document.createElement("canvas");
-			canvas.setAttribute("id", "drop-canvas");
-			canvas.setAttribute("style", "display:block;z-index:999999;pointer-events:none;position:fixed;top:0");
-			document.body.prepend(canvas);
-			canvas.width = width;
-			canvas.height = height;
-			window.addEventListener("resize", function () {
-				canvas.width = window.innerWidth;
-				canvas.height = window.innerHeight;
-			}, true);
-			context = canvas.getContext("2d");
-		} else if (context === null) {
-			context = canvas.getContext("2d");
-		}
+        if (version) {
+            version.x--;
 
-		setInterval(function () {
-			health();
-		}, dropper.interval);
+            if (version.x <= 0) {
+                this.versions.splice(version.i, 1);
+            }
+        }
+    }
 
-		runAnimation();
-	}
-})();
+    add(v) {
+        var width = window.innerWidth;
+        var column = parseInt(width / (this.radius * 3));
+
+        var particle = {};
+
+        particle.v = v;
+        particle.x = parseInt(Math.random() * column) * (this.radius * 2) + parseInt(width / 6);
+        particle.y = this.radius * -1;
+        particle.r = this.radius;
+        particle.color = this.color(v);
+
+        this.particles.push(particle);
+
+        console.log(`drop ${this.particles.length} ${particle.x} ${particle.y} ${this.versions.length}`);
+    }
+}
+
+let dropper = new Dropper();
 
 dropper.start();
+
+function health() {
+    var url = `${location.protocol}//${location.host}/health`;
+    $.ajax({
+        url: url,
+        type: 'get',
+        success: function (res, status) {
+            // console.log(`health : ${status}`);
+            if (res) {
+                dropper.add(res.version);
+            } else {
+                dropper.add(null);
+            }
+        },
+        error: function (err) {
+            dropper.add(null);
+        }
+    });
+}
+
+setInterval(function () {
+    health();
+}, dropper.interval);

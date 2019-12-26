@@ -34,7 +34,7 @@ class Dropper {
         this.colors = ["30,144,255", "255,140,0", "34,139,34", "147,112,219"];
         this.error = "220,20,60"; // Crimson
 
-        this.interval = 10;
+        this.interval = 5;
 
         this.radius = 10;
         this.alpha = 0.9;
@@ -93,24 +93,28 @@ class Dropper {
 
     find(v) {
         var version;
+        var index;
         for (var i = 0; i < this.versions.length; i++) {
             version = this.versions[i];
             if (version.v === v) {
-                version.i = i;
+                index = i;
                 break;
             }
         }
-        return version;
+        return index;
     }
 
     color(v) {
-        var version = this.find(v);
+        var version;
         var color;
 
-        if (version) {
-            color = version.c;
+        var index = this.find(v);
 
+        if (index) {
+            version = this.versions[index];
             version.x++;
+
+            color = version.c;
         } else {
             if (v) {
                 if (this.color_index) {
@@ -134,7 +138,7 @@ class Dropper {
             this.versions.push(version);
         }
 
-        console.log(`version ${this.versions.length} ${version.i} ${version.x}`);
+        console.log(`version ${this.versions.length} ${version.v} ${version.x}`);
 
         return color;
     }
@@ -142,13 +146,15 @@ class Dropper {
     del(v, i) {
         this.particles.splice(i, 1);
 
-        var version = this.find(v);
+        var version;
+        var index = this.find(v);
 
-        if (version) {
+        if (index) {
+            version = this.versions[index];
             version.x--;
 
             if (version.x <= 0) {
-                this.versions.splice(version.i, 1);
+                this.versions.splice(index, 1);
             }
         }
     }
@@ -167,7 +173,7 @@ class Dropper {
 
         this.particles.push(particle);
 
-        console.log(`drop ${this.particles.length} ${particle.x} ${particle.y}`);
+        console.log(`drop ${this.particles.length} ${particle.x} ${particle.y} ${v}`);
     }
 }
 

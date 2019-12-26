@@ -209,12 +209,15 @@ class Dropper {
         var e = document.getElementById("drop-log");
         if (e) {
             var version;
-            var t = `${this.particles.length}`;
+            var width;
+            var t = '<div class="progress">';
             for (var i = 0; i < this.versions.length; i++) {
                 version = this.versions[i];
-                t += ` | ${version.v} (${version.x})`;
+                width = version.x * 100 / this.particles.length;
+                t += `<div class="progress-bar" role="progressbar" style="width:${width}%; background-color: ${version.c};"></div>`;
             }
-            e.innerText = t;
+            t += '</div>';
+            e.innerHTML = t;
         }
     }
 }

@@ -24,6 +24,8 @@ class Dropper {
             }, true);
         }
 
+        this.debug = false;
+
         this.canvas = canvas;
         this.context = canvas.getContext("2d");
 
@@ -34,7 +36,7 @@ class Dropper {
         this.colors = ["30,144,255", "255,140,0", "34,139,34", "147,112,219"];
         this.error = "220,20,60"; // Crimson
 
-        this.interval = 5;
+        this.interval = 20;
 
         this.radius = 10;
         this.alpha = 0.9;
@@ -93,7 +95,7 @@ class Dropper {
 
     find(v) {
         var version;
-        var index;
+        var index = -1;
         for (var i = 0; i < this.versions.length; i++) {
             version = this.versions[i];
             if (version.v === v) {
@@ -101,6 +103,7 @@ class Dropper {
                 break;
             }
         }
+        // console.log(`find ${index}`);
         return index;
     }
 
@@ -110,7 +113,7 @@ class Dropper {
 
         var index = this.find(v);
 
-        if (index) {
+        if (index > -1) {
             version = this.versions[index];
             version.x++;
 
@@ -138,7 +141,9 @@ class Dropper {
             this.versions.push(version);
         }
 
-        console.log(`version ${this.versions.length} ${version.v} ${version.x}`);
+        if (this.debug) {
+            console.log(`version ${this.versions.length} ${version.v} ${version.x}`);
+        }
 
         return color;
     }
@@ -146,11 +151,10 @@ class Dropper {
     del(v, i) {
         this.particles.splice(i, 1);
 
-        var version;
         var index = this.find(v);
+        if (index > -1) {
+            var version = this.versions[index];
 
-        if (index) {
-            version = this.versions[index];
             version.x--;
 
             if (version.x <= 0) {
@@ -173,7 +177,9 @@ class Dropper {
 
         this.particles.push(particle);
 
-        console.log(`drop ${this.particles.length} ${particle.x} ${particle.y} ${v}`);
+        if (this.debug) {
+            console.log(`drop ${this.particles.length} ${particle.x} ${particle.y} ${v}`);
+        }
     }
 }
 

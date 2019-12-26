@@ -38,9 +38,18 @@ class Dropper {
 
         this.interval = 10;
 
+        this.column = 50;
         this.radius = 10;
         this.alpha = 0.9;
         this.speed = 1;
+
+        this.columns = [];
+        for (var i = 0; i < this.column; i++) {
+            this.columns.push(i);
+        }
+        this.columns.sort(function () {
+            return 0.5 - Math.random()
+        });
     }
 
     start() {
@@ -70,24 +79,28 @@ class Dropper {
     draw(diff) {
         var width = window.innerWidth;
         var height = window.innerHeight;
-
-        var particle;
+        var column = parseInt(width / (this.radius * 3));
+        var padding = parseInt(width / 6);
 
         this.context.clearRect(0, 0, width, height);
+
+        var particle;
+        var x;
 
         for (var i = 0; i < this.particles.length; i++) {
             particle = this.particles[i];
 
             particle.y += (diff * this.speed);
-
             if (particle.y > height) {
                 this.del(particle.v, i);
                 i--;
                 continue;
             }
 
+            x = parseInt(column / this.column * particle.x) * (this.radius * 2) + padding;
+
             this.context.beginPath();
-            this.context.arc(particle.x, particle.y, particle.r, 0, 2 * Math.PI);
+            this.context.arc(x, particle.y, particle.r, 0, 2 * Math.PI);
             this.context.fillStyle = particle.color;
             this.context.fill();
         }
@@ -163,14 +176,24 @@ class Dropper {
         }
     }
 
-    add(v) {
-        var width = window.innerWidth;
-        var column = parseInt(width / (this.radius * 3));
+    gen() {
+        if (this.column_index) {
+            this.column_index++;
+            if (this.column_index >= this.columns.length) {
+                this.column_index = this.column_index % this.columns.length;
+            }
+        } else {
+            this.column_index = parseInt(Math.random() * this.columns.length);
+        }
 
+        return this.columns[this.column_index];
+    }
+
+    add(v) {
         var particle = {};
 
         particle.v = v;
-        particle.x = parseInt(Math.random() * column) * (this.radius * 2) + parseInt(width / 6);
+        particle.x = this.gen();
         particle.y = this.radius * -1;
         particle.r = this.radius;
         particle.color = this.color(v);

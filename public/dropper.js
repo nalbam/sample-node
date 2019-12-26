@@ -112,14 +112,29 @@ class Dropper {
 
             version.x++;
         } else {
-            color = `rgba(${this.error},${this.alpha})`;
+            if (v) {
+                if (this.color_index) {
+                    this.color_index++;
+                    if (this.color_index >= this.colors.length) {
+                        this.color_index = this.color_index % this.colors.length;
+                    }
+                } else {
+                    this.color_index = parseInt(Math.random() * this.colors.length);
+                }
+                color = `rgba(${this.colors[this.color_index]},${this.alpha})`;
+            } else {
+                color = `rgba(${this.error},${this.alpha})`;
+            }
 
             version = {};
             version.v = v;
             version.c = color;
             version.x = 1;
+
             this.versions.push(version);
         }
+
+        console.log(`version ${this.versions.length} ${version.i} ${version.x}`);
 
         return color;
     }
@@ -152,7 +167,7 @@ class Dropper {
 
         this.particles.push(particle);
 
-        console.log(`drop ${this.particles.length} ${particle.x} ${particle.y} ${this.versions.length}`);
+        console.log(`drop ${this.particles.length} ${particle.x} ${particle.y}`);
     }
 }
 

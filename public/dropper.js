@@ -36,7 +36,7 @@ class Dropper {
         this.colors = ["30,144,255", "255,140,0", "34,139,34", "147,112,219"];
         this.error = "220,20,60"; // Crimson
 
-        this.interval = 20;
+        this.interval = 10;
 
         this.radius = 10;
         this.alpha = 0.9;

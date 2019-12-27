@@ -206,7 +206,7 @@ class Dropper {
     }
 
     log() {
-        var e = document.getElementById("drop-log");
+        var e = document.getElementById("drop-rate");
         if (e) {
             var version;
             var width;

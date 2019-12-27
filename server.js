@@ -20,7 +20,8 @@ const os = require('os'),
     cors = require('cors'),
     express = require('express'),
     moment = require('moment-timezone'),
-    redis = require('redis');
+    redis = require('redis'),
+    request = require('request');
 
 // express
 const app = express();
@@ -118,6 +119,23 @@ app.get('/live', function (req, res) {
     // console.log(`${req.method} ${req.path}`);
     return res.status(200).json({
         result: 'live'
+    });
+});
+
+app.get('/spring', function (req, res) {
+    // console.log(`${req.method} ${req.path}`);
+    request('http://sample-spring/health', function (error, response, body) {
+        // console.log('error:', error); // Print the error if one occurred
+        // console.log('statusCode:', response && response.statusCode); // Print the response status code if a response was received
+        // console.log('body:', body); // Print the HTML for the Google homepage.
+
+        if (error) {
+            return res.status(500).json({
+                result: 'error'
+            });
+        } else {
+            return res.status(response.statusCode).json(JSON.parse(body));
+        }
     });
 });
 

@@ -31,21 +31,35 @@ const os = require('os'),
     redis = require('redis'),
     request = require('request');
 
-// zipkin
-const {
-    Tracer,
-    ExplicitContext,
-    ConsoleRecorder
-} = require("zipkin");
-const zipkinExpress = require("zipkin-instrumentation-express").expressMiddleware;
-const zipkinRequest = require('zipkin-instrumentation-request');
+// jaeger
+const initTracer = require('jaeger-client').initTracer;
+const config = {
+    serviceName: 'sample-node',
+};
+const options = {
+    tags: {
+        'sample-node.version': VERSION,
+    },
+    // metrics: metrics,
+    // logger: logger,
+};
+const tracer = initTracer(config, options);
 
-// zipkin tracer
-const tracer = new Tracer({
-    ctxImpl: new ExplicitContext(),
-    recorder: new ConsoleRecorder(),
-    localServiceName: "sample-node",
-});
+// // zipkin
+// const {
+//     Tracer,
+//     ExplicitContext,
+//     ConsoleRecorder
+// } = require("zipkin");
+// const zipkinExpress = require("zipkin-instrumentation-express").expressMiddleware;
+// const zipkinRequest = require('zipkin-instrumentation-request');
+
+// // zipkin tracer
+// const tracer = new Tracer({
+//     ctxImpl: new ExplicitContext(),
+//     recorder: new ConsoleRecorder(),
+//     localServiceName: "sample-node",
+// });
 
 // express
 const app = express();

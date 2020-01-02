@@ -37,7 +37,7 @@ const {
     ExplicitContext,
     ConsoleRecorder
 } = require("zipkin");
-// const zipkinMiddleware = require("zipkin-instrumentation-express").expressMiddleware;
+const zipkinMiddleware = require("zipkin-instrumentation-express").expressMiddleware;
 const zipkinRequest = require('zipkin-instrumentation-request');
 
 // zipkin tracer
@@ -55,9 +55,9 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-// app.use(zipkinMiddleware({
-//     tracer
-// }));
+app.use(zipkinMiddleware({
+    tracer
+}));
 
 // redis
 const retry_strategy = function (options) {
@@ -121,7 +121,6 @@ app.get('/live', function (req, res) {
 });
 
 app.get('/health', function (req, res) {
-    console.log('req:', req);
     // console.log(`${req.method} ${req.path}`);
     var version;
     if (PROFILE === 'default') {
@@ -144,8 +143,8 @@ app.get('/health', function (req, res) {
 });
 
 app.get('/spring', function (req, res) {
-    console.log('req:', req);
     // console.log(`${req.method} ${req.path}`);
+    console.log(`${JSON.stringify(req.headers)}`);
 
     var remoteService;
     if (PROFILE === 'default') {

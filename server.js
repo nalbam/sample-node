@@ -69,9 +69,9 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-app.use(zipkinExpress({
-    tracer
-}));
+// app.use(zipkinExpress({
+//     tracer
+// }));
 
 // redis
 const retry_strategy = function (options) {

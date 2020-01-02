@@ -32,18 +32,33 @@ const os = require('os'),
     request = require('request');
 
 // jaeger
-const initTracer = require('jaeger-client').initTracer;
-const config = {
-    serviceName: 'sample-node',
-};
-const options = {
-    tags: {
-        'sample-node.version': VERSION,
-    },
-    // metrics: metrics,
-    // logger: logger,
-};
-const tracer = initTracer(config, options);
+// const initTracer = require('jaeger-client').initTracer;
+// const config = {
+//     serviceName: 'sample-node',
+// };
+// const options = {
+//     tags: {
+//         'sample-node.version': VERSION,
+//     },
+//     // metrics: metrics,
+//     logger: {
+//         info(msg) {
+//             console.log("INFO ", msg);
+//         },
+//         error(msg) {
+//             console.log("ERROR", msg);
+//         },
+//     },
+// };
+// const {
+//     track
+// } = require("express-jaeger");
+// const tracer = initTracer(config, options);
+
+const Tracer = require('@risingstack/jaeger')
+const tracer = new Tracer({
+    serviceName: 'sample-node'
+})
 
 // // zipkin
 // const {

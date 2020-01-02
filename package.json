@@ -9,12 +9,14 @@
     "test": "jest"
   },
   "dependencies": {
+    "@risingstack/jaeger": "^2.5.0",
     "cors": "^2.8.5",
     "ejs": "^3.0.1",
     "express": "^4.17.1",
     "jaeger-client": "^3.17.1",
     "moment-timezone": "^0.5.27",
     "node-fetch": "^2.6.0",
+    "opentracing": "^0.14.4",
     "redis": "^2.8.0"
   },
   "devDependencies": {

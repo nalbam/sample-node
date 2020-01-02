@@ -21,7 +21,8 @@ const os = require('os'),
     express = require('express'),
     moment = require('moment-timezone'),
     redis = require('redis'),
-    request = require('request');
+    request = require('request'),
+    appzip = require('appmetrics-zipkin');
 
 // express
 const app = express();

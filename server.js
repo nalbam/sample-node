@@ -16,13 +16,35 @@
 //     require('newrelic');
 // }
 
+// env
+const PORT = process.env.PORT || 3000;
+const PROFILE = process.env.PROFILE || 'default';
+const VERSION = process.env.VERSION || 'v0.0.0';
+const MESSAGE = process.env.MESSAGE || PROFILE;
+const FAULT_RATE = process.env.FAULT_RATE || 0;
+const REDIS_URL = process.env.REDIS_URL || `redis://sample-node-redis:6379`;
+
 const os = require('os'),
     cors = require('cors'),
     express = require('express'),
     moment = require('moment-timezone'),
     redis = require('redis'),
-    request = require('request'),
-    appzip = require('appmetrics-zipkin');
+    request = require('request');
+
+// zipkin
+const {
+    Tracer,
+    ExplicitContext,
+    ConsoleRecorder
+} = require("zipkin");
+const zipkinMiddleware = require("zipkin-instrumentation-express").expressMiddleware;
+
+// Get ourselves a zipkin tracer
+const tracer = new Tracer({
+    ctxImpl: new ExplicitContext(),
+    recorder: new ConsoleRecorder(),
+    localServiceName: "sample-node",
+});
 
 // express
 const app = express();
@@ -32,13 +54,9 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-// env
-const PORT = process.env.PORT || 3000;
-const PROFILE = process.env.PROFILE || 'default';
-const VERSION = process.env.VERSION || 'v0.0.0';
-const MESSAGE = process.env.MESSAGE || PROFILE;
-const FAULT_RATE = process.env.FAULT_RATE || 0;
-const REDIS_URL = process.env.REDIS_URL || `redis://sample-node-redis:6379`;
+app.use(zipkinMiddleware({
+    tracer
+}));
 
 // redis
 const retry_strategy = function (options) {

@@ -17,6 +17,7 @@
     "redis": "^2.8.0",
     "zipkin": "^0.19.1",
     "zipkin-instrumentation-express": "^0.19.1",
+    "zipkin-instrumentation-request": "^0.19.1",
     "zipkin-transport-http": "^0.19.1"
   },
   "devDependencies": {

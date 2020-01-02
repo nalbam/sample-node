@@ -149,7 +149,7 @@ app.get('/spring', function (req, res) {
 
     var remoteService;
     if (PROFILE === 'default') {
-        remoteService = 'localhost:3000';
+        remoteService = 'localhost:8080';
     } else {
         remoteService = 'sample-spring';
     }

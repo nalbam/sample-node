@@ -37,10 +37,10 @@ const {
     ExplicitContext,
     ConsoleRecorder
 } = require("zipkin");
-const zipkinMiddleware = require("zipkin-instrumentation-express").expressMiddleware;
+// const zipkinMiddleware = require("zipkin-instrumentation-express").expressMiddleware;
 const zipkinRequest = require('zipkin-instrumentation-request');
 
-// Get ourselves a zipkin tracer
+// zipkin tracer
 const tracer = new Tracer({
     ctxImpl: new ExplicitContext(),
     recorder: new ConsoleRecorder(),
@@ -55,9 +55,9 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-app.use(zipkinMiddleware({
-    tracer
-}));
+// app.use(zipkinMiddleware({
+//     tracer
+// }));
 
 // redis
 const retry_strategy = function (options) {

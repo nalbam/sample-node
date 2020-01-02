@@ -175,11 +175,10 @@ app.get('/spring', function (req, res) {
     //     }
     // });
 
-    // console.log(`${req.method} ${req.path}`);
     request(`http://${remoteService}/health`, function (error, response, body) {
-        // console.log('error:', error); // Print the error if one occurred
-        // console.log('statusCode:', response && response.statusCode); // Print the response status code if a response was received
-        // console.log('body:', body); // Print the HTML for the Google homepage.
+        // console.log('error:', error);
+        // console.log('statusCode:', response && response.statusCode);
+        // console.log('body:', body);
 
         if (error) {
             return res.status(500).json({
@@ -187,6 +186,45 @@ app.get('/spring', function (req, res) {
             });
         } else {
             return res.status(response.statusCode).json(JSON.parse(body));
+        }
+    });
+});
+
+app.get('/loop/:count', function (req, res) {
+    // console.log(`${req.method} ${req.path}`);
+    console.log(`${JSON.stringify(req.headers)}`);
+
+    var count = req.params.count;
+
+    if (count <= 0) {
+        return res.status(200).json({
+            result: 'ok'
+        });
+    }
+
+    count--;
+
+    var remoteService;
+    if (PROFILE === 'default') {
+        remoteService = 'localhost:3000';
+    } else {
+        remoteService = 'sample-node';
+    }
+
+    request(`http://${remoteService}/loop/${count}`, function (error, response, body) {
+        // console.log('error:', error);
+        // console.log('statusCode:', response && response.statusCode);
+        // console.log('body:', body);
+
+        if (error) {
+            return res.status(500).json({
+                result: 'error'
+            });
+        } else {
+            return res.status(response.statusCode).json({
+                result: 'ok',
+                data: JSON.parse(body)
+            });
         }
     });
 });

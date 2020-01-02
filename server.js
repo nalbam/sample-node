@@ -31,21 +31,21 @@ const os = require('os'),
     redis = require('redis'),
     request = require('request');
 
-// zipkin
-const {
-    Tracer,
-    ExplicitContext,
-    ConsoleRecorder
-} = require("zipkin");
-const zipkinExpress = require("zipkin-instrumentation-express").expressMiddleware;
-const zipkinRequest = require('zipkin-instrumentation-request');
+// // zipkin
+// const {
+//     Tracer,
+//     ExplicitContext,
+//     ConsoleRecorder
+// } = require("zipkin");
+// const zipkinExpress = require("zipkin-instrumentation-express").expressMiddleware;
+// const zipkinRequest = require('zipkin-instrumentation-request');
 
-// zipkin tracer
-const tracer = new Tracer({
-    ctxImpl: new ExplicitContext(),
-    recorder: new ConsoleRecorder(),
-    localServiceName: "sample-node",
-});
+// // zipkin tracer
+// const tracer = new Tracer({
+//     ctxImpl: new ExplicitContext(),
+//     recorder: new ConsoleRecorder(),
+//     localServiceName: "sample-node",
+// });
 
 // express
 const app = express();
@@ -55,9 +55,9 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-app.use(zipkinExpress({
-    tracer
-}));
+// app.use(zipkinExpress({
+//     tracer
+// }));
 
 // redis
 const retry_strategy = function (options) {
@@ -162,10 +162,6 @@ app.get('/spring', function (req, res) {
     //     url: `http://${remoteService}/health`,
     //     method: 'GET',
     // }, function (error, response, body) {
-    //     console.log('error:', error);
-    //     console.log('statusCode:', response && response.statusCode);
-    //     console.log('body:', body);
-
     //     if (error) {
     //         return res.status(500).json({
     //             result: 'error'
@@ -220,10 +216,6 @@ app.get('/loop/:count', function (req, res) {
     //     url: `http://${remoteService}/loop/${count}`,
     //     method: 'GET',
     // }, function (error, response, body) {
-    //     // console.log('error:', error);
-    //     // console.log('statusCode:', response && response.statusCode);
-    //     // console.log('body:', body);
-
     //     if (error) {
     //         return res.status(500).json({
     //             result: 'error'

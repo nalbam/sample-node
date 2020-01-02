@@ -31,21 +31,21 @@ const os = require('os'),
     redis = require('redis'),
     request = require('request');
 
-// zipkin
-const {
-    Tracer,
-    ExplicitContext,
-    ConsoleRecorder
-} = require("zipkin");
-const zipkinMiddleware = require("zipkin-instrumentation-express").expressMiddleware;
-const zipkinRequest = require('zipkin-instrumentation-request');
+// // zipkin
+// const {
+//     Tracer,
+//     ExplicitContext,
+//     ConsoleRecorder
+// } = require("zipkin");
+// const zipkinMiddleware = require("zipkin-instrumentation-express").expressMiddleware;
+// const zipkinRequest = require('zipkin-instrumentation-request');
 
-// zipkin tracer
-const tracer = new Tracer({
-    ctxImpl: new ExplicitContext(),
-    recorder: new ConsoleRecorder(),
-    localServiceName: "sample-node",
-});
+// // zipkin tracer
+// const tracer = new Tracer({
+//     ctxImpl: new ExplicitContext(),
+//     recorder: new ConsoleRecorder(),
+//     localServiceName: "sample-node",
+// });
 
 // express
 const app = express();
@@ -55,9 +55,9 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-app.use(zipkinMiddleware({
-    tracer
-}));
+// app.use(zipkinMiddleware({
+//     tracer
+// }));
 
 // redis
 const retry_strategy = function (options) {
@@ -153,33 +153,18 @@ app.get('/spring', function (req, res) {
         remoteService = 'sample-spring';
     }
 
-    const zipRequest = zipkinRequest(request, {
-        tracer,
-        remoteService
-    });
+    // const zipRequest = zipkinRequest(request, {
+    //     tracer,
+    //     remoteService
+    // });
 
-    zipRequest({
-        url: `http://${remoteService}/health`,
-        method: 'GET',
-    }, function (error, response, body) {
-        console.log('error:', error);
-        console.log('statusCode:', response && response.statusCode);
-        console.log('body:', body);
-
-        if (error) {
-            return res.status(500).json({
-                result: 'error'
-            });
-        } else {
-            return res.status(response.statusCode).json(JSON.parse(body));
-        }
-    });
-
-    // // console.log(`${req.method} ${req.path}`);
-    // request('http://sample-spring/health', function (error, response, body) {
-    //     // console.log('error:', error); // Print the error if one occurred
-    //     // console.log('statusCode:', response && response.statusCode); // Print the response status code if a response was received
-    //     // console.log('body:', body); // Print the HTML for the Google homepage.
+    // zipRequest({
+    //     url: `http://${remoteService}/health`,
+    //     method: 'GET',
+    // }, function (error, response, body) {
+    //     console.log('error:', error);
+    //     console.log('statusCode:', response && response.statusCode);
+    //     console.log('body:', body);
 
     //     if (error) {
     //         return res.status(500).json({
@@ -189,6 +174,21 @@ app.get('/spring', function (req, res) {
     //         return res.status(response.statusCode).json(JSON.parse(body));
     //     }
     // });
+
+    // console.log(`${req.method} ${req.path}`);
+    request(`http://${remoteService}/health`, function (error, response, body) {
+        // console.log('error:', error); // Print the error if one occurred
+        // console.log('statusCode:', response && response.statusCode); // Print the response status code if a response was received
+        // console.log('body:', body); // Print the HTML for the Google homepage.
+
+        if (error) {
+            return res.status(500).json({
+                result: 'error'
+            });
+        } else {
+            return res.status(response.statusCode).json(JSON.parse(body));
+        }
+    });
 });
 
 app.get('/stress', function (req, res) {

@@ -182,29 +182,29 @@ app.get('/spring', function (req, res) {
         remoteService = 'sample-spring';
     }
 
-    // const zipRequest = zipkinRequest(request, {
-    //     tracer,
-    //     remoteService
-    // });
+    request(`http://${remoteService}/health`, function (error, response, body) {
+        if (error) {
+            return res.status(500).json({
+                result: 'error'
+            });
+        } else {
+            return res.status(response.statusCode).json(JSON.parse(body));
+        }
+    });
+});
 
-    // zipRequest({
-    //     url: `http://${remoteService}/health`,
-    //     method: 'GET',
-    // }, function (error, response, body) {
-    //     if (error) {
-    //         return res.status(500).json({
-    //             result: 'error'
-    //         });
-    //     } else {
-    //         return res.status(response.statusCode).json(JSON.parse(body));
-    //     }
-    // });
+app.get('/tomcat', function (req, res) {
+    // console.log(`${req.method} ${req.path}`);
+    console.log(`${JSON.stringify(req.headers)}`);
+
+    var remoteService;
+    if (PROFILE === 'default') {
+        remoteService = 'localhost:8080';
+    } else {
+        remoteService = 'sample-tomcat';
+    }
 
     request(`http://${remoteService}/health`, function (error, response, body) {
-        // console.log('error:', error);
-        // console.log('statusCode:', response && response.statusCode);
-        // console.log('body:', body);
-
         if (error) {
             return res.status(500).json({
                 result: 'error'

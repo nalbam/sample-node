@@ -123,6 +123,7 @@ app.get('/', function (req, res) {
     res.render('index.ejs', {
         host: host,
         date: date,
+        profile: PROFILE,
         message: MESSAGE,
         version: VERSION
     });

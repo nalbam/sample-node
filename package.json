@@ -4,6 +4,7 @@
   "description": "Node.js sample app",
   "main": "server.js",
   "scripts": {
+    "clean": "rm -rf node_modules package-lock.json",
     "build": "npm install -s",
     "start": "node server.js",
     "test": "jest"

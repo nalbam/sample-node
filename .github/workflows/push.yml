@@ -16,7 +16,7 @@ jobs:
           fetch-depth: 1
 
       - name: Bump Version
-        uses: opspresso/action-builder@v0.2.5
+        uses: opspresso/action-builder@master
         with:
           args: --version
 
@@ -30,14 +30,14 @@ jobs:
           ./build.sh
 
       - name: Release to GitHub
-        uses: opspresso/action-builder@v0.2.5
+        uses: opspresso/action-builder@master
         with:
           args: --release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # - name: Trigger for GitOps
-      #   uses: opspresso/action-builder@v0.2.5
+      #   uses: opspresso/action-builder@master
       #   with:
       #     args: --dispatch
       #   env:
@@ -47,7 +47,7 @@ jobs:
       #     TARGET_ID: "deepracer-timer"
 
       # - name: Build & Push to Docker Hub
-      #   uses: opspresso/action-builder@v0.2.5
+      #   uses: opspresso/action-builder@master
       #   with:
       #     args: --docker
       #   env:
@@ -56,7 +56,7 @@ jobs:
       #     LATEST: "true"
 
       - name: Build & Push to GitHub Package
-        uses: opspresso/action-builder@v0.2.5
+        uses: opspresso/action-builder@master
         with:
           args: --docker
         env:
@@ -66,7 +66,7 @@ jobs:
           LATEST: "true"
 
       - name: Build & Push to AWS ECR
-        uses: opspresso/action-builder@v0.2.5
+        uses: opspresso/action-builder@master
         with:
           args: --ecr
         env:

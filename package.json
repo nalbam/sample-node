@@ -16,7 +16,7 @@
     "express": "^4.17.1",
     "moment-timezone": "^0.5.27",
     "node-fetch": "^2.6.0",
-    "redis": "^2.8.0"
+    "redis": "^3.0.2"
   },
   "devDependencies": {
     "jest": "^25.1.0",

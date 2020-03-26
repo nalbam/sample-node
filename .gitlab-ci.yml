@@ -3,7 +3,7 @@
 image: docker:stable
 
 services:
-  - docker:dind
+  - node:13
 
 variables:
   IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME

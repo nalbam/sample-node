@@ -99,11 +99,11 @@ podTemplate(label: label, containers: [
           }
         )
       }
-      stage("Deploy SPOT") {
+      stage("Deploy Local") {
         container("builder") {
           try {
             // deploy(cluster, namespace, sub_domain, profile, values_path)
-            builder.deploy("spot", "${SERVICE_GROUP}", "${IMAGE_NAME}", "dev")
+            builder.deploy("local", "${SERVICE_GROUP}", "${IMAGE_NAME}", "dev")
             builder.success(SLACK_TOKEN_DEV, "Deploy DEV")
           } catch (e) {
             builder.failure(SLACK_TOKEN_DEV, "Deploy DEV")

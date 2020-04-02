@@ -99,7 +99,7 @@ podTemplate(label: label, containers: [
           }
         )
       }
-      stage("Deploy LOCAL") {
+      stage("Deploy Local") {
         container("builder") {
           try {
             // deploy(cluster, namespace, sub_domain, profile, values_path)
@@ -111,7 +111,7 @@ podTemplate(label: label, containers: [
           }
         }
       }
-      // stage("Deploy DEV") {
+      // stage("Deploy Dev") {
       //   container("builder") {
       //     try {
       //       // deploy(cluster, namespace, sub_domain, profile, values_path)
@@ -123,7 +123,7 @@ podTemplate(label: label, containers: [
       //     }
       //   }
       // }
-      // stage("Request STAGE") {
+      // stage("Request Stage") {
       //   container("builder") {
       //     builder.proceed(SLACK_TOKEN_DEV, "Request STAGE", "stage")
       //     timeout(time: 60, unit: "MINUTES") {
@@ -131,7 +131,7 @@ podTemplate(label: label, containers: [
       //     }
       //   }
       // }
-      // stage("Proceed STAGE") {
+      // stage("Proceed Stage") {
       //   container("builder") {
       //     builder.proceed(SLACK_TOKEN_DQA, "Deploy STAGE", "stage")
       //     timeout(time: 60, unit: "MINUTES") {
@@ -139,7 +139,7 @@ podTemplate(label: label, containers: [
       //     }
       //   }
       // }
-      // stage("Deploy STAGE") {
+      // stage("Deploy Stage") {
       //   container("builder") {
       //     try {
       //       // deploy(cluster, namespace, sub_domain, profile, values_path)
@@ -151,7 +151,7 @@ podTemplate(label: label, containers: [
       //     }
       //   }
       // }
-      // stage("Proceed PROD") {
+      // stage("Proceed Prod") {
       //   container("builder") {
       //     builder.proceed(SLACK_TOKEN_DQA, "Deploy PROD", "prod")
       //     timeout(time: 60, unit: "MINUTES") {
@@ -159,7 +159,7 @@ podTemplate(label: label, containers: [
       //     }
       //   }
       // }
-      // stage("Deploy PROD") {
+      // stage("Deploy Prod") {
       //   container("builder") {
       //     try {
       //       // deploy(cluster, namespace, sub_domain, profile, values_path)

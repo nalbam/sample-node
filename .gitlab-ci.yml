@@ -1,6 +1,6 @@
 # gitlab-ci
 
-image: docker:latest
+image: docker:stable
 
 # services:
 #   - docker:dind

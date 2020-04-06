@@ -20,9 +20,3 @@ docker_build:
   stage: docker_build
   script:
     - docker build -f Dockerfile -t $IMAGE_TAG .
-
-before_script:
-  - curl
-
-after_script:
-  - curl

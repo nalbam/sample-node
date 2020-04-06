@@ -23,5 +23,6 @@ docker_build:
     - docker:dind
   stage: docker_build
   script:
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
     - docker build -f Dockerfile -t $IMAGE_TAG .
-    - docker images
+    - docker push $IMAGE_TAG

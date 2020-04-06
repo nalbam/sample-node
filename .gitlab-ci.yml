@@ -16,7 +16,13 @@ package:
     - npm install
 
 docker_build:
-  image: opspresso/builder:v0.7.69-kube
+  image: opspresso/builder:v0.7.69
   stage: docker_build
   script:
     - docker build -f Dockerfile -t $IMAGE_TAG .
+
+before_script:
+  - curl
+
+after_script:
+  - curl

@@ -1,21 +1,16 @@
 # gitlab-ci
 
-image: docker:stable
-
-services:
-  - node:13
-
 variables:
   IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME
 
 stages:
   - build
 
-before_script:
-  - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+cache:
+  paths:
+    - node_modules/
 
 build:
-  stage: build
+  image: node:latest
   script:
-    - docker build -f Dockerfile-alpine -t $IMAGE_TAG .
-    - docker push $IMAGE_TAG
+    - npm install

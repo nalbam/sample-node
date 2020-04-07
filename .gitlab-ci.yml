@@ -16,6 +16,9 @@ package:
   stage: package
   script:
     - npm install
+  artifacts:
+    paths:
+      - node_modules/
 
 docker_build:
   image: opspresso/builder:v0.7.69

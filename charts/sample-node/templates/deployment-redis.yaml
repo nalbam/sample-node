@@ -38,9 +38,9 @@ spec:
             - containerPort: 6379
               protocol: TCP
           resources:
-            limits:
-              cpu: 200m
-              memory: 256Mi
             requests:
               cpu: 100m
-              memory: 128Mi
+              memory: 120Mi
+            limits:
+              cpu: 110m
+              memory: 132Mi

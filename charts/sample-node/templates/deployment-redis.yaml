@@ -10,7 +10,7 @@ metadata:
     helm.sh/chart: {{ include "chart" . }}
 spec:
   replicas: 1
-  revisionHistoryLimit: 10
+  revisionHistoryLimit: 5
   selector:
     matchLabels:
       app: {{ include "fullname" . }}-redis

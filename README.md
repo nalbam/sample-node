@@ -1,4 +1,4 @@
-# sample-node	.
+# sample-node
 
 [![GitHub release](https://img.shields.io/github/release/nalbam/sample-node.svg)](https://github.com/nalbam/sample-node/releases)
 [![CircleCI](https://circleci.com/gh/nalbam/sample-node.svg?style=svg)](https://circleci.com/gh/nalbam/sample-node)

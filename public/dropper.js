@@ -36,7 +36,7 @@ class Dropper {
         this.colors = ["30,144,255", "255,140,0", "34,139,34", "147,112,219"];
         this.error = "220,20,60"; // Crimson
 
-        this.interval = 10;
+        this.interval = 100;
 
         this.column = 50;
         this.radius = 10;
@@ -205,7 +205,7 @@ class Dropper {
         }
     }
 
-    log() {
+    progress() {
         var e = document.getElementById("drop-rate");
         if (e) {
             var version;
@@ -227,7 +227,7 @@ let dropper = new Dropper();
 dropper.start();
 
 function health() {
-    var url = `${location.protocol}//${location.host}/health`;
+    var url = `${location.protocol}//${location.host}/success/${rate}`;
     $.ajax({
         url: url,
         type: 'get',
@@ -250,5 +250,5 @@ setInterval(function () {
 }, dropper.interval);
 
 setInterval(function () {
-    dropper.log();
+    dropper.progress();
 }, 1000);

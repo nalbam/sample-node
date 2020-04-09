@@ -132,7 +132,6 @@ app.get('/', function (req, res) {
 app.get('/drop', function (req, res) {
     // console.log(`${req.method} ${req.path}`);
     res.render('drop.ejs', {
-        version: VERSION,
         rate: 100,
     });
 });
@@ -140,7 +139,6 @@ app.get('/drop', function (req, res) {
 app.get('/drop/:rate', function (req, res) {
     // console.log(`${req.method} ${req.path}`);
     res.render('drop.ejs', {
-        version: VERSION,
         rate: req.params.rate,
     });
 });
@@ -148,14 +146,14 @@ app.get('/drop/:rate', function (req, res) {
 app.get('/read', function (req, res) {
     // console.log(`${req.method} ${req.path}`);
     return res.status(200).json({
-        result: 'read'
+        result: 'read',
     });
 });
 
 app.get('/live', function (req, res) {
     // console.log(`${req.method} ${req.path}`);
     return res.status(200).json({
-        result: 'live'
+        result: 'live',
     });
 });
 
@@ -171,12 +169,12 @@ app.get('/health', function (req, res) {
     if (Math.random() * 100 >= FAULT_RATE) {
         return res.status(200).json({
             result: 'ok',
-            version: version
+            version: version,
         });
     } else {
         return res.status(500).json({
             result: 'error',
-            version: version
+            version: version,
         });
     }
 });
@@ -195,7 +193,7 @@ app.get('/spring', function (req, res) {
     request(`http://${remoteService}/health`, function (error, response, body) {
         if (error) {
             return res.status(500).json({
-                result: 'error'
+                result: 'error',
             });
         } else {
             return res.status(response.statusCode).json(JSON.parse(body));
@@ -233,7 +231,7 @@ app.get('/loop/:count', function (req, res) {
 
     if (count <= 0) {
         return res.status(200).json({
-            result: 'ok'
+            result: 'ok',
         });
     }
 
@@ -274,7 +272,7 @@ app.get('/loop/:count', function (req, res) {
 
         if (error) {
             return res.status(500).json({
-                result: 'error'
+                result: 'error',
             });
         } else {
             return res.status(response.statusCode).json({
@@ -292,7 +290,8 @@ app.get('/stress', function (req, res) {
         sum += Math.sqrt(i);
     }
     return res.status(200).json({
-        sum: sum
+        result: 'ok',
+        sum: sum,
     });
 });
 
@@ -301,11 +300,13 @@ app.get('/success/:rate', function (req, res) {
     const rate = req.params.rate;
     if (Math.random() * 100 <= rate) {
         return res.status(200).json({
-            result: 'ok'
+            result: 'ok',
+            version: VERSION,
         });
     } else {
         return res.status(500).json({
-            result: 'error'
+            result: 'error',
+            version: VERSION,
         });
     }
 });
@@ -315,11 +316,13 @@ app.get('/fault/:rate', function (req, res) {
     const rate = req.params.rate;
     if (Math.random() * 100 >= rate) {
         return res.status(200).json({
-            result: 'ok'
+            result: 'ok',
+            version: VERSION,
         });
     } else {
         return res.status(500).json({
-            result: 'error'
+            result: 'error',
+            version: VERSION,
         });
     }
 });

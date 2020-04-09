@@ -125,14 +125,23 @@ app.get('/', function (req, res) {
         date: date,
         profile: PROFILE,
         message: MESSAGE,
-        version: VERSION
+        version: VERSION,
     });
 });
 
 app.get('/drop', function (req, res) {
     // console.log(`${req.method} ${req.path}`);
     res.render('drop.ejs', {
-        version: VERSION
+        version: VERSION,
+        rate: 100,
+    });
+});
+
+app.get('/drop/:rate', function (req, res) {
+    // console.log(`${req.method} ${req.path}`);
+    res.render('drop.ejs', {
+        version: VERSION,
+        rate: req.params.rate,
     });
 });
 
@@ -285,6 +294,20 @@ app.get('/stress', function (req, res) {
     return res.status(200).json({
         sum: sum
     });
+});
+
+app.get('/success/:rate', function (req, res) {
+    // console.log(`${req.method} ${req.path}`);
+    const rate = req.params.rate;
+    if (Math.random() * 100 <= rate) {
+        return res.status(200).json({
+            result: 'ok'
+        });
+    } else {
+        return res.status(500).json({
+            result: 'error'
+        });
+    }
 });
 
 app.get('/fault/:rate', function (req, res) {

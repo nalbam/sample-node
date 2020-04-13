@@ -65,7 +65,7 @@ podTemplate(label: label, containers: [
       }
     }
     stage("Code Analysis") {
-      container("maven") {
+      container("node") {
         try {
           builder.npm_sonar()
         } catch (e) {

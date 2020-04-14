@@ -296,7 +296,7 @@ app.get('/stress', function (req, res) {
 });
 
 app.get('/success/:rate', function (req, res) {
-    // console.log(`${req.method} ${req.path}`);
+    console.log(`${req.method} ${req.path}`);
     const rate = req.params.rate;
     if (Math.random() * 100 <= rate) {
         return res.status(200).json({
@@ -312,7 +312,7 @@ app.get('/success/:rate', function (req, res) {
 });
 
 app.get('/fault/:rate', function (req, res) {
-    // console.log(`${req.method} ${req.path}`);
+    console.log(`${req.method} ${req.path}`);
     const rate = req.params.rate;
     if (Math.random() * 100 >= rate) {
         return res.status(200).json({

@@ -29,7 +29,8 @@ const os = require('os'),
     express = require('express'),
     moment = require('moment-timezone'),
     redis = require('redis'),
-    request = require('request');
+    request = require('request'),
+    apiMetrics = require('prometheus-api-metrics');
 
 // jaeger
 // const initTracer = require('jaeger-client').initTracer;
@@ -83,6 +84,7 @@ app.set('view engine', 'ejs');
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
+app.use(apiMetrics())
 
 // app.use(zipkinExpress({
 //     tracer

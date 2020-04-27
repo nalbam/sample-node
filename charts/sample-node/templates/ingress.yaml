@@ -18,6 +18,11 @@ metadata:
 spec:
   {{- if .Values.ingress.tls }}
   tls:
+    {{- if and .Values.ingress.subdomain .Values.ingress.basedomain }}
+    - hosts:
+        - {{- default .Values.ingress.subdomain .Values.ingress.basedomain }}
+      secretName: {{ .Values.ingress.subdomain }}-tls
+    {{- end }}
     {{- range .Values.ingress.tls }}
     - hosts:
         {{- range .hosts }}
@@ -27,6 +32,15 @@ spec:
     {{- end }}
   {{- end }}
   rules:
+    {{ if and .Values.ingress.subdomain .Values.ingress.basedomain }}
+    - host: {{- default .Values.ingress.subdomain .Values.ingress.basedomain }}
+      http:
+        paths:
+        - path: /
+          backend:
+            serviceName: {{ $fullName }}
+            servicePort: {{ $servicePort }}
+    {{ end }}
     {{- range .Values.ingress.hosts }}
     - host: {{ .host | quote }}
       http:

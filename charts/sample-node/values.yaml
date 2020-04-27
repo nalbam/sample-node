@@ -1,74 +1,62 @@
-fullnameOverride: sample-node
+# Default values for sample.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
 
 replicaCount: 1
 
-profile: default
-
-namespace: development
+profile:
+namespace:
 
 image:
-  repository: docker-registry.127.0.0.1.nip.io:30500/sample-node
-  tag: latest
-  pullPolicy: Always
+  repository: registry.closed.mzdev.be/sample-node
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart version.
+  tag: "latest"
 
-labels: {}
-annotations: {}
+imagePullSecrets: []
+nameOverride: "sample-node"
+fullnameOverride: ""
 
-pod:
-  labels: {}
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
   annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
 
-pdb: {}
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
 
 service:
   type: ClusterIP
-  externalPort: 80
-  internalPort: 3000
-  annotations: {}
-  labels: {}
+  port: 3000
 
 ingress:
-  enabled: true
-  subdomain: sample-node
-  basedomain: 127.0.0.1.nip.io
-  tlsSecret: sample-node-tls
-  hosts: {}
-  # hosts:
-  #   - name: sample-node.nalbam.com
-  #     path: /
-  #     tls: true
-  #     tlsSecret: sample-node-tls
+  enabled: false
   annotations:
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
     kubernetes.io/ingress.class: nginx
-    # https://github.com/kubernetes/ingress-nginx/blob/master/docs/user-guide/nginx-configuration/annotations.md
-    # nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    # nginx.ingress.kubernetes.io/use-regex: "true"
-    # nginx.ingress.kubernetes.io/whitelist-source-range: 0.0.0.0/0
-  labels: {}
-
-autoscaling:
-  enabled: true
-  min: 1
-  max: 5
-  cpu: 80
-  mem: 80
-
-resources:
-  requests:
-    cpu: 100m
-    memory: 120Mi
-  limits:
-    cpu: 110m
-    memory: 132Mi
-
-readinessProbe:
-  httpGet:
-    path: /read
-    port: 3000
-  initialDelaySeconds: 3
-  periodSeconds: 10
-  failureThreshold: 3
+    kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: sample-node.localhost
+      paths:
+        - /
+  tls:
+   - secretName: sample-node-tls
+     hosts:
+       - sample-node.localhost
 
 livenessProbe:
   httpGet:
@@ -78,20 +66,31 @@ livenessProbe:
   periodSeconds: 10
   failureThreshold: 3
 
-# livenessProbe:
-#   exec:
-#     command:
-#     - cat
-#     - /tmp/healthy
-#   initialDelaySeconds: 3
-#   periodSeconds: 10
-# livenessProbe:
-#   tcpSocket:
-#     port: 3000
-#   initialDelaySeconds: 3
-#   periodSeconds: 10
+readinessProbe:
+  httpGet:
+    path: /read
+    port: 3000
+  initialDelaySeconds: 3
+  periodSeconds: 10
+  failureThreshold: 3
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
 
 # hostNetwork: true
+
 # dnsPolicy: Default
 
 nodeSelector: {}

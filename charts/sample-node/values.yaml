@@ -114,3 +114,17 @@ secret:
   enabled: false
   data: {}
     # SECRET: "c2VjcmV0IHdvcmxkCg=="
+
+## Configuration values for the Redis dependency.
+## ref: https://github.com/kubernetes/charts/blob/master/stable/redis/README.md
+redis:
+  enabled: true
+
+  master:
+    persistence:
+      enabled: false
+      accessModes:
+      - ReadWriteOnce
+
+  cluster:
+    enabled: false

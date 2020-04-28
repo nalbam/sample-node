@@ -20,7 +20,7 @@ spec:
   tls:
     {{- if and .Values.ingress.subdomain .Values.ingress.basedomain }}
     - hosts:
-        - {{- default .Values.ingress.subdomain .Values.ingress.basedomain }}
+        - {{ .Values.ingress.subdomain }}.{{ .Values.ingress.basedomain }}
       secretName: {{ .Values.ingress.subdomain }}-tls
     {{- end }}
     {{- range .Values.ingress.tls }}
@@ -33,7 +33,7 @@ spec:
   {{- end }}
   rules:
     {{ if and .Values.ingress.subdomain .Values.ingress.basedomain }}
-    - host: {{- default .Values.ingress.subdomain .Values.ingress.basedomain }}
+    - host: {{ .Values.ingress.subdomain }}.{{ .Values.ingress.basedomain }}
       http:
         paths:
         - path: /

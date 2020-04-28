@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: {{ include "sample.fullname" . }}-redis
+    app.kubernetes.io/name: {{ include "sample.fullname" . }}-redis
+  name: {{ include "sample.fullname" . }}-redis
+spec:
+  type: ClusterIP
+  ports:
+    - port: 6379
+      targetPort: redis
+      protocol: TCP
+      name: redis
+  selector:
+    app.kubernetes.io/instance: {{ include "sample.fullname" . }}-redis
+    app.kubernetes.io/name: {{ include "sample.fullname" . }}-redis

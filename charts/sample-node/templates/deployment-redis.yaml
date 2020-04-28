@@ -12,11 +12,6 @@ spec:
     matchLabels:
       app.kubernetes.io/instance: {{ include "sample.fullname" . }}-redis
       app.kubernetes.io/name: {{ include "sample.fullname" . }}-redis
-  strategy:
-    rollingUpdate:
-      maxSurge: 25%
-      maxUnavailable: 25%
-    type: RollingUpdate
   template:
     metadata:
       labels:
@@ -26,11 +21,12 @@ spec:
     spec:
       containers:
         - image: redis
-          imagePullPolicy: Always
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           name: redis
           ports:
             - containerPort: 6379
               protocol: TCP
+              name: redis
           resources:
             requests:
               cpu: 100m

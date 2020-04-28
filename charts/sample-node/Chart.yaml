@@ -1,13 +1,12 @@
 apiVersion: v2
-type: application
-name: sample-node
-icon: https://avatars0.githubusercontent.com/u/39108256
 description: A Helm chart for Kubernetes
-appVersion: v1.0.0
+icon: https://avatars0.githubusercontent.com/u/39108256
+name: sample-node
+appVersion: v0.1.0
 version: v0.1.0
 
-dependencies:
-- name: redis
-  version: 10.6.10
-  repository: https://charts.bitnami.com/bitnami
-  condition: redis.enabled
+# dependencies:
+# - name: redis
+#   version: 10.6.10
+#   repository: https://charts.bitnami.com/bitnami
+#   condition: redis.enabled

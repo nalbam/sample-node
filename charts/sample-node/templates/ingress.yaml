@@ -32,7 +32,7 @@ spec:
     {{- end }}
   {{- end }}
   rules:
-    {{ if and .Values.ingress.subdomain .Values.ingress.basedomain }}
+    {{- if and .Values.ingress.subdomain .Values.ingress.basedomain }}
     - host: {{ .Values.ingress.subdomain }}.{{ .Values.ingress.basedomain }}
       http:
         paths:
@@ -40,7 +40,7 @@ spec:
           backend:
             serviceName: {{ $fullName }}
             servicePort: {{ $servicePort }}
-    {{ end }}
+    {{- end }}
     {{- range .Values.ingress.hosts }}
     - host: {{ .host | quote }}
       http:

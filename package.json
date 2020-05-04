@@ -21,7 +21,7 @@
     "redis": "^3.0.2"
   },
   "devDependencies": {
-    "jest": "^25.1.0",
+    "jest": "^26.0.0",
     "jest-sonar-reporter": "^2.0.0",
     "sonarqube-scanner": "^2.6.0"
   },

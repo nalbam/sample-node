@@ -22,7 +22,6 @@ jobs:
 
       - name: Run Build
         run: |
-          echo ${{ github.event.repository.name }}
           ./build.sh
 
       # - name: Trigger for GitOps

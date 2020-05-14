@@ -189,7 +189,7 @@ app.get('/spring', function (req, res) {
     if (PROFILE === 'default') {
         remoteService = 'localhost:8080';
     } else {
-        remoteService = 'sample-spring';
+        remoteService = 'sample-spring:8080';
     }
 
     request(`http://${remoteService}/health`, function (error, response, body) {
@@ -211,7 +211,7 @@ app.get('/tomcat', function (req, res) {
     if (PROFILE === 'default') {
         remoteService = 'localhost:8080';
     } else {
-        remoteService = 'sample-tomcat';
+        remoteService = 'sample-tomcat:8080';
     }
 
     request(`http://${remoteService}/health`, function (error, response, body) {
@@ -243,7 +243,7 @@ app.get('/loop/:count', function (req, res) {
     if (PROFILE === 'default') {
         remoteService = 'localhost:3000';
     } else {
-        remoteService = 'sample-node';
+        remoteService = 'sample-node:3000';
     }
 
     // const zipRequest = zipkinRequest(request, {

@@ -1,0 +1,15 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "sample.fullname" . }}
+  labels:
+    {{- include "sample.labels" . | nindent 4 }}
+    release: prometheus-operator
+spec:
+  selector:
+    matchLabels:
+      app: sample-node
+  endpoints:
+    - interval: 10s
+      path: /metrics
+      port: http

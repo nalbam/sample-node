@@ -64,16 +64,16 @@ podTemplate(label: label, containers: [
         }
       }
     }
-    // stage("Code Analysis") {
-    //   container("node") {
-    //     try {
-    //       builder.npm_sonar()
-    //     } catch (e) {
-    //       builder.failure(SLACK_TOKEN_DEV, "Code Analysis")
-    //       throw e
-    //     }
-    //   }
-    // }
+    stage("Code Analysis") {
+      container("node") {
+        try {
+          builder.npm_sonar()
+        } catch (e) {
+          builder.failure(SLACK_TOKEN_DEV, "Code Analysis")
+          throw e
+        }
+      }
+    }
     if (BRANCH_NAME == "master") {
       stage("Build Image") {
         parallel(

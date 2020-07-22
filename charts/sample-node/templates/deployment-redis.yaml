@@ -7,7 +7,7 @@ metadata:
   name: {{ include "sample.fullname" . }}-redis
 spec:
   replicas: 1
-  revisionHistoryLimit: 5
+  revisionHistoryLimit: 0
   selector:
     matchLabels:
       app.kubernetes.io/instance: {{ include "sample.fullname" . }}-redis

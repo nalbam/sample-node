@@ -1,9 +1,9 @@
 'use strict';
 
-const DD_AGENT = process.env.DD_AGENT_ENABLED || 'false';
+const DD_AGENT = process.env.DD_AGENT_ENABLED || false;
 
 // datadog tracer
-if (DD_AGENT && DD_AGENT === 'true') {
+if (DD_AGENT) {
     require('dd-trace').init({
         hostname: process.env.DD_AGENT_HOST,
         // port: process.env.DD_AGENT_PORT,

@@ -18,7 +18,7 @@ if (DD_AGENT) {
 
 // env
 const PORT = process.env.PORT || 3000;
-const CLUSTER = process.env.CLUSTER || 'local';
+const CLUSTER = process.env.CLUSTER_NAME || 'local';
 const PROFILE = process.env.PROFILE || 'default';
 const VERSION = process.env.VERSION || 'v0.0.0';
 const MESSAGE = process.env.MESSAGE || PROFILE;

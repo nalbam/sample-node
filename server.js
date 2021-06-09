@@ -57,10 +57,10 @@ const os = require('os'),
 // } = require("express-jaeger");
 // const tracer = initTracer(config, options);
 
-const Tracer = require('@risingstack/jaeger');
-const tracer = new Tracer({
-  serviceName: 'sample-node'
-});
+// const Tracer = require('@risingstack/jaeger');
+// const tracer = new Tracer({
+//   serviceName: 'sample-node'
+// });
 
 // // zipkin
 // const {

@@ -19,7 +19,8 @@
     "node-fetch": "^2.6.0",
     "prom-client": "^13.1.0",
     "prometheus-api-metrics": "^3.1.0",
-    "redis": "^3.0.2"
+    "redis": "^3.0.2",
+    "request": "^2.88.2"
   },
   "devDependencies": {
     "jest": "^27.0.1",

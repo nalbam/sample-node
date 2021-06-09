@@ -14,7 +14,7 @@
     "dd-trace": "^0.34.0",
     "ejs": "^3.0.1",
     "express": "^4.17.1",
-    "got": "^9.6.0",
+    "got": "^11.8.2",
     "moment-timezone": "^0.5.27",
     "node-fetch": "^2.6.0",
     "prom-client": "^13.1.0",

@@ -28,9 +28,9 @@ const REDIS_URL = process.env.REDIS_URL || `redis://sample-node-redis:6379`;
 const os = require('os'),
   cors = require('cors'),
   express = require('express'),
+  got = require('got'),
   moment = require('moment-timezone'),
   redis = require('redis'),
-  request = require('request'),
   apiMetrics = require('prometheus-api-metrics');
 
 // jaeger
@@ -194,7 +194,7 @@ app.get('/spring', function (req, res) {
     remoteService = 'sample-spring:8080';
   }
 
-  request(`http://${remoteService}/health`, function (error, response, body) {
+  got(`http://${remoteService}/health`, function (error, response, body) {
     if (error) {
       return res.status(500).json({
         result: 'error',
@@ -216,7 +216,7 @@ app.get('/tomcat', function (req, res) {
     remoteService = 'sample-tomcat:8080';
   }
 
-  request(`http://${remoteService}/health`, function (error, response, body) {
+  got(`http://${remoteService}/health`, function (error, response, body) {
     if (error) {
       return res.status(500).json({
         result: 'error'
@@ -269,7 +269,7 @@ app.get('/loop/:count', function (req, res) {
   //     }
   // });
 
-  request(`http://${remoteService}/loop/${count}`, function (error, response, body) {
+  got(`http://${remoteService}/loop/${count}`, function (error, response, body) {
     // console.log('error:', error);
     // console.log('statusCode:', response && response.statusCode);
     // console.log('body:', body);

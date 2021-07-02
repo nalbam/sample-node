@@ -290,7 +290,7 @@ app.get('/loop/:count', function (req, res) {
 app.get('/stress', function (req, res) {
   console.log(`${req.method} ${req.path}`);
   let sum = 0;
-  for (let i = 0; i < 1000000; i++) {
+  for (let i = 0; i < 5000000; i++) {
     sum += Math.sqrt(i);
   }
   return res.status(200).json({

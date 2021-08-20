@@ -23,7 +23,7 @@ const PROFILE = process.env.PROFILE || 'default';
 const VERSION = process.env.VERSION || 'v0.0.0';
 const MESSAGE = process.env.MESSAGE || PROFILE;
 const FAULT_RATE = process.env.FAULT_RATE || 0;
-const REDIS_URL = process.env.REDIS_URL || `redis://sample-node-redis:6379`;
+const REDIS_URL = process.env.REDIS_URL || `redis://sample-redis:6379`;
 
 const os = require('os'),
   cors = require('cors'),

@@ -163,22 +163,15 @@ app.get('/live', function (req, res) {
 
 app.get('/health', function (req, res) {
   // console.log(`${req.method} ${req.path}`);
-  var version;
-  if (PROFILE === 'default') {
-    version = `v0.0.${parseInt(Math.random() * 2)}`;
-  } else {
-    version = VERSION;
-  }
-
   if (Math.random() * 100 >= FAULT_RATE) {
     return res.status(200).json({
       result: 'ok',
-      version: version,
+      version: VERSION,
     });
   } else {
     return res.status(500).json({
       result: 'error',
-      version: version,
+      version: VERSION,
     });
   }
 });
@@ -236,6 +229,7 @@ app.get('/loop/:count', function (req, res) {
   if (count <= 0) {
     return res.status(200).json({
       result: 'ok',
+      version: VERSION,
     });
   }
 
@@ -277,10 +271,12 @@ app.get('/loop/:count', function (req, res) {
     if (error) {
       return res.status(500).json({
         result: 'error',
+        version: VERSION,
       });
     } else {
       return res.status(response.statusCode).json({
         result: 'ok',
+        version: VERSION,
         data: JSON.parse(body)
       });
     }
@@ -295,6 +291,7 @@ app.get('/stress', function (req, res) {
   }
   return res.status(200).json({
     result: 'ok',
+    version: VERSION,
     sum: sum,
   });
 });

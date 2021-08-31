@@ -37,6 +37,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Trigger for GitOps
+        uses: opspresso/action-builder@master
+        with:
+          args: --dispatch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GHP_TOKEN }}
+          GITOPS_REPO: "opspresso/argocd-env-demo"
+          PROJECT: ${{ github.event.repository.name }}
+
       - name: Build & Push to Docker Hub
         uses: opspresso/action-builder@master
         with:
@@ -68,12 +77,3 @@ jobs:
           AWS_REGION: "ap-northeast-2"
           # TAG_NAME: ${{ github.ref }}
           # LATEST: "true"
-
-      - name: Trigger for GitOps
-        uses: opspresso/action-builder@master
-        with:
-          args: --dispatch
-        env:
-          GITHUB_TOKEN: ${{ secrets.GHP_TOKEN }}
-          GITOPS_REPO: "opspresso/argocd-env-demo"
-          PROJECT: ${{ github.event.repository.name }}

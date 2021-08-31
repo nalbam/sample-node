@@ -54,7 +54,6 @@ jobs:
       - run:
           name: Docker
           command: |
-            arch
             bash ./target/builder.sh
   trigger:
     docker:

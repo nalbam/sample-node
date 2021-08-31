@@ -58,7 +58,7 @@ jobs:
             url="https://github.com/docker/buildx/releases/download/v0.5.1/buildx-v0.5.1.linux-amd64"
             curl -sSL -o ~/.docker/cli-plugins/docker-buildx $url
             chmod a+x ~/.docker/cli-plugins/docker-buildx
-            export DOCKER_CLI_EXPERIMENTAL="enabled"
+            # export DOCKER_CLI_EXPERIMENTAL="enabled"
             # docker buildx install
             # docker run --rm --privileged multiarch/qemu-user-static:5.2.0-2 --reset -p yes
             # docker rm -f buildx_buildkit_docker-multiarch0

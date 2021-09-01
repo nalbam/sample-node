@@ -80,5 +80,5 @@ jobs:
           REGISTRY: "public.ecr.aws/nalbam"
           # TAG_NAME: ${{ github.ref }}
           # PLATFORM: "linux/arm64,linux/amd64"
-          BUILDX: "true"
+          # BUILDX: "true"
           # LATEST: "true"

@@ -54,7 +54,7 @@ jobs:
           # USERNAME: ${{ secrets.DOCKER_USERNAME }}
           PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
           # TAG_NAME: ${{ github.ref }}
-          PLATFORM: "linux/arm/v7,linux/arm64/v8,linux/amd64"
+          PLATFORM: "linux/arm64,linux/amd64"
           BUILDX: "true"
           LATEST: "true"
 
@@ -78,6 +78,6 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: "ap-northeast-2"
           # TAG_NAME: ${{ github.ref }}
-          PLATFORM: "linux/arm/v7,linux/arm64/v8,linux/amd64"
+          PLATFORM: "linux/arm64,linux/amd64"
           BUILDX: "true"
           LATEST: "true"

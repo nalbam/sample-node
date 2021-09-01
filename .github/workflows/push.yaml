@@ -67,7 +67,7 @@ jobs:
           REGISTRY: "docker.pkg.github.com"
           # TAG_NAME: ${{ github.ref }}
           # LATEST: "true"
-          BUILDX: "true"
+          # BUILDX: "true"
 
       - name: Build & Push to AWS ECR
         uses: opspresso/action-builder@master

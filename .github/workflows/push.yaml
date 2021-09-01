@@ -55,6 +55,7 @@ jobs:
           PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
           # TAG_NAME: ${{ github.ref }}
           PLATFORM: "linux/arm/v7,linux/arm64/v8,linux/amd64"
+          BUILDX: "true"
           LATEST: "true"
 
       - name: Build & Push to GitHub Package
@@ -78,4 +79,5 @@ jobs:
           AWS_REGION: "ap-northeast-2"
           # TAG_NAME: ${{ github.ref }}
           PLATFORM: "linux/arm/v7,linux/arm64/v8,linux/amd64"
+          BUILDX: "true"
           LATEST: "true"

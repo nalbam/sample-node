@@ -56,7 +56,7 @@ jobs:
           # TAG_NAME: ${{ github.ref }}
           PLATFORM: "linux/arm64,linux/amd64"
           BUILDX: "true"
-          LATEST: "true"
+          # LATEST: "true"
 
       - name: Build & Push to GitHub Package
         uses: opspresso/action-builder@master
@@ -80,4 +80,4 @@ jobs:
           # TAG_NAME: ${{ github.ref }}
           PLATFORM: "linux/arm64,linux/amd64"
           BUILDX: "true"
-          LATEST: "true"
+          # LATEST: "true"

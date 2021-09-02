@@ -23,6 +23,7 @@ const PROFILE = process.env.PROFILE || 'default';
 const VERSION = process.env.VERSION || 'v0.0.0';
 const MESSAGE = process.env.MESSAGE || PROFILE;
 const FAULT_RATE = process.env.FAULT_RATE || 0;
+const HOSTNAME = process.env.HOSTNAME || 'default.svc.cluster.local';
 const REDIS_URL = process.env.REDIS_URL || `redis://sample-redis:6379`;
 
 const os = require('os'),
@@ -184,7 +185,7 @@ app.get('/spring', function (req, res) {
   if (PROFILE === 'default') {
     remoteService = 'localhost:8080';
   } else {
-    remoteService = 'sample-spring:8080';
+    remoteService = `sample-spring.${HOSTNAME}`;
   }
 
   request(`http://${remoteService}/health`, function (error, response, body) {
@@ -206,7 +207,7 @@ app.get('/tomcat', function (req, res) {
   if (PROFILE === 'default') {
     remoteService = 'localhost:8080';
   } else {
-    remoteService = 'sample-tomcat:8080';
+    remoteService = `sample-tomcat.${HOSTNAME}`;
   }
 
   request(`http://${remoteService}/health`, function (error, response, body) {
@@ -239,7 +240,7 @@ app.get('/loop/:count', function (req, res) {
   if (PROFILE === 'default') {
     remoteService = 'localhost:3000';
   } else {
-    remoteService = 'sample-node:3000';
+    remoteService = `sample-node.${HOSTNAME}`;
   }
 
   // const zipRequest = zipkinRequest(request, {

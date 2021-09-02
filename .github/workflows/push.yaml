@@ -67,8 +67,8 @@ jobs:
           PASSWORD: ${{ secrets.GHP_TOKEN }}
           REGISTRY: "docker.pkg.github.com"
           # TAG_NAME: ${{ github.ref }}
-          PLATFORM: "linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6"
-          BUILDX: "true"
+          # PLATFORM: "linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6"
+          # BUILDX: "true"
           # LATEST: "true"
 
       - name: Build & Push to AWS ECR Private

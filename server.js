@@ -183,12 +183,12 @@ app.get('/spring', function (req, res) {
 
   var remoteService;
   if (PROFILE === 'default') {
-    remoteService = 'localhost:8080';
+    remoteService = 'http://localhost:8080';
   } else {
-    remoteService = `sample-spring.${HOSTNAME}`;
+    remoteService = `https://sample-spring.${HOSTNAME}`;
   }
 
-  request(`http://${remoteService}/health`, function (error, response, body) {
+  request(`${remoteService}/health`, function (error, response, body) {
     if (error) {
       return res.status(500).json({
         result: 'error',
@@ -205,12 +205,12 @@ app.get('/tomcat', function (req, res) {
 
   var remoteService;
   if (PROFILE === 'default') {
-    remoteService = 'localhost:8080';
+    remoteService = 'http://localhost:8080';
   } else {
-    remoteService = `sample-tomcat.${HOSTNAME}`;
+    remoteService = `https://sample-tomcat.${HOSTNAME}`;
   }
 
-  request(`http://${remoteService}/health`, function (error, response, body) {
+  request(`${remoteService}/health`, function (error, response, body) {
     if (error) {
       return res.status(500).json({
         result: 'error'
@@ -238,9 +238,9 @@ app.get('/loop/:count', function (req, res) {
 
   var remoteService;
   if (PROFILE === 'default') {
-    remoteService = 'localhost:3000';
+    remoteService = 'http://localhost:3000';
   } else {
-    remoteService = `sample-node.${HOSTNAME}`;
+    remoteService = `https://sample-node.${HOSTNAME}`;
   }
 
   // const zipRequest = zipkinRequest(request, {
@@ -249,7 +249,7 @@ app.get('/loop/:count', function (req, res) {
   // });
 
   // zipRequest({
-  //     url: `http://${remoteService}/loop/${count}`,
+  //     url: `${remoteService}/loop/${count}`,
   //     method: 'GET',
   // }, function (error, response, body) {
   //     if (error) {
@@ -264,7 +264,7 @@ app.get('/loop/:count', function (req, res) {
   //     }
   // });
 
-  request(`http://${remoteService}/loop/${count}`, function (error, response, body) {
+  request(`${remoteService}/loop/${count}`, function (error, response, body) {
     // console.log('error:', error);
     // console.log('statusCode:', response && response.statusCode);
     // console.log('body:', body);

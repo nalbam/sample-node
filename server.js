@@ -183,7 +183,7 @@ app.get('/spring', function (req, res) {
 
   var remoteService;
   if (PROFILE === 'default') {
-    remoteService = 'http://localhost:8080';
+    remoteService = 'http://sample-spring:8080';
   } else {
     remoteService = `https://sample-spring.${HOSTNAME}`;
   }
@@ -205,7 +205,7 @@ app.get('/tomcat', function (req, res) {
 
   var remoteService;
   if (PROFILE === 'default') {
-    remoteService = 'http://localhost:8080';
+    remoteService = 'http://sample-tomcat:8080';
   } else {
     remoteService = `https://sample-tomcat.${HOSTNAME}`;
   }
@@ -238,7 +238,7 @@ app.get('/loop/:count', function (req, res) {
 
   var remoteService;
   if (PROFILE === 'default') {
-    remoteService = 'http://localhost:3000';
+    remoteService = 'http://sample-node:3000';
   } else {
     remoteService = `https://sample-node.${HOSTNAME}`;
   }

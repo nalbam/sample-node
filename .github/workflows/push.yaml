@@ -47,7 +47,7 @@ jobs:
           PROJECT: ${{ github.event.repository.name }}
 
       - name: Build & Push to Docker Hub
-        uses: opspresso/action-builder@master
+        uses: opspresso/action-docker@master
         with:
           args: --docker
         env:
@@ -59,7 +59,7 @@ jobs:
           # LATEST: "true"
 
       - name: Build & Push to AWS ECR Private
-        uses: opspresso/action-builder@master
+        uses: opspresso/action-docker@master
         with:
           args: --ecr
         env:
@@ -73,7 +73,7 @@ jobs:
           # LATEST: "true"
 
       - name: Build & Push to AWS ECR Public
-        uses: opspresso/action-builder@master
+        uses: opspresso/action-docker@master
         with:
           args: --ecr
         env:
@@ -87,7 +87,7 @@ jobs:
           # LATEST: "true"
 
       - name: Build & Push to Quay.io
-        uses: opspresso/action-builder@master
+        uses: opspresso/action-docker@master
         with:
           args: --docker
         env:
@@ -100,7 +100,7 @@ jobs:
           # LATEST: "true"
 
       - name: Build & Push to GitHub Package
-        uses: opspresso/action-builder@master
+        uses: opspresso/action-docker@master
         with:
           args: --docker
         env:

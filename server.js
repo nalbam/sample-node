@@ -304,11 +304,13 @@ app.get('/success/:rate', function (req, res) {
   if (Math.random() * 100 <= rate) {
     return res.status(200).json({
       result: 'ok',
+      rate: rate,
       version: VERSION,
     });
   } else {
     return res.status(500).json({
       result: 'error',
+      rate: rate,
       version: VERSION,
     });
   }
@@ -320,11 +322,13 @@ app.get('/fault/:rate', function (req, res) {
   if (Math.random() * 100 >= rate) {
     return res.status(200).json({
       result: 'ok',
+      rate: rate,
       version: VERSION,
     });
   } else {
     return res.status(500).json({
       result: 'error',
+      rate: rate,
       version: VERSION,
     });
   }
@@ -335,6 +339,7 @@ app.get('/delay/:sec', function (req, res) {
   sleep(sec);
   return res.status(200).json({
     result: 'ok',
+    sec: sec,
     version: VERSION,
   });
 });

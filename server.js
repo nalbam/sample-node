@@ -330,6 +330,15 @@ app.get('/fault/:rate', function (req, res) {
   }
 });
 
+app.get('/c/:sec', function (req, res) {
+  console.log(`${req.method} ${req.path}`);
+  sleep(sec);
+  return res.status(200).json({
+    result: 'ok',
+    version: VERSION,
+  });
+});
+
 app.get('/cache/:name', function (req, res) {
   // console.log(`${req.method} ${req.path}`);
   const name = req.params.name;

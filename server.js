@@ -184,7 +184,7 @@ app.get('/spring', function (req, res) {
 
   var remoteService;
   if (PROFILE === 'default') {
-    remoteService = 'http://sample-spring:8080';
+    remoteService = 'http://sample-spring';
   } else {
     remoteService = `${PROTOCOL}://sample-spring.${HOSTNAME}`;
   }
@@ -206,7 +206,7 @@ app.get('/tomcat', function (req, res) {
 
   var remoteService;
   if (PROFILE === 'default') {
-    remoteService = 'http://sample-tomcat:8080';
+    remoteService = 'http://sample-tomcat';
   } else {
     remoteService = `${PROTOCOL}://sample-tomcat.${HOSTNAME}`;
   }

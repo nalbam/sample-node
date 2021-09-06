@@ -237,7 +237,7 @@ app.get('/loop/:count', function (req, res) {
 
   count--;
 
-  var remoteService = 'http://sample-node';
+  var remoteService = 'http://sample-spring';
 
   // var remoteService;
   // if (PROFILE === 'default') {

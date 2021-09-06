@@ -237,11 +237,11 @@ app.get('/loop/:count', function (req, res) {
 
   count--;
 
-  var remoteService = 'http://sample-node:3000';
+  var remoteService = 'http://sample-node';
 
   // var remoteService;
   // if (PROFILE === 'default') {
-  //   remoteService = 'http://sample-node:3000';
+  //   remoteService = 'http://sample-node';
   // } else {
   //   remoteService = `${PROTOCOL}://sample-node.${HOSTNAME}`;
   // }

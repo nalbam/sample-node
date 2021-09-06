@@ -237,12 +237,14 @@ app.get('/loop/:count', function (req, res) {
 
   count--;
 
-  var remoteService;
-  if (PROFILE === 'default') {
-    remoteService = 'http://sample-node:3000';
-  } else {
-    remoteService = `${PROTOCOL}://sample-node.${HOSTNAME}`;
-  }
+  var remoteService = 'http://sample-node:3000';
+
+  // var remoteService;
+  // if (PROFILE === 'default') {
+  //   remoteService = 'http://sample-node:3000';
+  // } else {
+  //   remoteService = `${PROTOCOL}://sample-node.${HOSTNAME}`;
+  // }
 
   // const zipRequest = zipkinRequest(request, {
   //     tracer,

@@ -330,7 +330,7 @@ app.get('/fault/:rate', function (req, res) {
   }
 });
 
-app.get('/c/:sec', function (req, res) {
+app.get('/delay/:sec', function (req, res) {
   console.log(`${req.method} ${req.path}`);
   sleep(sec);
   return res.status(200).json({

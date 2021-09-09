@@ -17,16 +17,17 @@ if (DD_AGENT) {
 // }
 
 // env
-const PORT = process.env.PORT || 3000;
 const CLUSTER = process.env.CLUSTER_NAME || 'local';
-const PROFILE = process.env.PROFILE || 'default';
-const VERSION = process.env.VERSION || 'v0.0.0';
-const MESSAGE = process.env.MESSAGE || PROFILE;
-const FAULT_RATE = process.env.FAULT_RATE || 0;
-const PROTOCOL = process.env.PROTOCOL || 'http';
-const HOSTNAME = process.env.HOSTNAME || 'default.svc.cluster.local';
-const REDIS_URL = process.env.REDIS_URL || `redis://sample-redis:6379`;
 const COLLECTOR = process.env.COLLECTOR || `http://jaeger-collector.istio-system.svc.cluster.local:14268/api/traces`;
+const FAULT_RATE = process.env.FAULT_RATE || 0;
+const HOSTNAME = process.env.HOSTNAME || 'default.svc.cluster.local';
+const MESSAGE = process.env.MESSAGE || '';
+const NAMESPACE = process.env.NAMESPACE || 'default';
+const PORT = process.env.PORT || 3000;
+const PROFILE = process.env.PROFILE || 'default';
+const PROTOCOL = process.env.PROTOCOL || 'http';
+const REDIS_URL = process.env.REDIS_URL || `redis://sample-redis:6379`;
+const VERSION = process.env.VERSION || 'v0.0.0';
 
 const os = require('os'),
   cors = require('cors'),
@@ -48,7 +49,7 @@ const os = require('os'),
 // jaeger
 const initTracer = require('jaeger-client').initTracer;
 const config = {
-  serviceName: 'sample-node',
+  serviceName: `sample-node.${NAMESPACE}`,
   reporter: {
     collectorEndpoint: COLLECTOR,
     logSpans: true,

@@ -26,6 +26,7 @@ const FAULT_RATE = process.env.FAULT_RATE || 0;
 const PROTOCOL = process.env.PROTOCOL || 'http';
 const HOSTNAME = process.env.HOSTNAME || 'default.svc.cluster.local';
 const REDIS_URL = process.env.REDIS_URL || `redis://sample-redis:6379`;
+const COLLECTOR = process.env.COLLECTOR || `http://jaeger-collector.istio-system.svc.cluster.local:14268/api/traces`;
 
 const os = require('os'),
   cors = require('cors'),
@@ -48,14 +49,14 @@ const os = require('os'),
 const initTracer = require('jaeger-client').initTracer;
 const config = {
   serviceName: 'sample-node',
-  // reporter: {
-  //   collectorEndpoint: 'http://jaegercollector:14268/api/traces',
-  //   logSpans: true,
-  // },
-  // sampler: {
-  //   type: 'const',
-  //   param: 1
-  // },
+  reporter: {
+    collectorEndpoint: COLLECTOR,
+    logSpans: true,
+  },
+  sampler: {
+    type: 'const',
+    param: 1
+  },
 };
 const options = {
   tags: {

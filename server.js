@@ -46,27 +46,27 @@ const os = require('os'),
 // var namespace = config.serviceName;
 // var metrics = new PrometheusMetricsFactory(promClient, namespace);
 
-// jaeger
-const initTracer = require('jaeger-client').initTracer;
-const config = {
-  serviceName: `sample-node.${NAMESPACE}`,
-  reporter: {
-    collectorEndpoint: COLLECTOR,
-    logSpans: true,
-  },
-  sampler: {
-    type: 'const',
-    param: 1
-  },
-};
-const options = {
-  tags: {
-    'sample-node.version': VERSION,
-  },
-  // metrics: metrics,
-  logger: console,
-};
-const tracer = initTracer(config, options);
+// // jaeger
+// const initTracer = require('jaeger-client').initTracer;
+// const config = {
+//   serviceName: `sample-node.${NAMESPACE}`,
+//   reporter: {
+//     collectorEndpoint: COLLECTOR,
+//     logSpans: true,
+//   },
+//   sampler: {
+//     type: 'const',
+//     param: 1
+//   },
+// };
+// const options = {
+//   tags: {
+//     'sample-node.version': VERSION,
+//   },
+//   // metrics: metrics,
+//   logger: console,
+// };
+// const tracer = initTracer(config, options);
 
 // // zipkin
 // const {
@@ -192,7 +192,7 @@ app.get('/spring', function (req, res) {
     remoteService = `${PROTOCOL}://sample-spring.${HOSTNAME}`;
   }
 
-  const span = tracer.startSpan("http_request");
+  // const span = tracer.startSpan("http_request");
   request(`${remoteService}/health`, function (error, response, body) {
     if (error) {
       return res.status(500).json({
@@ -202,7 +202,7 @@ app.get('/spring', function (req, res) {
       return res.status(response.statusCode).json(JSON.parse(body));
     }
   });
-  span.finish();
+  // span.finish();
 });
 
 app.get('/tomcat', function (req, res) {
@@ -216,7 +216,7 @@ app.get('/tomcat', function (req, res) {
     remoteService = `${PROTOCOL}://sample-tomcat.${HOSTNAME}`;
   }
 
-  const span = tracer.startSpan("http_request");
+  // const span = tracer.startSpan("http_request");
   request(`${remoteService}/health`, function (error, response, body) {
     if (error) {
       return res.status(500).json({
@@ -226,7 +226,7 @@ app.get('/tomcat', function (req, res) {
       return res.status(response.statusCode).json(JSON.parse(body));
     }
   });
-  span.finish();
+  // span.finish();
 });
 
 app.get('/loop/:count', function (req, res) {
@@ -246,7 +246,7 @@ app.get('/loop/:count', function (req, res) {
 
   var remoteService = 'http://sample-spring';
 
-  const span = tracer.startSpan("http_request");
+  // const span = tracer.startSpan("http_request");
   request(`${remoteService}/loop/${count}`, function (error, response, body) {
     // console.log('error:', error);
     // console.log('statusCode:', response && response.statusCode);
@@ -265,7 +265,7 @@ app.get('/loop/:count', function (req, res) {
       });
     }
   });
-  span.finish();
+  // span.finish();
 });
 
 app.get('/stress', function (req, res) {

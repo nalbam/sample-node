@@ -32,37 +32,39 @@ const os = require('os'),
   express = require('express'),
   moment = require('moment-timezone'),
   redis = require('redis'),
-  request = require('request'),
-  apiMetrics = require('prometheus-api-metrics');
+  request = require('request');
+
+// // prom
+// var PrometheusMetricsFactory = require('jaeger-client').PrometheusMetricsFactory;
+// var promClient = require('prom-client');
+
+// var config = {
+//   serviceName: 'sample-node',
+// };
+// var namespace = config.serviceName;
+// var metrics = new PrometheusMetricsFactory(promClient, namespace);
 
 // jaeger
-// const initTracer = require('jaeger-client').initTracer;
-// const config = {
-//     serviceName: 'sample-node',
-// };
-// const options = {
-//     tags: {
-//         'sample-node.version': VERSION,
-//     },
-//     // metrics: metrics,
-//     logger: {
-//         info(msg) {
-//             console.log("INFO ", msg);
-//         },
-//         error(msg) {
-//             console.log("ERROR", msg);
-//         },
-//     },
-// };
-// const {
-//     track
-// } = require("express-jaeger");
-// const tracer = initTracer(config, options);
-
-// const Tracer = require('@risingstack/jaeger');
-// const tracer = new Tracer({
-//   serviceName: 'sample-node'
-// });
+const initTracer = require('jaeger-client').initTracer;
+const config = {
+  serviceName: 'sample-node',
+  // reporter: {
+  //   collectorEndpoint: 'http://jaegercollector:14268/api/traces',
+  //   logSpans: true,
+  // },
+  // sampler: {
+  //   type: 'const',
+  //   param: 1
+  // },
+};
+const options = {
+  tags: {
+    'sample-node.version': VERSION,
+  },
+  // metrics: metrics,
+  logger: console,
+};
+const tracer = initTracer(config, options);
 
 // // zipkin
 // const {
@@ -87,7 +89,6 @@ app.set('view engine', 'ejs');
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
-app.use(apiMetrics())
 
 // app.use(zipkinExpress({
 //     tracer
@@ -189,6 +190,7 @@ app.get('/spring', function (req, res) {
     remoteService = `${PROTOCOL}://sample-spring.${HOSTNAME}`;
   }
 
+  const span = tracer.startSpan("http_request");
   request(`${remoteService}/health`, function (error, response, body) {
     if (error) {
       return res.status(500).json({
@@ -198,6 +200,7 @@ app.get('/spring', function (req, res) {
       return res.status(response.statusCode).json(JSON.parse(body));
     }
   });
+  span.finish();
 });
 
 app.get('/tomcat', function (req, res) {
@@ -211,6 +214,7 @@ app.get('/tomcat', function (req, res) {
     remoteService = `${PROTOCOL}://sample-tomcat.${HOSTNAME}`;
   }
 
+  const span = tracer.startSpan("http_request");
   request(`${remoteService}/health`, function (error, response, body) {
     if (error) {
       return res.status(500).json({
@@ -220,6 +224,7 @@ app.get('/tomcat', function (req, res) {
       return res.status(response.statusCode).json(JSON.parse(body));
     }
   });
+  span.finish();
 });
 
 app.get('/loop/:count', function (req, res) {
@@ -239,34 +244,7 @@ app.get('/loop/:count', function (req, res) {
 
   var remoteService = 'http://sample-spring';
 
-  // var remoteService;
-  // if (PROFILE === 'default') {
-  //   remoteService = 'http://sample-node';
-  // } else {
-  //   remoteService = `${PROTOCOL}://sample-node.${HOSTNAME}`;
-  // }
-
-  // const zipRequest = zipkinRequest(request, {
-  //     tracer,
-  //     remoteService
-  // });
-
-  // zipRequest({
-  //     url: `${remoteService}/loop/${count}`,
-  //     method: 'GET',
-  // }, function (error, response, body) {
-  //     if (error) {
-  //         return res.status(500).json({
-  //             result: 'error'
-  //         });
-  //     } else {
-  //         return res.status(response.statusCode).json({
-  //             result: 'ok',
-  //             data: JSON.parse(body)
-  //         });
-  //     }
-  // });
-
+  const span = tracer.startSpan("http_request");
   request(`${remoteService}/loop/${count}`, function (error, response, body) {
     // console.log('error:', error);
     // console.log('statusCode:', response && response.statusCode);
@@ -285,6 +263,7 @@ app.get('/loop/:count', function (req, res) {
       });
     }
   });
+  span.finish();
 });
 
 app.get('/stress', function (req, res) {

@@ -19,7 +19,7 @@
     "moment-timezone": "^0.5.27",
     "node-fetch": "^3.0.0",
     "opentracing": "^0.14.5",
-    "prom-client": "^13.2.0",
+    "prom-client": "^14.0.0",
     "prometheus-api-metrics": "^3.1.0",
     "redis": "^3.0.2",
     "request": "^2.88.2"

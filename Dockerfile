@@ -1,6 +1,6 @@
 # Dockerfile
 
-FROM docker.io/library/node:13-alpine
+FROM node:13-alpine
 
 EXPOSE 3000
 

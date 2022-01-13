@@ -97,7 +97,7 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}
             ${{ steps.login-ecr.outputs.registry }}/nalbam/${{ github.event.repository.name }}
           tags: |
-            type=semver,pattern=${{ steps.bump.outputs.version }}
+            type=semver,pattern={{version}},value=${{ steps.bump.outputs.version }}
 
       # - name: Prepare
       #   id: prep

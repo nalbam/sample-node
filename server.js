@@ -319,7 +319,7 @@ app.get('/fault/:rate', function (req, res) {
 
 app.get('/delay/:sec', function (req, res) {
   console.log(`${req.method} ${req.path}`);
-  await sleep(sec * 1000);
+  sleep(sec);
   return res.status(200).json({
     result: 'ok',
     sec: sec,

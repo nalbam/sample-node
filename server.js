@@ -21,6 +21,7 @@ const CLUSTER = process.env.CLUSTER_NAME || 'local';
 const COLLECTOR = process.env.COLLECTOR || `http://jaeger-collector.istio-system.svc.cluster.local:14268/api/traces`;
 const FAULT_RATE = process.env.FAULT_RATE || 0;
 const HOSTNAME = process.env.HOSTNAME || 'default.svc.cluster.local';
+const LOOP_HOST = process.env.LOOP_HOST || 'http://sample-node';
 const MESSAGE = process.env.MESSAGE || '';
 const NAMESPACE = process.env.NAMESPACE || 'default';
 const PORT = process.env.PORT || 3000;
@@ -244,7 +245,7 @@ app.get('/loop/:count', function (req, res) {
 
   count--;
 
-  var remoteService = 'http://sample-spring';
+  var remoteService = LOOP_HOST;
 
   // const span = tracer.startSpan("http_request");
   request(`${remoteService}/loop/${count}`, function (error, response, body) {

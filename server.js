@@ -1,21 +1,5 @@
 'use strict';
 
-const DD_AGENT = process.env.DD_AGENT_ENABLED || false;
-
-// datadog tracer
-if (DD_AGENT) {
-  require('dd-trace').init({
-    // hostname: process.env.DD_AGENT_HOST,
-    // port: process.env.DD_AGENT_PORT,
-    // analytics: true,
-  })
-}
-
-// // newrelic tracer
-// if (TRACER === 'all' || TRACER === 'newrelic') {
-//     require('newrelic');
-// }
-
 // env
 const CLUSTER = process.env.CLUSTER_NAME || 'local';
 const COLLECTOR = process.env.COLLECTOR || `http://jaeger-collector.istio-system.svc.cluster.local:14268/api/traces`;
@@ -30,6 +14,22 @@ const PROTOCOL = process.env.PROTOCOL || 'http';
 const REDIS_URL = process.env.REDIS_URL || `redis://sample-redis:6379`;
 const VERSION = process.env.VERSION || 'v0.0.0';
 
+// const DD_AGENT = process.env.DD_AGENT_ENABLED || false;
+
+// // datadog tracer
+// if (DD_AGENT) {
+//   require('dd-trace').init({
+//     // hostname: process.env.DD_AGENT_HOST,
+//     // port: process.env.DD_AGENT_PORT,
+//     // analytics: true,
+//   })
+// }
+
+// // newrelic tracer
+// if (TRACER === 'all' || TRACER === 'newrelic') {
+//     require('newrelic');
+// }
+
 const os = require('os'),
   cors = require('cors'),
   express = require('express'),
@@ -37,15 +37,15 @@ const os = require('os'),
   redis = require('redis'),
   request = require('request');
 
-// // prom
-// var PrometheusMetricsFactory = require('jaeger-client').PrometheusMetricsFactory;
-// var promClient = require('prom-client');
+// prom
+var PrometheusMetricsFactory = require('jaeger-client').PrometheusMetricsFactory;
+var promClient = require('prom-client');
 
-// var config = {
-//   serviceName: 'sample-node',
-// };
-// var namespace = config.serviceName;
-// var metrics = new PrometheusMetricsFactory(promClient, namespace);
+var config = {
+  serviceName: 'sample-node',
+};
+var namespace = NAMESPACE;
+var metrics = new PrometheusMetricsFactory(promClient, namespace);
 
 // // jaeger
 // const initTracer = require('jaeger-client').initTracer;

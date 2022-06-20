@@ -2,7 +2,6 @@
 
 // env
 const CLUSTER = process.env.CLUSTER_NAME || 'local';
-const COLLECTOR = process.env.COLLECTOR || `http://jaeger-collector.istio-system.svc.cluster.local:14268/api/traces`;
 const FAULT_RATE = process.env.FAULT_RATE || 0;
 const HOSTNAME = process.env.HOSTNAME || 'default.svc.cluster.local';
 const LOOP_HOST = process.env.LOOP_HOST || `http://sample-node`;
@@ -14,76 +13,13 @@ const PROTOCOL = process.env.PROTOCOL || 'http';
 const REDIS_URL = process.env.REDIS_URL || `redis://sample-redis:6379`;
 const VERSION = process.env.VERSION || 'v0.0.0';
 
-// const DD_AGENT = process.env.DD_AGENT_ENABLED || false;
-
-// // datadog tracer
-// if (DD_AGENT) {
-//   require('dd-trace').init({
-//     // hostname: process.env.DD_AGENT_HOST,
-//     // port: process.env.DD_AGENT_PORT,
-//     // analytics: true,
-//   })
-// }
-
-// // newrelic tracer
-// if (TRACER === 'all' || TRACER === 'newrelic') {
-//     require('newrelic');
-// }
-
 const os = require('os'),
   cors = require('cors'),
   express = require('express'),
   moment = require('moment-timezone'),
   redis = require('redis'),
-  request = require('request');
-
-// prom
-var PrometheusMetricsFactory = require('jaeger-client').PrometheusMetricsFactory;
-var promClient = require('prom-client');
-
-var config = {
-  serviceName: 'sample-node',
-};
-var namespace = NAMESPACE;
-var metrics = new PrometheusMetricsFactory(promClient, namespace);
-
-// // jaeger
-// const initTracer = require('jaeger-client').initTracer;
-// const config = {
-//   serviceName: `sample-node.${NAMESPACE}`,
-//   reporter: {
-//     collectorEndpoint: COLLECTOR,
-//     logSpans: true,
-//   },
-//   sampler: {
-//     type: 'const',
-//     param: 1
-//   },
-// };
-// const options = {
-//   tags: {
-//     'sample-node.version': VERSION,
-//   },
-//   // metrics: metrics,
-//   logger: console,
-// };
-// const tracer = initTracer(config, options);
-
-// // zipkin
-// const {
-//     Tracer,
-//     ExplicitContext,
-//     ConsoleRecorder
-// } = require("zipkin");
-// const zipkinExpress = require("zipkin-instrumentation-express").expressMiddleware;
-// const zipkinRequest = require('zipkin-instrumentation-request');
-
-// // zipkin tracer
-// const tracer = new Tracer({
-//     ctxImpl: new ExplicitContext(),
-//     recorder: new ConsoleRecorder(),
-//     localServiceName: "sample-node",
-// });
+  request = require('request'),
+  prom = require('prom-client');
 
 // express
 const app = express();
@@ -93,9 +29,9 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-// app.use(zipkinExpress({
-//     tracer
-// }));
+// prom-client
+const collectDefaultMetrics = prom.collectDefaultMetrics;
+collectDefaultMetrics({ prefix: 'forethought' });
 
 // redis
 const retry_strategy = function (options) {
@@ -397,6 +333,12 @@ app.delete('/counter/:name', function (req, res) {
     }
     return res.send(result == null ? '0' : result.toString());
   });
+});
+
+app.get('/metrics', async (req, res) => {
+  // console.log(`${req.method} ${req.path}`);
+  res.setHeader('Content-Type', prom.register.contentType);
+  res.end(await prom.register.metrics());
 });
 
 app.listen(PORT, function () {

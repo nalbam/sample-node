@@ -1,6 +1,6 @@
 {
   "name": "sample-node",
-  "version": "v0.6.0",
+  "version": "v0.10.0",
   "description": "Node.js sample app",
   "main": "server.js",
   "scripts": {
@@ -19,8 +19,7 @@
     "moment-timezone": "^0.5.27",
     "node-fetch": "^3.0.0",
     "opentracing": "^0.14.5",
-    "prom-client": "^14.0.0",
-    "prometheus-api-metrics": "^3.1.0",
+    "prom-client": "^14.0.1",
     "redis": "^3.1.2",
     "request": "^2.88.2"
   },

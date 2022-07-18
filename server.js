@@ -62,7 +62,7 @@ client.on('error', err => {
 });
 
 app.get('/', function (req, res) {
-  console.log(`${req.method} ${req.path}`);
+  console.log(`get /`);
 
   let host = os.hostname();
   let date = moment().tz('Asia/Seoul').format();
@@ -77,7 +77,7 @@ app.get('/', function (req, res) {
 });
 
 app.get('/drop', function (req, res) {
-  console.log(`${req.method} ${req.path}`);
+  console.log(`get /drop`);
 
   res.render('drop.ejs', {
     rate: 100,
@@ -85,7 +85,9 @@ app.get('/drop', function (req, res) {
 });
 
 app.get('/drop/:rate', function (req, res) {
-  console.log(`${req.method} ${req.path}`);
+  var rate = req.params.rate;
+
+  console.log(`get /drop/${rate}`);
 
   res.render('drop.ejs', {
     rate: req.params.rate,
@@ -93,7 +95,7 @@ app.get('/drop/:rate', function (req, res) {
 });
 
 app.get('/read', function (req, res) {
-  console.log(`${req.method} ${req.path}`);
+  console.log(`get /read`);
 
   return res.status(200).json({
     result: 'read',
@@ -101,7 +103,7 @@ app.get('/read', function (req, res) {
 });
 
 app.get('/live', function (req, res) {
-  console.log(`${req.method} ${req.path}`);
+  console.log(`get /live`);
 
   return res.status(200).json({
     result: 'live',
@@ -109,7 +111,7 @@ app.get('/live', function (req, res) {
 });
 
 app.get('/health', function (req, res) {
-  console.log(`${req.method} ${req.path}`);
+  console.log(`get /health`);
 
   if (Math.random() * 100 >= FAULT_RATE) {
     return res.status(200).json({
@@ -125,7 +127,7 @@ app.get('/health', function (req, res) {
 });
 
 app.get('/spring', function (req, res) {
-  console.log(`${req.method} ${req.path}`);
+  console.log(`get /spring`);
   // console.log(`${JSON.stringify(req.headers)}`);
 
   var remoteService;
@@ -149,7 +151,7 @@ app.get('/spring', function (req, res) {
 });
 
 app.get('/tomcat', function (req, res) {
-  console.log(`${req.method} ${req.path}`);
+  console.log(`get /tomcat`);
   // console.log(`${JSON.stringify(req.headers)}`);
 
   var remoteService;
@@ -173,10 +175,11 @@ app.get('/tomcat', function (req, res) {
 });
 
 app.get('/loop/:count', function (req, res) {
-  console.log(`${req.method} ${req.path}`);
   // console.log(`${JSON.stringify(req.headers)}`);
 
   var count = req.params.count;
+
+  console.log(`get /loop/${count}`);
 
   if (count <= 0) {
     return res.status(200).json({
@@ -212,7 +215,7 @@ app.get('/loop/:count', function (req, res) {
 });
 
 app.get('/stress', function (req, res) {
-  console.log(`${req.method} ${req.path}`);
+  console.log(`get /stress`);
 
   let sum = 0;
   for (let i = 0; i < 5000000; i++) {
@@ -226,9 +229,10 @@ app.get('/stress', function (req, res) {
 });
 
 app.get('/success/:rate', function (req, res) {
-  console.log(`${req.method} ${req.path}`);
-
   const rate = req.params.rate;
+
+  console.log(`get /success/${rate}`);
+
   if (Math.random() * 100 <= rate) {
     return res.status(200).json({
       result: 'ok',
@@ -245,9 +249,10 @@ app.get('/success/:rate', function (req, res) {
 });
 
 app.get('/fault/:rate', function (req, res) {
-  console.log(`${req.method} ${req.path}`);
-
   const rate = req.params.rate;
+
+  console.log(`get /fault/${rate}`);
+
   if (Math.random() * 100 >= rate) {
     return res.status(200).json({
       result: 'ok',
@@ -264,7 +269,9 @@ app.get('/fault/:rate', function (req, res) {
 });
 
 app.get('/delay/:sec', function (req, res) {
-  console.log(`${req.method} ${req.path}`);
+  const sec = req.params.sec;
+
+  console.log(`get /delay/${sec}`);
 
   sleep(sec);
   return res.status(200).json({
@@ -275,9 +282,10 @@ app.get('/delay/:sec', function (req, res) {
 });
 
 app.get('/cache/:name', function (req, res) {
-  console.log(`${req.method} ${req.path}`);
-
   const name = req.params.name;
+
+  console.log(`get /cache/${name}`);
+
   return client.get(`cache:${name}`, (err, result) => {
     if (err) {
       console.error(`${err}`);
@@ -291,9 +299,9 @@ app.get('/cache/:name', function (req, res) {
 });
 
 app.post('/cache/:name', function (req, res) {
-  console.log(`${req.method} ${req.path}`);
-
   const name = req.params.name;
+  console.log(`post /cache/${name}`);
+
   const json = JSON.stringify(req.body);
   //console.log(`req.body: ${json}`);
   return client.set(`cache:${name}`, json, (err, result) => {
@@ -309,9 +317,10 @@ app.post('/cache/:name', function (req, res) {
 });
 
 app.get('/counter/:name', function (req, res) {
-  console.log(`${req.method} ${req.path}`);
-
   const name = req.params.name;
+
+  console.log(`get /counter/${name}`);
+
   return client.get(`counter:${name}`, (err, result) => {
     res.setHeader('Content-Type', 'text/plain; charset=UTF-8');
     if (err) {
@@ -323,9 +332,10 @@ app.get('/counter/:name', function (req, res) {
 });
 
 app.post('/counter/:name', function (req, res) {
-  console.log(`${req.method} ${req.path}`);
-
   const name = req.params.name;
+
+  console.log(`post /counter/${name}`);
+
   return client.incr(`counter:${name}`, (err, result) => {
     res.setHeader('Content-Type', 'text/plain; charset=UTF-8');
     if (err) {
@@ -337,9 +347,10 @@ app.post('/counter/:name', function (req, res) {
 });
 
 app.delete('/counter/:name', function (req, res) {
-  console.log(`${req.method} ${req.path}`);
-
   const name = req.params.name;
+
+  console.log(`delete /counter/${name}`);
+
   return client.decr(`counter:${name}`, (err, result) => {
     res.setHeader('Content-Type', 'text/plain; charset=UTF-8');
     if (err) {
@@ -351,7 +362,8 @@ app.delete('/counter/:name', function (req, res) {
 });
 
 app.get('/metrics', async (req, res) => {
-  // console.log(`${req.method} ${req.path}`);
+  console.log(`get /metrics`);
+
   res.setHeader('Content-Type', prom.register.contentType);
   res.end(await prom.register.metrics());
 });

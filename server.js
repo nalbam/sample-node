@@ -30,8 +30,11 @@ app.use(express.json());
 app.use(express.static('public'));
 
 // prom-client
-const collectDefaultMetrics = prom.collectDefaultMetrics;
-collectDefaultMetrics();
+const register = new prom.Registry();
+register.setDefaultLabels({
+  app: 'sample-node'
+});
+prom.collectDefaultMetrics({ register });
 
 // redis
 const retry_strategy = function (options) {
@@ -364,8 +367,9 @@ app.delete('/counter/:name', function (req, res) {
 app.get('/metrics', async (req, res) => {
   console.log(`get /metrics`);
 
-  res.setHeader('Content-Type', prom.register.contentType);
-  res.end(await prom.register.metrics());
+  res.setHeader('Content-Type', register.contentType);
+  let metrics = await register.metrics();
+  res.send(metrics);
 });
 
 app.listen(PORT, function () {

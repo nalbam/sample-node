@@ -31,9 +31,6 @@ app.use(express.static('public'));
 
 // prom-client
 const register = new prom.Registry();
-// register.setDefaultLabels({
-//   app: 'sample-node'
-// });
 prom.collectDefaultMetrics({ register });
 
 // redis

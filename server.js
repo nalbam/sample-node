@@ -31,9 +31,9 @@ app.use(express.static('public'));
 
 // prom-client
 const register = new prom.Registry();
-register.setDefaultLabels({
-  app: 'sample-node'
-});
+// register.setDefaultLabels({
+//   app: 'sample-node'
+// });
 prom.collectDefaultMetrics({ register });
 
 // redis
@@ -368,8 +368,7 @@ app.get('/metrics', async (req, res) => {
   console.log(`get /metrics`);
 
   res.setHeader('Content-Type', register.contentType);
-  let metrics = await register.metrics();
-  res.send(metrics);
+  res.send(await register.metrics());
 });
 
 app.listen(PORT, function () {

@@ -31,7 +31,7 @@ app.use(express.static('public'));
 
 // prom-client
 const collectDefaultMetrics = prom.collectDefaultMetrics;
-collectDefaultMetrics({ prefix: 'forethought' });
+collectDefaultMetrics();
 
 // redis
 const retry_strategy = function (options) {

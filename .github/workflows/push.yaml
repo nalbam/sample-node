@@ -35,16 +35,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG_NAME: ${{ steps.bump.outputs.version }}
 
-      - name: Trigger for GitOps
-        uses: opspresso/action-builder@master
-        with:
-          args: --dispatch
-        env:
-          GITHUB_TOKEN: ${{ secrets.GHP_TOKEN }}
-          GITOPS_REPO: "opspresso/argocd-env-demo"
-          PROJECT: ${{ github.event.repository.name }}
-          VERSION: ${{ steps.bump.outputs.version }}
-
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
 
@@ -96,3 +86,13 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Trigger for GitOps
+        uses: opspresso/action-builder@master
+        with:
+          args: --dispatch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GHP_TOKEN }}
+          GITOPS_REPO: "opspresso/argocd-env-demo"
+          PROJECT: ${{ github.event.repository.name }}
+          VERSION: ${{ steps.bump.outputs.version }}

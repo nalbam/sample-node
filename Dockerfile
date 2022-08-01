@@ -10,8 +10,10 @@ LABEL maintainer="me@nalbam.com" \
 
 EXPOSE 3000
 
-WORKDIR /data
+WORKDIR /usr/src/app
 
-CMD ["node", "/data/server.js"]
+COPY . .
 
-ADD . /data
+RUN npm install
+
+CMD ["node", "server.js"]

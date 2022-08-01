@@ -12,8 +12,6 @@ EXPOSE 3000
 
 WORKDIR /data
 
-ENTRYPOINT ["/bin/sh", "/data/entrypoint.sh"]
-
-COPY ./entrypoint.sh /data/entrypoint.sh
+CMD ["node", "/data/server.js"]
 
 ADD . /data

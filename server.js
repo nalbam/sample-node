@@ -9,7 +9,7 @@ const MESSAGE = process.env.MESSAGE || '';
 const PORT = process.env.PORT || 3000;
 const PROFILE = process.env.PROFILE || 'default';
 const PROTOCOL = process.env.PROTOCOL || 'http';
-const REDIS_HOST = process.env.REDIS_HOST || 'sample-redis';
+const REDIS_HOST = process.env.REDIS_HOST || 'redis';
 const REDIS_PORT = process.env.REDIS_PORT || 6379;
 const REDIS_PASS = process.env.REDIS_PASS || '';
 const VERSION = process.env.VERSION || 'v0.0.0';
@@ -357,5 +357,5 @@ app.get('/metrics', async (req, res) => {
 
 app.listen(PORT, function () {
   console.log(`[${PROFILE}] Listening on port ${PORT}!`);
-  console.log(`connecting to redis: ${REDIS_URL}`);
+  console.log(`connecting to redis: ${REDIS_HOST}:${REDIS_PORT}`);
 });

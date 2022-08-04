@@ -6,11 +6,12 @@ const FAULT_RATE = process.env.FAULT_RATE || 0;
 const HOSTNAME = process.env.HOSTNAME || 'default.svc.cluster.local';
 const LOOP_HOST = process.env.LOOP_HOST || `http://sample-node`;
 const MESSAGE = process.env.MESSAGE || '';
-const NAMESPACE = process.env.NAMESPACE || 'default';
 const PORT = process.env.PORT || 3000;
 const PROFILE = process.env.PROFILE || 'default';
 const PROTOCOL = process.env.PROTOCOL || 'http';
-const REDIS_URL = process.env.REDIS_URL || `redis://sample-redis:6379`;
+const REDIS_HOST = process.env.REDIS_HOST || 'sample-redis';
+const REDIS_PORT = process.env.REDIS_PORT || 6379;
+const REDIS_PASS = process.env.REDIS_PASS || '';
 const VERSION = process.env.VERSION || 'v0.0.0';
 
 const os = require('os'),
@@ -34,28 +35,14 @@ const register = new prom.Registry();
 prom.collectDefaultMetrics({ register });
 
 // redis
-const retry_strategy = function (options) {
-  if (options.error && (options.error.code === 'ECONNREFUSED' || options.error.code === 'NR_CLOSED')) {
-    // Try reconnecting after 5 seconds
-    console.error('The server refused the connection. Retrying connection...');
-    return 5000;
-  }
-  if (options.total_retry_time > 1000 * 60 * 60) {
-    // End reconnecting after a specific timeout and flush all commands with an individual error
-    return new Error('Retry time exhausted');
-  }
-  if (options.attempt > 50) {
-    // End reconnecting with built in error
-    return undefined;
-  }
-  // reconnect after
-  return Math.min(options.attempt * 100, 5000);
-};
-const client = redis.createClient(REDIS_URL, {
-  retry_strategy: retry_strategy
+const client = redis.createClient({
+  host: REDIS_HOST,
+  port: REDIS_PORT,
+  db: 0,
+  password: REDIS_PASS
 });
 client.on('connect', () => {
-  console.log(`connected to redis: ${REDIS_URL}`);
+  console.log(`connected to redis: ${REDIS_HOST}:${REDIS_PORT}`);
 });
 client.on('error', err => {
   console.error(`${err}`);

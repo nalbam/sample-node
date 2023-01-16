@@ -1,6 +1,6 @@
 # sample-node
 
-[![build](https://img.shields.io/github/workflow/status/nalbam/sample-node/build?label=build&style=for-the-badge&logo=github)](https://github.com/nalbam/sample-node/actions/workflows/push.yaml)
+[![build](https://img.shields.io/github/actions/workflow/status/nalbam/sample-node/push.yaml?branch=main&style=for-the-badge&logo=github)](https://github.com/nalbam/sample-node/actions/workflows/push.yaml)
 [![release](https://img.shields.io/github/v/release/nalbam/sample-node?style=for-the-badge&logo=github)](https://github.com/nalbam/sample-node/releases)
 
 <!-- [![CircleCI](https://circleci.com/gh/nalbam/sample-node.svg?style=svg)](https://circleci.com/gh/nalbam/sample-node) -->

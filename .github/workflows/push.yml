@@ -55,17 +55,6 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-northeast-2
-
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v4
@@ -73,7 +62,6 @@ jobs:
           images: |
             nalbam/${{ github.event.repository.name }}
             ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}
-            ${{ steps.login-ecr.outputs.registry }}/nalbam/${{ github.event.repository.name }}
           tags: |
             type=semver,pattern={{raw}},value=${{ steps.bump.outputs.version }}
 

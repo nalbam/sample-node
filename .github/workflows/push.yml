@@ -16,11 +16,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Node
-        uses: actions/setup-node@v1
-        with:
-          node-version: "16.x"
-
       - name: Bump Version
         id: bump
         uses: opspresso/action-builder@master
@@ -34,6 +29,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG_NAME: ${{ steps.bump.outputs.version }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: "16.x"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2

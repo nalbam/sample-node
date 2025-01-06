@@ -80,18 +80,21 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-      - name: Login to Github Container Registry 🔑
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Login to Github Container Registry 🔑
+      #   uses: docker/login-action@v3
+      #   with:
+      #     registry: ghcr.io
+      #     username: ${{ github.repository_owner }}
+      #     password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push image to Github Container Registry
-        run: |
-          docker buildx imagetools create \
-            --tag ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:${{ steps.meta.outputs.version }} \
-            ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+      # - name: Push image to Github Container Registry
+      #   env:
+      #     IMAGE_URI: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}
+      #     VERSION: ${{ steps.meta.outputs.version }}
+      #   run: |
+      #     docker buildx imagetools create \
+      #       --tag ${{ env.IMAGE_URI }}:${{ env.VERSION }} \
+      #       ${{ env.IMAGE_NAME }}:${{ env.VERSION }}
 
       - name: Configure AWS Credentials 🔑
         uses: aws-actions/configure-aws-credentials@v4
@@ -104,10 +107,13 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Push image to Amazon ECR
+        env:
+          IMAGE_URI: ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.IMAGE_NAME }}
+          VERSION: ${{ steps.meta.outputs.version }}
         run: |
           docker buildx imagetools create \
-            --tag ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }} \
-            ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+            --tag ${{ env.IMAGE_URI }}:${{ env.VERSION }} \
+            ${{ env.IMAGE_NAME }}:${{ env.VERSION }}
 
       - name: Trigger for GitOps 🚀
         uses: opspresso/action-builder@master

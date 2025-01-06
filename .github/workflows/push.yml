@@ -34,14 +34,8 @@ jobs:
         uses: opspresso/action-builder@master
         with:
           args: --version
-
-      - name: Release to GitHub 🚀
-        uses: opspresso/action-builder@master
-        with:
-          args: --release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG_NAME: ${{ steps.bump.outputs.version }}
 
       - name: Setup Node 📦
         uses: actions/setup-node@v4

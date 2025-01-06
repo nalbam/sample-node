@@ -75,7 +75,7 @@ jobs:
         with:
           images: |
             ${{ env.IMAGE_NAME }}
-            ghcr.io/${{ env.IMAGE_NAME }}
+            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}
             ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.IMAGE_NAME }}
           tags: |
             type=semver,pattern={{raw}},value=${{ steps.bump.outputs.version }}

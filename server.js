@@ -1,38 +1,28 @@
 'use strict';
 
 // env
-const CLUSTER = process.env.CLUSTER_NAME || 'local';
-const FAULT_RATE = process.env.FAULT_RATE || 0;
-const HOSTNAME = process.env.HOSTNAME || 'default.svc.cluster.local';
-const LOOP_HOST = process.env.LOOP_HOST || `http://sample-node`;
-const MESSAGE = process.env.MESSAGE || '';
-const PORT = process.env.PORT || 3000;
-const PROFILE = process.env.PROFILE || 'default';
-const PROTOCOL = process.env.PROTOCOL || 'http';
-const REDIS_HOST = process.env.REDIS_HOST || 'redis';
-const REDIS_PORT = process.env.REDIS_PORT || 6379;
-const REDIS_PASS = process.env.REDIS_PASS || '';
-const VERSION = process.env.VERSION || 'v0.0.0';
+const CLUSTER = process.env.CLUSTER_NAME ?? 'local';
+const FAULT_RATE = process.env.FAULT_RATE ?? 0;
+const HOSTNAME = process.env.HOSTNAME ?? 'default.svc.cluster.local';
+const LOOP_HOST = process.env.LOOP_HOST ?? `http://sample-node`;
+const MESSAGE = process.env.MESSAGE ?? '';
+const PORT = process.env.PORT ?? 3000;
+const PROFILE = process.env.PROFILE ?? 'default';
+const PROTOCOL = process.env.PROTOCOL ?? 'http';
+const REDIS_HOST = process.env.REDIS_HOST ?? 'redis';
+const REDIS_PORT = process.env.REDIS_PORT ?? 6379;
+const REDIS_PASS = process.env.REDIS_PASS ?? '';
+const VERSION = process.env.VERSION ?? 'v0.0.0';
 
 const os = require('os'),
   cors = require('cors'),
   express = require('express'),
   moment = require('moment-timezone'),
   redis = require('redis'),
-  request = require('request'),
+  fetch = require('node-fetch'),
   prom = require('prom-client');
 
-// express
-const app = express();
-app.set('view engine', 'ejs');
-
-app.use(cors());
-app.use(express.json());
-app.use(express.static('public'));
-
-// prom-client
-const register = new prom.Registry();
-prom.collectDefaultMetrics({ register });
+const { promisify } = require('util');
 
 // redis
 const client = redis.createClient({
@@ -48,7 +38,42 @@ client.on('error', err => {
   console.error(`${err}`);
 });
 
-app.get('/', function (req, res) {
+const clientGetAsync = promisify(client.get).bind(client);
+const clientSetAsync = promisify(client.set).bind(client);
+const clientIncrAsync = promisify(client.incr).bind(client);
+const clientDecrAsync = promisify(client.decr).bind(client);
+
+// express
+const app = express();
+app.set('view engine', 'ejs');
+
+app.use(cors());
+app.use(express.json());
+app.use(express.static('public'));
+
+// prom-client
+const register = new prom.Registry();
+prom.collectDefaultMetrics({ register });
+
+async function handleRemoteService(req, res, serviceName) {
+  console.log(`get /${serviceName}`);
+  const remoteService = PROFILE === 'default' ? `http://sample-${serviceName}` : `${PROTOCOL}://sample-${serviceName}.${HOSTNAME}`;
+
+  try {
+    const response = await fetch(`${remoteService}/health`);
+    const body = await response.json();
+    return res.status(response.status).json(body);
+  } catch (error) {
+    return res.status(500).json({
+      result: 'error',
+    });
+  }
+}
+
+app.get('/spring', async (req, res) => handleRemoteService(req, res, 'spring'));
+app.get('/tomcat', async (req, res) => handleRemoteService(req, res, 'tomcat'));
+
+app.get('/', async function (req, res) {
   console.log(`get /`);
 
   let host = os.hostname();
@@ -63,7 +88,7 @@ app.get('/', function (req, res) {
   });
 });
 
-app.get('/drop', function (req, res) {
+app.get('/drop', async function (req, res) {
   console.log(`get /drop`);
 
   res.render('drop.ejs', {
@@ -71,7 +96,7 @@ app.get('/drop', function (req, res) {
   });
 });
 
-app.get('/drop/:rate', function (req, res) {
+app.get('/drop/:rate', async function (req, res) {
   var rate = req.params.rate;
 
   console.log(`get /drop/${rate}`);
@@ -81,7 +106,7 @@ app.get('/drop/:rate', function (req, res) {
   });
 });
 
-app.get('/read', function (req, res) {
+app.get('/read', async function (req, res) {
   console.log(`get /read`);
 
   return res.status(200).json({
@@ -89,7 +114,7 @@ app.get('/read', function (req, res) {
   });
 });
 
-app.get('/live', function (req, res) {
+app.get('/live', async function (req, res) {
   console.log(`get /live`);
 
   return res.status(200).json({
@@ -97,7 +122,7 @@ app.get('/live', function (req, res) {
   });
 });
 
-app.get('/health', function (req, res) {
+app.get('/health', async function (req, res) {
   console.log(`get /health`);
 
   if (Math.random() * 100 >= FAULT_RATE) {
@@ -113,57 +138,7 @@ app.get('/health', function (req, res) {
   }
 });
 
-app.get('/spring', function (req, res) {
-  console.log(`get /spring`);
-  // console.log(`${JSON.stringify(req.headers)}`);
-
-  var remoteService;
-  if (PROFILE === 'default') {
-    remoteService = 'http://sample-spring';
-  } else {
-    remoteService = `${PROTOCOL}://sample-spring.${HOSTNAME}`;
-  }
-
-  // const span = tracer.startSpan("http_request");
-  request(`${remoteService}/health`, function (error, response, body) {
-    if (error) {
-      return res.status(500).json({
-        result: 'error',
-      });
-    } else {
-      return res.status(response.statusCode).json(JSON.parse(body));
-    }
-  });
-  // span.finish();
-});
-
-app.get('/tomcat', function (req, res) {
-  console.log(`get /tomcat`);
-  // console.log(`${JSON.stringify(req.headers)}`);
-
-  var remoteService;
-  if (PROFILE === 'default') {
-    remoteService = 'http://sample-tomcat';
-  } else {
-    remoteService = `${PROTOCOL}://sample-tomcat.${HOSTNAME}`;
-  }
-
-  // const span = tracer.startSpan("http_request");
-  request(`${remoteService}/health`, function (error, response, body) {
-    if (error) {
-      return res.status(500).json({
-        result: 'error'
-      });
-    } else {
-      return res.status(response.statusCode).json(JSON.parse(body));
-    }
-  });
-  // span.finish();
-});
-
-app.get('/loop/:count', function (req, res) {
-  // console.log(`${JSON.stringify(req.headers)}`);
-
+app.get('/loop/:count', async function (req, res) {
   var count = req.params.count;
 
   console.log(`get /loop/${count}`);
@@ -179,29 +154,23 @@ app.get('/loop/:count', function (req, res) {
 
   var remoteService = LOOP_HOST;
 
-  // const span = tracer.startSpan("http_request");
-  request(`${remoteService}/loop/${count}`, function (error, response, body) {
-    // console.log('error:', error);
-    // console.log('statusCode:', response && response.statusCode);
-    // console.log('body:', body);
-
-    if (error) {
-      return res.status(500).json({
-        result: 'error',
-        version: VERSION,
-      });
-    } else {
-      return res.status(response.statusCode).json({
-        result: 'ok',
-        version: VERSION,
-        data: JSON.parse(body)
-      });
-    }
-  });
-  // span.finish();
+  try {
+    const response = await fetch(`${remoteService}/loop/${count}`);
+    const body = await response.json();
+    return res.status(response.status).json({
+      result: 'ok',
+      version: VERSION,
+      data: body
+    });
+  } catch (error) {
+    return res.status(500).json({
+      result: 'error',
+      version: VERSION,
+    });
+  }
 });
 
-app.get('/stress', function (req, res) {
+app.get('/stress', async function (req, res) {
   console.log(`get /stress`);
 
   let sum = 0;
@@ -215,7 +184,7 @@ app.get('/stress', function (req, res) {
   });
 });
 
-app.get('/success/:rate', function (req, res) {
+app.get('/success/:rate', async function (req, res) {
   const rate = req.params.rate;
 
   console.log(`get /success/${rate}`);
@@ -235,7 +204,7 @@ app.get('/success/:rate', function (req, res) {
   }
 });
 
-app.get('/fault/:rate', function (req, res) {
+app.get('/fault/:rate', async function (req, res) {
   const rate = req.params.rate;
 
   console.log(`get /fault/${rate}`);
@@ -255,12 +224,12 @@ app.get('/fault/:rate', function (req, res) {
   }
 });
 
-app.get('/delay/:sec', function (req, res) {
+app.get('/delay/:sec', async function (req, res) {
   const sec = req.params.sec;
 
   console.log(`get /delay/${sec}`);
 
-  sleep(sec);
+  await sleep(sec);
   return res.status(200).json({
     result: 'ok',
     sec: sec,
@@ -268,84 +237,82 @@ app.get('/delay/:sec', function (req, res) {
   });
 });
 
-app.get('/cache/:name', function (req, res) {
+app.get('/cache/:name', async function (req, res) {
   const name = req.params.name;
-
   console.log(`get /cache/${name}`);
 
-  return client.get(`cache:${name}`, (err, result) => {
-    if (err) {
-      console.error(`${err}`);
-      return res.status(500).json({
-        status: 500,
-        message: err.message,
-      });
-    }
+  try {
+    const result = await clientGetAsync(`cache:${name}`);
     return res.status(200).json(result == null ? {} : JSON.parse(result));
-  });
+  } catch (err) {
+    console.error(`${err}`);
+    return res.status(500).json({
+      status: 500,
+      message: err.message,
+    });
+  }
 });
 
-app.post('/cache/:name', function (req, res) {
+app.post('/cache/:name', async function (req, res) {
   const name = req.params.name;
   console.log(`post /cache/${name}`);
 
   const json = JSON.stringify(req.body);
-  //console.log(`req.body: ${json}`);
-  return client.set(`cache:${name}`, json, (err, result) => {
-    if (err) {
-      console.error(`${err}`);
-      return res.status(500).json({
-        status: 500,
-        message: err.message,
-      });
-    }
+  try {
+    const result = await clientSetAsync(`cache:${name}`, json);
     return res.status(200).json(result == null ? {} : result);
-  });
+  } catch (err) {
+    console.error(`${err}`);
+    return res.status(500).json({
+      status: 500,
+      message: err.message,
+    });
+  }
 });
 
-app.get('/counter/:name', function (req, res) {
+app.get('/counter/:name', async function (req, res) {
   const name = req.params.name;
 
   console.log(`get /counter/${name}`);
 
-  return client.get(`counter:${name}`, (err, result) => {
+  try {
+    const result = await clientGetAsync(`counter:${name}`);
     res.setHeader('Content-Type', 'text/plain; charset=UTF-8');
-    if (err) {
-      console.error(`${err}`);
-      return res.status(500).send(err.message);
-    }
     return res.send(result == null ? '0' : result.toString());
-  });
+  } catch (err) {
+    console.error(`${err}`);
+    return res.status(500).send(err.message);
+  }
 });
 
-app.post('/counter/:name', function (req, res) {
+app.post('/counter/:name', async function (req, res) {
   const name = req.params.name;
 
   console.log(`post /counter/${name}`);
 
-  return client.incr(`counter:${name}`, (err, result) => {
+  try {
+    const result = await clientIncrAsync(`counter:${name}`);
     res.setHeader('Content-Type', 'text/plain; charset=UTF-8');
-    if (err) {
-      console.error(`${err}`);
-      return res.status(500).send(err.message);
-    }
     return res.send(result == null ? '0' : result.toString());
-  });
+  } catch (err) {
+    console.error(`${err}`);
+    return res.status(500).send(err.message);
+  }
 });
 
-app.delete('/counter/:name', function (req, res) {
+app.delete('/counter/:name', async function (req, res) {
   const name = req.params.name;
 
   console.log(`delete /counter/${name}`);
 
-  return client.decr(`counter:${name}`, (err, result) => {
+  try {
+    const result = await clientDecrAsync(`counter:${name}`);
     res.setHeader('Content-Type', 'text/plain; charset=UTF-8');
-    if (err) {
-      console.error(`${err}`);
-      return res.status(500).send(err.message);
-    }
     return res.send(result == null ? '0' : result.toString());
-  });
+  } catch (err) {
+    console.error(`${err}`);
+    return res.status(500).send(err.message);
+  }
 });
 
 app.get('/metrics', async (req, res) => {

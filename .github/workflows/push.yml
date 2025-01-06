@@ -64,9 +64,6 @@ jobs:
       - name: Docker Metadata 📦
         id: meta
         uses: docker/metadata-action@v5
-        env:
-          GHCR_IMAGE: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}
-          AWS_IMAGE: ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.IMAGE_NAME }}
         with:
           images: |
             ${{ env.IMAGE_NAME }}
@@ -93,8 +90,8 @@ jobs:
       - name: Push image to Github Container Registry
         run: |
           docker buildx imagetools create \
-            --tag ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:${{ steps.meta.outputs.tags }} \
-            ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tags }}
+            --tag ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:${{ steps.meta.outputs.version }} \
+            ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
 
       - name: Configure AWS Credentials 🔑
         uses: aws-actions/configure-aws-credentials@v4
@@ -109,8 +106,8 @@ jobs:
       - name: Push image to Amazon ECR
         run: |
           docker buildx imagetools create \
-            --tag ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tags }} \
-            ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tags }}
+            --tag ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }} \
+            ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
 
       - name: Trigger for GitOps 🚀
         uses: opspresso/action-builder@master

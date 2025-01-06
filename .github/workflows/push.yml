@@ -6,23 +6,36 @@ on:
       - main
       - master
 
+env:
+  AWS_ACCOUNT_ID: "968005369378"
+  AWS_REGION: "ap-northeast-2"
+  AWS_ROLE_NAME: "sample-node"
+
+  IMAGE_NAME: nalbam/sample-node
+  PLATFORM: linux/amd64,linux/arm64
+
+# Permission can be added at job level or workflow level
+permissions:
+  id-token: write   # This is required for requesting the JWT
+  contents: read    # This is required for actions/checkout
+
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout 🛎️
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Bump Version
+      - name: Bump Version 🏷️
         id: bump
         uses: opspresso/action-builder@master
         with:
           args: --version
 
-      - name: Release to GitHub
+      - name: Release to GitHub 🚀
         uses: opspresso/action-builder@master
         with:
           args: --release
@@ -30,52 +43,60 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG_NAME: ${{ steps.bump.outputs.version }}
 
-      - name: Setup Node
+      - name: Setup Node 📦
         uses: actions/setup-node@v4
         with:
           node-version: 18
 
-      - name: Set up QEMU
+      - name: Setup QEMU 📦
         uses: docker/setup-qemu-action@v3
 
-      - name: Set up Docker Buildx
+      - name: Setup Docker Buildx 📦
         id: buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Login to DockerHub
+      - name: Login to DockerHub 🔑
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Login to Github Container Registry
+      - name: Login to Github Container Registry 🔑
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Docker Metadata
+      - name: Configure AWS Credentials 🔑
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: "arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/${{ env.AWS_ROLE_NAME }}"
+          role-session-name: github-actions-ci-bot
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Docker Metadata 📦
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: |
-            nalbam/${{ github.event.repository.name }}
-            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}
+            ${{ env.IMAGE_NAME }}
+            ghcr.io/${{ env.IMAGE_NAME }}
+            ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.IMAGE_NAME }}
           tags: |
             type=semver,pattern={{raw}},value=${{ steps.bump.outputs.version }}
 
-      - name: Build and push
+      - name: Build and push 🐳
         uses: docker/build-push-action@v6
         with:
           builder: ${{ steps.buildx.outputs.name }}
           context: .
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ env.PLATFORM }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-      - name: Trigger for GitOps
+      - name: Trigger for GitOps 🚀
         uses: opspresso/action-builder@master
         with:
           args: --dispatch

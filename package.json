@@ -25,7 +25,7 @@
   "devDependencies": {
     "jest": "^29.7.0",
     "jest-sonar-reporter": "^2.0.0",
-    "sonarqube-scanner": "^3.4.0"
+    "sonarqube-scanner": "^4.2.6"
   },
   "jest": {
     "testResultsProcessor": "jest-sonar-reporter"

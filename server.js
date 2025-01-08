@@ -2,33 +2,31 @@
 
 // env
 const CLUSTER = process.env.CLUSTER_NAME ?? 'local';
-const FAULT_RATE = process.env.FAULT_RATE ?? 0;
+const FAULT_RATE = parseFloat(process.env.FAULT_RATE) || 0;
 const HOSTNAME = process.env.HOSTNAME ?? 'default.svc.cluster.local';
 const LOOP_HOST = process.env.LOOP_HOST ?? `http://sample-node`;
 const MESSAGE = process.env.MESSAGE ?? '';
-const PORT = process.env.PORT ?? 3000;
+const PORT = parseInt(process.env.PORT, 10) || 3000;
 const PROFILE = process.env.PROFILE ?? 'default';
 const PROTOCOL = process.env.PROTOCOL ?? 'http';
 const REDIS_HOST = process.env.REDIS_HOST ?? 'redis';
-const REDIS_PORT = process.env.REDIS_PORT ?? 6379;
+const REDIS_PORT = parseInt(process.env.REDIS_PORT, 10) || 6379;
 const REDIS_PASS = process.env.REDIS_PASS ?? '';
 const VERSION = process.env.VERSION ?? 'v0.0.0';
 
-const os = require('os'),
-  cors = require('cors'),
-  express = require('express'),
-  moment = require('moment-timezone'),
-  redis = require('redis'),
-  fetch = require('node-fetch'),
-  prom = require('prom-client');
+import fetch from 'node-fetch';
+import os from 'os';
+import cors from 'cors';
+import express from 'express';
+import moment from 'moment-timezone';
+import redis from 'redis';
+import prom from 'prom-client';
 
-const { promisify } = require('util');
+import { promisify } from 'util';
 
 // redis
 const client = redis.createClient({
-  host: REDIS_HOST,
-  port: REDIS_PORT,
-  db: 0,
+  url: `redis://${REDIS_HOST}:${REDIS_PORT}`,
   password: REDIS_PASS
 });
 client.on('connect', () => {
@@ -54,6 +52,10 @@ app.use(express.static('public'));
 // prom-client
 const register = new prom.Registry();
 prom.collectDefaultMetrics({ register });
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms * 1000));
+}
 
 async function handleRemoteService(req, res, serviceName) {
   console.log(`get /${serviceName}`);
@@ -184,12 +186,8 @@ app.get('/stress', async function (req, res) {
   });
 });
 
-app.get('/success/:rate', async function (req, res) {
-  const rate = req.params.rate;
-
-  console.log(`get /success/${rate}`);
-
-  if (Math.random() * 100 <= rate) {
+function handleRateBasedResponse(req, res, rate, successCondition) {
+  if (successCondition(rate)) {
     return res.status(200).json({
       result: 'ok',
       rate: rate,
@@ -202,26 +200,18 @@ app.get('/success/:rate', async function (req, res) {
       version: VERSION,
     });
   }
+}
+
+app.get('/success/:rate', async function (req, res) {
+  const rate = parseFloat(req.params.rate);
+  console.log(`get /success/${rate}`);
+  handleRateBasedResponse(req, res, rate, (rate) => Math.random() * 100 <= rate);
 });
 
 app.get('/fault/:rate', async function (req, res) {
-  const rate = req.params.rate;
-
+  const rate = parseFloat(req.params.rate);
   console.log(`get /fault/${rate}`);
-
-  if (Math.random() * 100 >= rate) {
-    return res.status(200).json({
-      result: 'ok',
-      rate: rate,
-      version: VERSION,
-    });
-  } else {
-    return res.status(500).json({
-      result: 'error',
-      rate: rate,
-      version: VERSION,
-    });
-  }
+  handleRateBasedResponse(req, res, rate, (rate) => Math.random() * 100 >= rate);
 });
 
 app.get('/delay/:sec', async function (req, res) {

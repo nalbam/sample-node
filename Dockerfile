@@ -1,6 +1,6 @@
 # Dockerfile
 
-FROM node:18-alpine
+FROM node:20-alpine
 
 LABEL maintainer="me@nalbam.com" \
       org.opencontainers.image.description="A Sample Docker image for Nodejs App" \

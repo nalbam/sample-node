@@ -72,6 +72,7 @@ async function handleRemoteService(req, res, serviceName) {
   }
 }
 
+app.get('/node', async (req, res) => handleRemoteService(req, res, 'node'));
 app.get('/spring', async (req, res) => handleRemoteService(req, res, 'spring'));
 app.get('/tomcat', async (req, res) => handleRemoteService(req, res, 'tomcat'));
 

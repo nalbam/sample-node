@@ -319,6 +319,24 @@ app.get('/metrics', (req, res) => {
   res.send(register.metrics());
 });
 
+// Redis 클라이언트 연결 상태 확인 및 재연결
+async function ensureRedisConnection() {
+  if (!client.isOpen) {
+    try {
+      await client.connect();
+      console.log('Redis 클라이언트가 재연결되었습니다.');
+    } catch (err) {
+      console.error('Redis 클라이언트 재연결 실패:', err);
+    }
+  }
+}
+
+// Redis 명령 실행 전 연결 상태 확인
+app.use(async (req, res, next) => {
+  await ensureRedisConnection();
+  next();
+});
+
 app.listen(PORT, function () {
   console.log(`[${PROFILE}] Listening on port ${PORT}!`);
   console.log(`connecting to redis: ${REDIS_HOST}:${REDIS_PORT}`);

@@ -141,9 +141,16 @@ app.get('/health', async function (req, res) {
 });
 
 app.get('/loop/:count', async function (req, res) {
-  var count = req.params.count;
+  var count = parseInt(req.params.count, 10);
 
   console.log(`get /loop/${count}`);
+
+  if (isNaN(count) || count < 0) {
+    return res.status(400).json({
+      result: 'error',
+      message: 'Invalid count value',
+    });
+  }
 
   if (count <= 0) {
     return res.status(200).json({
@@ -305,11 +312,11 @@ app.delete('/counter/:name', async function (req, res) {
   }
 });
 
-app.get('/metrics', async (req, res) => {
+app.get('/metrics', (req, res) => {
   console.log(`get /metrics`);
 
   res.setHeader('Content-Type', register.contentType);
-  res.send(await register.metrics());
+  res.send(register.metrics());
 });
 
 app.listen(PORT, function () {

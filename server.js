@@ -269,6 +269,7 @@ app.post('/cache/:name', async function (req, res) {
 });
 
 app.get('/counter/:name', async function (req, res) {
+  await ensureRedisConnection();
   const name = req.params.name;
 
   console.log(`get /counter/${name}`);
@@ -284,6 +285,7 @@ app.get('/counter/:name', async function (req, res) {
 });
 
 app.post('/counter/:name', async function (req, res) {
+  await ensureRedisConnection();
   const name = req.params.name;
 
   console.log(`post /counter/${name}`);
@@ -299,6 +301,7 @@ app.post('/counter/:name', async function (req, res) {
 });
 
 app.delete('/counter/:name', async function (req, res) {
+  await ensureRedisConnection();
   const name = req.params.name;
 
   console.log(`delete /counter/${name}`);

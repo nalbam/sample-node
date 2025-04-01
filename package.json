@@ -14,7 +14,7 @@
     "cors": "^2.8.5",
     "dd-trace": "^5.10.0",
     "ejs": "^3.0.1",
-    "express": "^4.17.1",
+    "express": "^5.1.0",
     "got": "^14.2.1",
     "jaeger-client": "^3.18.1",
     "moment-timezone": "^0.5.27",

@@ -43,7 +43,7 @@ aws iam attach-role-policy --role-name "${NAME}" --policy-arn "${POLICY_ARN}"
       - name: configure aws credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: "arn:aws:iam::651188579251:role/sample-node"
+          role-to-assume: "arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/${{ env.AWS_ROLE_NAME }}"
           role-session-name: github-actions-ci-bot
           aws-region: ${{ env.AWS_REGION }}
 

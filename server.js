@@ -223,6 +223,54 @@ app.get('/stress', async function (req, res) {
   });
 });
 
+// Kill switch. Off-heap buffers grow RSS past the container memory limit, so the
+// kernel OOM killer ends the process with exit 137 (k8s: OOMKilled) instead of
+// V8 aborting on its own heap limit with 134.
+const OOM_CHUNK_BYTES = 1024 * 1024;
+const OOM_INTERVAL_MS = 100;
+
+// Safety cap, ~1.2Gi. A pod with a memory limit is killed long before this, so
+// the cap only matters on a host with no limit, where unbounded growth would
+// take the whole machine down instead of just this process.
+const OOM_MAX_BYTES = 1229 * 1024 * 1024;
+
+const oomBallast = [];
+let oomTimer = null;
+
+function startOomAllocation() {
+  if (oomTimer) {
+    return;
+  }
+
+  oomTimer = setInterval(() => {
+    if (oomBallast.length * OOM_CHUNK_BYTES >= OOM_MAX_BYTES) {
+      clearInterval(oomTimer);
+      console.log(`oom: stopped at the ${OOM_MAX_BYTES / 1024 / 1024}mb cap, this process has no memory limit`);
+      return;
+    }
+
+    // Fill with a non-zero byte. A zero-filled buffer is backed by the kernel
+    // zero page, so it never commits real memory and RSS stays flat.
+    oomBallast.push(Buffer.alloc(OOM_CHUNK_BYTES, 1));
+    console.log(`oom: rss ${Math.round(process.memoryUsage.rss() / 1024 / 1024)}mb`);
+  }, OOM_INTERVAL_MS);
+}
+
+// POST so a prefetch, crawler or probe can never kill the instance.
+app.post('/oom', async function (req, res) {
+  console.log(`post /oom`);
+
+  // Allocate only after the response is flushed, so the caller learns which
+  // instance is going down.
+  res.on('finish', startOomAllocation);
+
+  return res.status(202).json({
+    result: 'oom',
+    host: os.hostname(),
+    version: VERSION,
+  });
+});
+
 function handleRateBasedResponse(res, rate, successCondition) {
   if (successCondition(rate)) {
     return res.status(200).json({

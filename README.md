@@ -41,6 +41,7 @@ npm test
 | GET    | `/tomcat`        | Calls `/health` of a remote sample service              |
 | GET    | `/loop/:count`   | Calls `LOOP_HOST` recursively `count` times             |
 | GET    | `/stress`        | Burns CPU                                               |
+| POST   | `/oom`           | Kill switch, allocates memory until the container OOM kills it (exit 137), capped at 1.2Gi |
 | GET    | `/success/:rate` | Returns 200 at `rate` percent                           |
 | GET    | `/fault/:rate`   | Returns 500 at `rate` percent                           |
 | GET    | `/delay/:sec`    | Responds after `sec` seconds                            |

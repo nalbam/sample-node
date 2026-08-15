@@ -86,6 +86,10 @@ npm test
 | GET    | `/`            | Info page: host, date, cluster, profile, message, version, and the kill switch |
 | GET    | `/drop`        | Rollout visualization, `/drop/:rate` sets the success rate    |
 
+`/` renders the pod that answered, and shows the local time in the reader's own zone.
+It samples `/health` every few seconds, and if more than one version answers it adds a
+`versions in rotation` bar — so a rollout is visible without leaving the page.
+
 `/drop` polls `/success/:rate` every 100ms and drops a colored dot per response. Each
 `VERSION` that answers gets its own color, and the bar at the bottom shows how the
 responses split between them — so during a rollout you watch one color take over from

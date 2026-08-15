@@ -22,7 +22,7 @@
 
     <section class="plate">
       <p class="tag">host</p>
-      <h1 class="host">
+      <h1 class="host" style="--len: <%= host.length %>">
         <%= host %>
       </h1>
 
@@ -41,7 +41,9 @@
         </dd>
         <dt class="tag">time</dt>
         <dd>
-          <%= date %>
+          <time datetime="<%= date %>">
+            <%= date %>
+          </time>
         </dd>
       </dl>
 
@@ -70,7 +72,12 @@
     </section>
 
     <p class="status" id="kill-status"></p>
-    <div class="readout" id="drop-rate"></div>
+
+    <section class="rotation" id="rotation" hidden>
+      <p class="tag">versions in rotation</p>
+      <div class="progress"></div>
+      <p class="tag rotation-legend"></p>
+    </section>
   </main>
 
   <dialog class="sheet" id="kill-dialog" aria-labelledby="kill-dialog-title">
@@ -85,8 +92,10 @@
     </div>
   </dialog>
 
+  <script src="/time.js"></script>
   <script src="/counter.js"></script>
   <script src="/kill.js"></script>
+  <script src="/rotation.js"></script>
 
 </body>
 

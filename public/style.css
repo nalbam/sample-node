@@ -58,7 +58,9 @@ body {
 /* The panel itself: brushed metal with a soft bevel. */
 .panel {
     width: 100%;
-    max-width: 33rem;
+    /* Wide enough to keep a pod name like sample-node-64f48c795-5srps on one
+       line at the display size below. */
+    max-width: 38rem;
     background-color: var(--panel);
     background-image: repeating-linear-gradient(90deg,
             rgba(255, 255, 255, 0.035) 0 1px,
@@ -166,12 +168,17 @@ body {
 }
 
 .plate {
+    container-type: inline-size;
     padding: 1.75rem 1.5rem 1.5rem;
 }
 
+/* A pod name is one identifier and reads worst broken across lines, so the type
+   shrinks to fit instead. Monospace advance is about 0.6em, so dividing the
+   plate width by the character count gives the largest size that still fits on
+   one line; --len comes from the server. */
 .host {
     margin: 0.375rem 0 1.5rem;
-    font-size: clamp(1.25rem, 5.5vw, 2rem);
+    font-size: clamp(0.875rem, calc((100cqi - 3rem) / (var(--len, 20) * 0.62)), 2rem);
     font-weight: 600;
     letter-spacing: -0.02em;
     line-height: 1.15;
@@ -303,8 +310,7 @@ body {
 }
 
 /* Nothing to report yet — do not reserve panel space for it. */
-.status:empty,
-.readout:empty {
+.status:empty {
     display: none;
 }
 
@@ -321,8 +327,9 @@ body {
     color: var(--estop);
 }
 
-/* Version split rendered by dropper.js. */
-.readout {
+/* Version split: the drop screen's bar, and the status screen's rotation panel
+   that appears only while more than one version is answering. */
+.rotation {
     padding: 0 1.5rem 1.5rem;
 }
 
@@ -338,6 +345,31 @@ body {
 
 .progress-bar {
     height: 100%;
+}
+
+.readout-note {
+    margin-top: 0.5rem;
+}
+
+/* Version strings are literals, so they keep their own case. */
+.rotation-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    margin-top: 0.5rem;
+    text-transform: none;
+}
+
+.rotation-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.swatch {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
 }
 
 /* Confirmation sheet — the safety cover over the switch. */

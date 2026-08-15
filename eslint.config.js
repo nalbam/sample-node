@@ -6,8 +6,6 @@ export default [
     ignores: [
       'node_modules/',
       'reports/',
-      'public/confetti.js',
-      'public/confetti.min.js',
     ],
   },
   js.configs.recommended,

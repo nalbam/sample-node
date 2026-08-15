@@ -49,9 +49,11 @@ class Dropper {
         this.column = 50;
         this.radius = 10;
         this.alpha = 0.9;
-        // Pixels per millisecond. Slow enough that ~30 dots share the screen,
-        // so the version split is a usable sample rather than 8 dots jittering.
-        this.speed = 0.3;
+        // Milliseconds to cross the screen. Deriving speed from the window
+        // height keeps ~30 dots in flight on any display; a fixed speed gave 20
+        // on a laptop and 48 on a large monitor, so the split bar was steadier
+        // on one screen than another.
+        this.fall = 3000;
 
         this.columns = [];
         for (var i = 0; i < this.column; i++) {
@@ -94,6 +96,7 @@ class Dropper {
         var height = window.innerHeight;
         var column = parseInt(width / (this.radius * 3));
         var padding = parseInt(width / 6);
+        var speed = height / this.fall;
 
         this.context.clearRect(0, 0, width, height);
 
@@ -103,7 +106,7 @@ class Dropper {
         for (var i = 0; i < this.particles.length; i++) {
             particle = this.particles[i];
 
-            particle.y += (diff * this.speed);
+            particle.y += (diff * speed);
             if (particle.y > height) {
                 this.del(particle.v, i);
                 i--;
@@ -216,6 +219,9 @@ class Dropper {
                 t += `<div class="progress-bar" role="progressbar" style="width:${width}%; background-color: ${version.c};"></div>`;
             }
             t += '</div>';
+            // The bar is measured, not configured: say how big the sample is so
+            // it is not read as the rate that was asked for.
+            t += `<p class="tag readout-note">${this.particles.length} in flight</p>`;
             e.innerHTML = t;
         }
     }

@@ -89,4 +89,4 @@ jobs:
           GITOPS_REPO: "opspresso/argocd-env-demo"
           PROJECT: ${{ github.event.repository.name }}
           VERSION: ${{ steps.bump.outputs.version }}
-          PROD_PHASE: "alpha"
+          PHASE: "alpha"

@@ -209,8 +209,9 @@ app.get('/loop/:count', async function (req, res) {
   }
 });
 
-app.get('/stress', async function (req, res) {
-  console.log(`get /stress`);
+// POST because burning CPU is a side effect, not a safe read.
+app.post('/stress', async function (req, res) {
+  console.log(`post /stress`);
 
   let sum = 0;
   for (let i = 0; i < 5000000; i++) {
@@ -361,10 +362,11 @@ app.get('/cache/:name', async function (req, res) {
   }
 });
 
-app.post('/cache/:name', async function (req, res) {
+// PUT because the client picks the key and the value is replaced wholesale.
+app.put('/cache/:name', async function (req, res) {
   const name = req.params.name;
 
-  console.log(`post /cache/${name}`);
+  console.log(`put /cache/${name}`);
 
   if (!(await ensureRedisConnection())) {
     return res.status(503).json({
@@ -438,8 +440,10 @@ app.delete('/counter/:name', async function (req, res) {
   }
 
   try {
-    const result = await client.decr(`counter:${name}`);
-    return res.send(result == null ? '0' : result.toString());
+    await client.del(`counter:${name}`);
+    // The counter is gone, so its value is 0. DEL returns the number of keys
+    // removed, which would read as a counter value.
+    return res.send('0');
   } catch (err) {
     console.error(`${err}`);
     return res.status(500).send('internal server error');

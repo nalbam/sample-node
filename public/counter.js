@@ -28,6 +28,6 @@ $(function () {
         _counter('up', 'post');
     });
     $('.btn-thumbs-down').click(function () {
-        _counter('down', 'delete');
+        _counter('down', 'post');
     });
 });

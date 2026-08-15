@@ -85,3 +85,18 @@ describe('GET /delay/:sec', () => {
     expect(res.body).toMatchObject({ result: 'ok', sec: 0 });
   });
 });
+
+describe('POST /stress', () => {
+  test('burns cpu and reports the sum', async () => {
+    const res = await request(app).post('/stress');
+
+    expect(res.status).toBe(200);
+    expect(res.body.result).toBe('ok');
+  });
+
+  test('is not reachable with GET', async () => {
+    const res = await request(app).get('/stress');
+
+    expect(res.status).toBe(404);
+  });
+});

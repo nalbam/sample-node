@@ -227,13 +227,14 @@ app.post('/stress', async function (req, res) {
 // Kill switch. Off-heap buffers grow RSS past the container memory limit, so the
 // kernel OOM killer ends the process with exit 137 (k8s: OOMKilled) instead of
 // V8 aborting on its own heap limit with 134.
-const OOM_CHUNK_BYTES = 1024 * 1024;
-const OOM_INTERVAL_MS = 100;
+const OOM_FILL_MS = 30000;
+const OOM_INTERVAL_MS = 500;
+const MB = 1024 * 1024;
 
-// Safety cap, ~1.2Gi. A pod with a memory limit is killed long before this, so
-// the cap only matters on a host with no limit, where unbounded growth would
-// take the whole machine down instead of just this process.
-const OOM_MAX_BYTES = 1229 * 1024 * 1024;
+// Safety cap, ~1.2Gi, for a process with no memory limit at all, where
+// unbounded growth would take the whole machine down instead of just this
+// process. A pod with a limit is killed by the kernel long before any cap.
+const OOM_MAX_BYTES = 1229 * MB;
 
 const oomBallast = [];
 let oomTimer = null;
@@ -243,17 +244,30 @@ function startOomAllocation() {
     return;
   }
 
+  // Size each chunk to the headroom that actually exists, so the fill takes
+  // about OOM_FILL_MS whatever the limit is. A fixed rate either dies in a few
+  // seconds on a small pod — too fast for a metrics scrape to show anything —
+  // or never reaches a limit larger than the cap.
+  const limit = process.constrainedMemory();
+  const headroom = Math.max((limit || OOM_MAX_BYTES) - process.memoryUsage.rss(), 0);
+  const chunk = Math.max(Math.ceil(headroom / (OOM_FILL_MS / OOM_INTERVAL_MS)), 1);
+  // With a limit the kernel does the stopping; the cap is only for the case
+  // where nothing else would.
+  const cap = limit ? Infinity : OOM_MAX_BYTES;
+
+  console.log(`oom: limit ${limit ? `${Math.round(limit / MB)}mb` : 'none'}, filling ${Math.round(headroom / MB)}mb over ${OOM_FILL_MS / 1000}s in ${Math.round(chunk / MB)}mb chunks`);
+
   oomTimer = setInterval(() => {
-    if (oomBallast.length * OOM_CHUNK_BYTES >= OOM_MAX_BYTES) {
+    if (oomBallast.length * chunk >= cap) {
       clearInterval(oomTimer);
-      console.log(`oom: stopped at the ${OOM_MAX_BYTES / 1024 / 1024}mb cap, this process has no memory limit`);
+      console.log(`oom: stopped at the ${Math.round(OOM_MAX_BYTES / MB)}mb cap, this process has no memory limit`);
       return;
     }
 
     // Fill with a non-zero byte. A zero-filled buffer is backed by the kernel
     // zero page, so it never commits real memory and RSS stays flat.
-    oomBallast.push(Buffer.alloc(OOM_CHUNK_BYTES, 1));
-    console.log(`oom: rss ${Math.round(process.memoryUsage.rss() / 1024 / 1024)}mb`);
+    oomBallast.push(Buffer.alloc(chunk, 1));
+    console.log(`oom: rss ${Math.round(process.memoryUsage.rss() / MB)}mb`);
   }, OOM_INTERVAL_MS);
 }
 

@@ -110,14 +110,16 @@ outage. It is a browser page, so open it rather than curl it.
 | Method | Path             | Description                                            |
 | ------ | ---------------- | ------------------------------------------------------ |
 | POST   | `/stress`        | Burns CPU                                              |
-| POST   | `/oom`           | Kill switch, allocates memory until the container OOM kills it (exit 137), capped at 1.2Gi |
+| POST   | `/oom`           | Kill switch, fills the container memory limit over ~30s until the kernel OOM kills it (exit 137) |
 | GET    | `/delay/:sec`    | Responds after `sec` seconds                           |
 | GET    | `/success/:rate` | Returns 200 at `rate` percent                          |
 | GET    | `/fault/:rate`   | Returns 500 at `rate` percent                          |
 | GET    | `/loop/:count`   | Calls `LOOP_HOST` recursively `count` times            |
 
-`POST /oom` only triggers an OOM kill when the container has a memory limit; without
-one it stops at the 1.2Gi cap and keeps running. The write methods are `POST` so a
+`POST /oom` reads the container memory limit and sizes its allocations to fill the
+headroom over about 30 seconds, so it dies at the same pace on a 128Mi pod and a 4Gi
+one — slow enough for a metrics scrape to catch the climb. Without a memory limit
+there is nothing to trigger the kernel, so it stops at a 1.2Gi cap and keeps running. The write methods are `POST` so a
 prefetch, crawler or probe cannot trip them.
 
 ```bash

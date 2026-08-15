@@ -1,6 +1,6 @@
 # Dockerfile
 
-FROM node:20-alpine
+FROM node:24-alpine
 
 LABEL maintainer="me@nalbam.com" \
       org.opencontainers.image.description="A Sample Docker image for Nodejs App" \
@@ -8,12 +8,18 @@ LABEL maintainer="me@nalbam.com" \
       org.opencontainers.image.source="https://github.com/nalbam/sample-node" \
       org.opencontainers.image.title="sample-node"
 
+ENV NODE_ENV=production
+
 EXPOSE 3000
 
 WORKDIR /usr/src/app
 
-COPY . .
+COPY --chown=node:node package*.json ./
 
-RUN npm install
+RUN npm install --omit=dev && npm cache clean --force
+
+COPY --chown=node:node . .
+
+USER node
 
 CMD ["node", "server.js"]

@@ -5,7 +5,7 @@ function _counter(name, type) {
     $.ajax({
         url: url,
         type: type,
-        success: function (res, status) {
+        success: function (res) {
             // console.log(`_counter (${name}) : ${status}`);
             if (res) {
                 $(`#thumbs-${name}-count`).html(res);

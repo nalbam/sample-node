@@ -1,5 +1,3 @@
-'use strict';
-
 // env
 const CLUSTER = process.env.CLUSTER_NAME ?? 'local';
 const FAULT_RATE = parseFloat(process.env.FAULT_RATE) || 0;
@@ -14,20 +12,25 @@ const REDIS_PORT = parseInt(process.env.REDIS_PORT, 10) || 6379;
 const REDIS_PASS = process.env.REDIS_PASS ?? '';
 const VERSION = process.env.VERSION ?? 'v0.0.0';
 
-import fetch from 'node-fetch';
 import os from 'os';
+import { fileURLToPath } from 'url';
+
 import cors from 'cors';
 import express from 'express';
 import moment from 'moment-timezone';
 import redis from 'redis';
 import prom from 'prom-client';
 
-import { promisify } from 'util';
-
 // redis
 const client = redis.createClient({
   url: `redis://${REDIS_HOST}:${REDIS_PORT}`,
-  password: REDIS_PASS
+  password: REDIS_PASS,
+  socket: {
+    connectTimeout: 2000,
+    // Stop retrying so a request fails fast instead of hanging. The next
+    // request that needs redis starts a fresh attempt.
+    reconnectStrategy: retries => (retries >= 2 ? new Error('redis unreachable') : 100),
+  }
 });
 client.on('connect', () => {
   console.log(`connected to redis: ${REDIS_HOST}:${REDIS_PORT}`);
@@ -36,10 +39,27 @@ client.on('error', err => {
   console.error(`${err}`);
 });
 
-const clientGetAsync = promisify(client.get).bind(client);
-const clientSetAsync = promisify(client.set).bind(client);
-const clientIncrAsync = promisify(client.incr).bind(client);
-const clientDecrAsync = promisify(client.decr).bind(client);
+// The redis v4 client needs an explicit connect. Concurrent requests share the
+// in-flight attempt so they never open a second connection.
+let connecting = null;
+
+function ensureRedisConnection() {
+  if (client.isOpen) {
+    return Promise.resolve(true);
+  }
+  if (!connecting) {
+    connecting = client.connect()
+      .then(() => true)
+      .catch(err => {
+        console.error(`failed to connect redis: ${err}`);
+        return false;
+      })
+      .finally(() => {
+        connecting = null;
+      });
+  }
+  return connecting;
+}
 
 // express
 const app = express();
@@ -53,11 +73,11 @@ app.use(express.static('public'));
 const register = new prom.Registry();
 prom.collectDefaultMetrics({ register });
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms * 1000));
+function sleep(sec) {
+  return new Promise(resolve => setTimeout(resolve, sec * 1000));
 }
 
-async function handleRemoteService(req, res, serviceName) {
+async function handleRemoteService(res, serviceName) {
   console.log(`get /${serviceName}`);
   const remoteService = PROFILE === 'default' ? `http://sample-${serviceName}` : `${PROTOCOL}://sample-${serviceName}.${HOSTNAME}`;
 
@@ -65,22 +85,23 @@ async function handleRemoteService(req, res, serviceName) {
     const response = await fetch(`${remoteService}/health`);
     const body = await response.json();
     return res.status(response.status).json(body);
-  } catch (error) {
+  } catch (err) {
+    console.error(`${err}`);
     return res.status(500).json({
       result: 'error',
     });
   }
 }
 
-app.get('/node', async (req, res) => handleRemoteService(req, res, 'node'));
-app.get('/spring', async (req, res) => handleRemoteService(req, res, 'spring'));
-app.get('/tomcat', async (req, res) => handleRemoteService(req, res, 'tomcat'));
+app.get('/node', async (req, res) => handleRemoteService(res, 'node'));
+app.get('/spring', async (req, res) => handleRemoteService(res, 'spring'));
+app.get('/tomcat', async (req, res) => handleRemoteService(res, 'tomcat'));
 
 app.get('/', async function (req, res) {
   console.log(`get /`);
 
-  let host = os.hostname();
-  let date = moment().tz('Asia/Seoul').format();
+  const host = os.hostname();
+  const date = moment().tz('Asia/Seoul').format();
   res.render('index.ejs', {
     host: host,
     date: date,
@@ -100,12 +121,19 @@ app.get('/drop', async function (req, res) {
 });
 
 app.get('/drop/:rate', async function (req, res) {
-  var rate = req.params.rate;
+  const rate = parseFloat(req.params.rate);
 
-  console.log(`get /drop/${rate}`);
+  console.log(`get /drop/${req.params.rate}`);
+
+  if (Number.isNaN(rate)) {
+    return res.status(400).json({
+      result: 'error',
+      message: 'Invalid rate value',
+    });
+  }
 
   res.render('drop.ejs', {
-    rate: req.params.rate,
+    rate: rate,
   });
 });
 
@@ -142,11 +170,11 @@ app.get('/health', async function (req, res) {
 });
 
 app.get('/loop/:count', async function (req, res) {
-  var count = parseInt(req.params.count, 10);
+  let count = parseInt(req.params.count, 10);
 
-  console.log(`get /loop/${count}`);
+  console.log(`get /loop/${req.params.count}`);
 
-  if (isNaN(count) || count < 0) {
+  if (Number.isNaN(count) || count < 0) {
     return res.status(400).json({
       result: 'error',
       message: 'Invalid count value',
@@ -162,7 +190,7 @@ app.get('/loop/:count', async function (req, res) {
 
   count--;
 
-  var remoteService = LOOP_HOST;
+  const remoteService = LOOP_HOST;
 
   try {
     const response = await fetch(`${remoteService}/loop/${count}`);
@@ -172,7 +200,8 @@ app.get('/loop/:count', async function (req, res) {
       version: VERSION,
       data: body
     });
-  } catch (error) {
+  } catch (err) {
+    console.error(`${err}`);
     return res.status(500).json({
       result: 'error',
       version: VERSION,
@@ -194,7 +223,7 @@ app.get('/stress', async function (req, res) {
   });
 });
 
-function handleRateBasedResponse(req, res, rate, successCondition) {
+function handleRateBasedResponse(res, rate, successCondition) {
   if (successCondition(rate)) {
     return res.status(200).json({
       result: 'ok',
@@ -212,20 +241,45 @@ function handleRateBasedResponse(req, res, rate, successCondition) {
 
 app.get('/success/:rate', async function (req, res) {
   const rate = parseFloat(req.params.rate);
-  console.log(`get /success/${rate}`);
-  handleRateBasedResponse(req, res, rate, (rate) => Math.random() * 100 <= rate);
+
+  console.log(`get /success/${req.params.rate}`);
+
+  if (Number.isNaN(rate)) {
+    return res.status(400).json({
+      result: 'error',
+      message: 'Invalid rate value',
+    });
+  }
+
+  return handleRateBasedResponse(res, rate, (rate) => Math.random() * 100 <= rate);
 });
 
 app.get('/fault/:rate', async function (req, res) {
   const rate = parseFloat(req.params.rate);
-  console.log(`get /fault/${rate}`);
-  handleRateBasedResponse(req, res, rate, (rate) => Math.random() * 100 >= rate);
+
+  console.log(`get /fault/${req.params.rate}`);
+
+  if (Number.isNaN(rate)) {
+    return res.status(400).json({
+      result: 'error',
+      message: 'Invalid rate value',
+    });
+  }
+
+  return handleRateBasedResponse(res, rate, (rate) => Math.random() * 100 >= rate);
 });
 
 app.get('/delay/:sec', async function (req, res) {
-  const sec = req.params.sec;
+  const sec = parseFloat(req.params.sec);
 
-  console.log(`get /delay/${sec}`);
+  console.log(`get /delay/${req.params.sec}`);
+
+  if (Number.isNaN(sec) || sec < 0) {
+    return res.status(400).json({
+      result: 'error',
+      message: 'Invalid sec value',
+    });
+  }
 
   await sleep(sec);
   return res.status(200).json({
@@ -237,111 +291,127 @@ app.get('/delay/:sec', async function (req, res) {
 
 app.get('/cache/:name', async function (req, res) {
   const name = req.params.name;
+
   console.log(`get /cache/${name}`);
 
+  if (!(await ensureRedisConnection())) {
+    return res.status(503).json({
+      status: 503,
+      message: 'redis unavailable',
+    });
+  }
+
   try {
-    const result = await clientGetAsync(`cache:${name}`);
+    const result = await client.get(`cache:${name}`);
     return res.status(200).json(result == null ? {} : JSON.parse(result));
   } catch (err) {
     console.error(`${err}`);
     return res.status(500).json({
       status: 500,
-      message: err.message,
+      message: 'internal server error',
     });
   }
 });
 
 app.post('/cache/:name', async function (req, res) {
   const name = req.params.name;
+
   console.log(`post /cache/${name}`);
+
+  if (!(await ensureRedisConnection())) {
+    return res.status(503).json({
+      status: 503,
+      message: 'redis unavailable',
+    });
+  }
 
   const json = JSON.stringify(req.body);
   try {
-    const result = await clientSetAsync(`cache:${name}`, json);
+    const result = await client.set(`cache:${name}`, json);
     return res.status(200).json(result == null ? {} : result);
   } catch (err) {
     console.error(`${err}`);
     return res.status(500).json({
       status: 500,
-      message: err.message,
+      message: 'internal server error',
     });
   }
 });
 
 app.get('/counter/:name', async function (req, res) {
-  await ensureRedisConnection();
   const name = req.params.name;
 
   console.log(`get /counter/${name}`);
 
+  res.setHeader('Content-Type', 'text/plain; charset=UTF-8');
+
+  if (!(await ensureRedisConnection())) {
+    return res.status(503).send('redis unavailable');
+  }
+
   try {
-    const result = await clientGetAsync(`counter:${name}`);
-    res.setHeader('Content-Type', 'text/plain; charset=UTF-8');
+    const result = await client.get(`counter:${name}`);
     return res.send(result == null ? '0' : result.toString());
   } catch (err) {
     console.error(`${err}`);
-    return res.status(500).send(err.message);
+    return res.status(500).send('internal server error');
   }
 });
 
 app.post('/counter/:name', async function (req, res) {
-  await ensureRedisConnection();
   const name = req.params.name;
 
   console.log(`post /counter/${name}`);
 
+  res.setHeader('Content-Type', 'text/plain; charset=UTF-8');
+
+  if (!(await ensureRedisConnection())) {
+    return res.status(503).send('redis unavailable');
+  }
+
   try {
-    const result = await clientIncrAsync(`counter:${name}`);
-    res.setHeader('Content-Type', 'text/plain; charset=UTF-8');
+    const result = await client.incr(`counter:${name}`);
     return res.send(result == null ? '0' : result.toString());
   } catch (err) {
     console.error(`${err}`);
-    return res.status(500).send(err.message);
+    return res.status(500).send('internal server error');
   }
 });
 
 app.delete('/counter/:name', async function (req, res) {
-  await ensureRedisConnection();
   const name = req.params.name;
 
   console.log(`delete /counter/${name}`);
 
+  res.setHeader('Content-Type', 'text/plain; charset=UTF-8');
+
+  if (!(await ensureRedisConnection())) {
+    return res.status(503).send('redis unavailable');
+  }
+
   try {
-    const result = await clientDecrAsync(`counter:${name}`);
-    res.setHeader('Content-Type', 'text/plain; charset=UTF-8');
+    const result = await client.decr(`counter:${name}`);
     return res.send(result == null ? '0' : result.toString());
   } catch (err) {
     console.error(`${err}`);
-    return res.status(500).send(err.message);
+    return res.status(500).send('internal server error');
   }
 });
 
-app.get('/metrics', (req, res) => {
+app.get('/metrics', async function (req, res) {
   console.log(`get /metrics`);
 
   res.setHeader('Content-Type', register.contentType);
-  res.send(register.metrics());
+  return res.send(await register.metrics());
 });
 
-// Redis 클라이언트 연결 상태 확인 및 재연결
-async function ensureRedisConnection() {
-  if (!client.isOpen) {
-    try {
-      await client.connect();
-      console.log('Redis 클라이언트가 재연결되었습니다.');
-    } catch (err) {
-      console.error('Redis 클라이언트 재연결 실패:', err);
-    }
-  }
-}
+export default app;
 
-// Redis 명령 실행 전 연결 상태 확인
-app.use(async (req, res, next) => {
-  await ensureRedisConnection();
-  next();
-});
-
-app.listen(PORT, function () {
-  console.log(`[${PROFILE}] Listening on port ${PORT}!`);
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
   console.log(`connecting to redis: ${REDIS_HOST}:${REDIS_PORT}`);
-});
+  ensureRedisConnection();
+
+  app.listen(PORT, function () {
+    console.log(`[${PROFILE}] Listening on port ${PORT}!`);
+  });
+}

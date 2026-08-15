@@ -1,2 +1,6 @@
 charts/
 .git/
+.github/
+node_modules/
+reports/
+test/

@@ -2,6 +2,8 @@
  * dropper.js
  */
 
+/* global rate */ // injected by views/drop.ejs
+
 class Dropper {
     constructor() {
         this.init();
@@ -232,15 +234,14 @@ function health() {
     $.ajax({
         url: url,
         type: 'get',
-        success: function (res, status) {
-            // console.log(`health : ${status}`);
+        success: function (res) {
             if (res) {
                 dropper.add(res.version);
             } else {
                 dropper.add(null);
             }
         },
-        error: function (err) {
+        error: function () {
             dropper.add(null);
         }
     });

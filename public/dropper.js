@@ -34,16 +34,24 @@ class Dropper {
         this.particles = [];
         this.versions = [];
 
+        // Colors live here for the lifetime of the page. Holding them in
+        // `versions` lost a version's color whenever its last dot landed, so a
+        // version that paused came back in a different color.
+        this.palette = new Map();
+
         // DodgerBlue, DarkOrange, ForestGreen, MediumPurple
         this.colors = ["30,144,255", "255,140,0", "34,139,34", "147,112,219"];
         this.error = "220,20,60"; // Crimson
+        this.color_index = -1;
 
         this.interval = 100;
 
         this.column = 50;
         this.radius = 10;
         this.alpha = 0.9;
-        this.speed = 1;
+        // Pixels per millisecond. Slow enough that ~30 dots share the screen,
+        // so the version split is a usable sample rather than 8 dots jittering.
+        this.speed = 0.3;
 
         this.columns = [];
         for (var i = 0; i < this.column; i++) {
@@ -52,6 +60,7 @@ class Dropper {
         this.columns.sort(function () {
             return 0.5 - Math.random()
         });
+        this.column_index = -1;
     }
 
     start() {
@@ -70,7 +79,9 @@ class Dropper {
             return;
         }
 
-        var diff = timestamp - this.time;
+        // Cap the step so dots do not teleport after the tab was backgrounded,
+        // where requestAnimationFrame stops firing.
+        var diff = Math.min(timestamp - this.time, 100);
         this.time = timestamp;
 
         this.draw(diff);
@@ -122,45 +133,37 @@ class Dropper {
         return index;
     }
 
+    // A version keeps its color for as long as the page is open. Failures are
+    // always the error color and never take a palette slot.
     color(v) {
-        var version;
-        var color;
-
-        var index = this.find(v);
-
-        if (index > -1) {
-            version = this.versions[index];
-            version.x++;
-
-            color = version.c;
-        } else {
-            if (v) {
-                if (this.color_index) {
-                    this.color_index++;
-                    if (this.color_index >= this.colors.length) {
-                        this.color_index = this.color_index % this.colors.length;
-                    }
-                } else {
-                    this.color_index = parseInt(Math.random() * this.colors.length);
-                }
-                color = `rgba(${this.colors[this.color_index]},${this.alpha})`;
-            } else {
-                color = `rgba(${this.error},${this.alpha})`;
-            }
-
-            version = {};
-            version.v = v;
-            version.c = color;
-            version.x = 1;
-
-            this.versions.push(version);
+        if (!v) {
+            return `rgba(${this.error},${this.alpha})`;
         }
 
-        if (this.debug) {
-            console.log(`version ${this.versions.length} ${version.v} ${version.x}`);
+        var color = this.palette.get(v);
+        if (!color) {
+            this.color_index = (this.color_index + 1) % this.colors.length;
+            color = `rgba(${this.colors[this.color_index]},${this.alpha})`;
+            this.palette.set(v, color);
         }
 
         return color;
+    }
+
+    // `versions` counts what is on screen right now, which is what the split
+    // bar reads. It empties out as dots land; the palette above does not.
+    count(v) {
+        var index = this.find(v);
+
+        if (index > -1) {
+            this.versions[index].x++;
+        } else {
+            this.versions.push({ v: v, c: this.color(v), x: 1 });
+        }
+
+        if (this.debug) {
+            console.log(`version ${this.versions.length} ${v}`);
+        }
     }
 
     del(v, i) {
@@ -179,14 +182,7 @@ class Dropper {
     }
 
     gen() {
-        if (this.column_index) {
-            this.column_index++;
-            if (this.column_index >= this.columns.length) {
-                this.column_index = this.column_index % this.columns.length;
-            }
-        } else {
-            this.column_index = parseInt(Math.random() * this.columns.length);
-        }
+        this.column_index = (this.column_index + 1) % this.columns.length;
 
         return this.columns[this.column_index];
     }
@@ -200,6 +196,7 @@ class Dropper {
         particle.r = this.radius;
         particle.color = this.color(v);
 
+        this.count(v);
         this.particles.push(particle);
 
         if (this.debug) {
@@ -231,24 +228,25 @@ dropper.start();
 function health() {
     var ms = Date.now();
     var url = `${location.protocol}//${location.host}/success/${rate}?q=${ms}`;
-    $.ajax({
-        url: url,
-        type: 'get',
-        success: function (res) {
-            if (res) {
-                dropper.add(res.version);
-            } else {
-                dropper.add(null);
-            }
-        },
-        error: function () {
+    fetch(url)
+        .then(function (res) {
+            // A 500 from /success/:rate is a failed drop, not an exception.
+            return res.ok ? res.json() : null;
+        })
+        .then(function (res) {
+            dropper.add(res ? res.version : null);
+        })
+        .catch(function () {
             dropper.add(null);
-        }
-    });
+        });
 }
 
 setInterval(function () {
-    health();
+    // requestAnimationFrame stops in a background tab, so polling on would pile
+    // up dots nothing is drawing or removing.
+    if (!document.hidden) {
+        health();
+    }
 }, dropper.interval);
 
 setInterval(function () {

@@ -17,6 +17,9 @@
     --estop: #b4342a;
     --estop-hi: #d4483c;
     --estop-collar: #d9b430;
+    --load: #a8701c;
+    --load-hi: #c98c2c;
+    --load-collar: #6f6659;
     --key: #3d3a35;
     --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 }
@@ -33,6 +36,9 @@
         --estop: #c23a2e;
         --estop-hi: #e04d3e;
         --estop-collar: #c9a52c;
+        --load: #b87d20;
+        --load-hi: #dc9a30;
+        --load-collar: #55504a;
         --key: #d7d3c9;
     }
 }
@@ -438,10 +444,66 @@ body {
     border-radius: 3px;
 }
 
-.btn-stress.is-on {
-    color: #fff;
-    background-color: var(--estop);
-    border-color: var(--estop);
+/* The load switch is the same panel-mounted button as the stop, in amber
+   instead of red — the two things you can do to a pod should feel alike. */
+.load {
+    text-align: center;
+}
+
+.load-btn {
+    background:
+        radial-gradient(circle at 50% 38%,
+            var(--load-hi) 0 38%,
+            var(--load) 38% 62%,
+            transparent 62%),
+        radial-gradient(circle at 50% 50%,
+            var(--load-collar) 0 100%);
+}
+
+/* Latches down while it runs, the way a maintained switch does. */
+.load-btn.is-on {
+    transform: translateY(3px);
+    box-shadow:
+        0 0 0 rgba(0, 0, 0, 0.28),
+        0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.load-btn.is-on:hover:not(:disabled) {
+    transform: translateY(3px);
+}
+
+.load-face {
+    font-variant-numeric: tabular-nums;
+}
+
+/* Range marks under the button, like the settings printed around a dial. */
+.load-range {
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-top: 0.625rem;
+}
+
+.range {
+    padding: 0;
+    font-family: inherit;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    color: var(--engrave-dim);
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+.range:hover {
+    color: var(--engrave);
+}
+
+.range.is-on {
+    color: var(--engrave);
+    text-decoration: underline;
+    text-underline-offset: 4px;
 }
 
 /* Confirmation sheet — the safety cover over the switch. */

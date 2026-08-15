@@ -92,6 +92,9 @@ each one's uptime, memory and CPU against its limits — enough to watch a rollo
 load test without leaving the page. Only pods that answer appear, so a `Pending` or
 `CrashLoopBackOff` pod shows up as a smaller count rather than a row.
 
+The controls under it are the two switches: a CPU load selector for 1, 5 or 10 minutes
+— long enough to watch an HPA scale up, hold and scale back down — and the kill switch.
+
 `/drop` polls `/success/:rate` every 100ms and drops a colored dot per response. Each
 `VERSION` that answers gets its own color, and the bar at the bottom shows how the
 responses split between them — so during a rollout you watch one color take over from
@@ -134,9 +137,10 @@ enough for the liveness probe to keep answering. Under a small `limits.cpu` the 
 throttles on top of that and the probe may still time out — the pod restarting is then
 part of what you are demonstrating.
 
-Both are `POST` so a prefetch, crawler or probe cannot trip them. Which pod picks up
-the request is the load balancer's choice, including the `DELETE` that stops a burn —
-the pod list on `/` is what shows where it actually landed.
+Both are `POST` so a prefetch, crawler or probe cannot trip them. Which pod picks up a
+request is the load balancer's choice, so the load selector on `/` fires several
+requests per pod to cover them all — an HPA scales on the average, and one busy pod out
+of two only moves that halfway. The pod list shows where the load actually landed.
 
 ```bash
 curl -X POST localhost:3000/stress/60

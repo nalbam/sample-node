@@ -6,6 +6,8 @@
  * Pending or CrashLoopBackOff pod is visible as a smaller count, not a row.
  */
 
+/* exported podCount */ // read by public/stress.js
+
 const PODS_INTERVAL = 2000;
 const PODS_TTL = 20000;
 
@@ -148,6 +150,11 @@ function _render() {
     body.appendChild(rows);
 
     el.hidden = false;
+}
+
+// stress.js spreads its requests across however many pods are answering.
+function podCount() {
+    return _pods.size;
 }
 
 function _sample() {

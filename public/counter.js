@@ -1,33 +1,32 @@
 let API_URL = location.protocol + '//' + location.host.replace(/sample-([a-z]+)/, 'sample-node');
 
-function _counter(name, type) {
-    let url = API_URL + `/counter/${name}`;
-    $.ajax({
-        url: url,
-        type: type,
-        success: function (res) {
-            // console.log(`_counter (${name}) : ${status}`);
-            if (res) {
-                $(`#thumbs-${name}-count`).html(res);
+function _counter(name, method) {
+    fetch(`${API_URL}/counter/${name}`, { method: method })
+        .then(function (res) {
+            return res.ok ? res.text() : null;
+        })
+        .then(function (text) {
+            if (text) {
+                document.getElementById(`thumbs-${name}-count`).textContent = text;
             }
-        }
-    });
+        })
+        .catch(function () {
+            // Polling is best effort, so a failed read keeps the last value.
+        });
 }
 
-$(function () {
-    _counter('up', 'get');
-    _counter('down', 'get');
+document.addEventListener('DOMContentLoaded', function () {
+    _counter('up', 'GET');
+    _counter('down', 'GET');
     setInterval(function () {
-        _counter('up', 'get');
-        _counter('down', 'get');
+        _counter('up', 'GET');
+        _counter('down', 'GET');
     }, 1000);
-});
 
-$(function () {
-    $('.btn-thumbs-up').click(function () {
-        _counter('up', 'post');
+    document.querySelector('.btn-thumbs-up').addEventListener('click', function () {
+        _counter('up', 'POST');
     });
-    $('.btn-thumbs-down').click(function () {
-        _counter('down', 'post');
+    document.querySelector('.btn-thumbs-down').addEventListener('click', function () {
+        _counter('down', 'POST');
     });
 });

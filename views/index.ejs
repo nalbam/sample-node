@@ -3,53 +3,88 @@
 
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
-  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.12.0/css/all.css">
-  <title>Hello, world!</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/style.css">
+  <title>sample-node · <%= host %></title>
 </head>
 
 <body>
 
-  <main role="main">
-    <section class="jumbotron text-center">
-      <div class="container">
-        <h1><img src="https://nalbam.com/static/logo/nodejs.png"></h1>
-        <h3>
-          <%= host %>
-        </h3>
-        <p>
-          <%= date %>
-        </p>
-        <p>
+  <main class="panel">
+    <header class="panel-bar">
+      <span class="lamp"></span>
+      <span class="unit">sample-node</span>
+      <nav class="modes">
+        <a class="mode is-on" href="/">status</a>
+        <a class="mode" href="/drop">drop</a>
+      </nav>
+    </header>
+
+    <section class="plate">
+      <p class="tag">host</p>
+      <h1 class="host">
+        <%= host %>
+      </h1>
+
+      <dl class="spec">
+        <dt class="tag">cluster</dt>
+        <dd>
           <%= cluster %>
-        </p>
-        <p>
+        </dd>
+        <dt class="tag">profile</dt>
+        <dd>
           <%= profile %>
-        </p>
-        <p>
-          <%= message %>
-        </p>
-        <p>
+        </dd>
+        <dt class="tag">version</dt>
+        <dd>
           <%= version %>
-        </p>
-        <p>
-          <button class="btn btn-primary btn-thumbs-up"><i class="far fa-thumbs-up"></i> <span
-              id="thumbs-up-count">0</span></button>
-          <button class="btn btn-danger btn-thumbs-down"><i class="far fa-thumbs-down"></i> <span
-              id="thumbs-down-count">0</span></button>
-        </p>
-        <p>
-          <button class="btn btn-outline-danger btn-kill"><i class="fas fa-skull-crossbones"></i> Kill</button>
-        </p>
-        <p id="kill-status"></p>
-        <p id="drop-rate"></p>
+        </dd>
+        <dt class="tag">time</dt>
+        <dd>
+          <%= date %>
+        </dd>
+      </dl>
+
+      <% if (message) { %>
+      <p class="note">
+        <%= message %>
+      </p>
+      <% } %>
+    </section>
+
+    <section class="controls">
+      <div class="tally">
+        <p class="tag">tally</p>
+        <div class="tally-keys">
+          <button class="key btn-thumbs-up" aria-label="tally up">▲ <span id="thumbs-up-count">0</span></button>
+          <button class="key btn-thumbs-down" aria-label="tally down">▼ <span id="thumbs-down-count">0</span></button>
+        </div>
+      </div>
+
+      <div class="estop">
+        <p class="tag">kill switch</p>
+        <button class="estop-btn btn-kill" aria-label="kill this instance with an OOM">
+          <span class="estop-face">kill</span>
+        </button>
       </div>
     </section>
+
+    <p class="status" id="kill-status"></p>
+    <div class="readout" id="drop-rate"></div>
   </main>
 
-  <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
-  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js"></script>
+  <dialog class="sheet" id="kill-dialog" aria-labelledby="kill-dialog-title">
+    <p class="tag" id="kill-dialog-title">kill switch</p>
+    <p class="sheet-body">
+      This allocates memory until the kernel kills the process. The pod goes down and its
+      controller decides whether to bring it back.
+    </p>
+    <div class="sheet-actions">
+      <button class="key" type="button" id="kill-cancel">cancel</button>
+      <button class="key key-danger" type="button" id="kill-confirm">kill</button>
+    </div>
+  </dialog>
+
   <script src="/counter.js"></script>
   <script src="/kill.js"></script>
 

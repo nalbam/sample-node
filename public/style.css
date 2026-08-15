@@ -1,0 +1,413 @@
+/**
+ * style.css
+ *
+ * The pages are styled as a lab instrument panel: engraved labels, a status
+ * lamp, and an emergency-stop button for the kill switch. No external fonts or
+ * stylesheets — everything here is system fonts and CSS.
+ */
+
+:root {
+    --panel: #c5c2b8;
+    --panel-hi: #d7d4cb;
+    --panel-low: #a9a69c;
+    --seam: #8e8b82;
+    --engrave: #23201c;
+    --engrave-dim: #6d6961;
+    --lamp: #2f9e57;
+    --estop: #b4342a;
+    --estop-hi: #d4483c;
+    --estop-collar: #d9b430;
+    --key: #3d3a35;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --panel: #2f2d2a;
+        --panel-hi: #3a3835;
+        --panel-low: #232120;
+        --seam: #46443f;
+        --engrave: #e6e2d8;
+        --engrave-dim: #918c82;
+        --lamp: #4cd47c;
+        --estop: #c23a2e;
+        --estop-hi: #e04d3e;
+        --estop-collar: #c9a52c;
+        --key: #d7d3c9;
+    }
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    margin: 0;
+    padding: 2rem 1rem;
+    font-family: var(--mono);
+    color: var(--engrave);
+    background-color: var(--panel-low);
+}
+
+/* The panel itself: brushed metal with a soft bevel. */
+.panel {
+    width: 100%;
+    max-width: 33rem;
+    background-color: var(--panel);
+    background-image: repeating-linear-gradient(90deg,
+            rgba(255, 255, 255, 0.035) 0 1px,
+            transparent 1px 3px);
+    border-radius: 6px;
+    box-shadow:
+        inset 0 1px 0 var(--panel-hi),
+        inset 0 -1px 0 var(--seam),
+        0 1px 2px rgba(0, 0, 0, 0.2),
+        0 12px 32px rgba(0, 0, 0, 0.28);
+}
+
+/* Engraved silkscreen label. Small, wide, uppercase. */
+.tag {
+    margin: 0;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--engrave-dim);
+}
+
+.panel-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.75rem 1.5rem;
+    border-bottom: 1px solid var(--seam);
+    box-shadow: inset 0 -1px 0 var(--panel-hi);
+}
+
+.unit {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.bar-spec {
+    margin-left: auto;
+    font-size: 0.8125rem;
+}
+
+/* Mode selector between the two screens. */
+.modes {
+    display: flex;
+    margin-left: auto;
+}
+
+.mode {
+    padding: 0.25rem 0.625rem;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: var(--engrave-dim);
+    background-color: var(--panel-low);
+    border: 1px solid var(--seam);
+}
+
+.mode + .mode {
+    border-left: none;
+}
+
+.mode:first-child {
+    border-radius: 3px 0 0 3px;
+}
+
+.mode:last-child {
+    border-radius: 0 3px 3px 0;
+}
+
+.mode:hover {
+    color: var(--engrave);
+}
+
+.mode.is-on {
+    color: var(--engrave);
+    background-color: var(--panel-hi);
+}
+
+.lamp {
+    position: relative;
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 50%;
+    background-color: var(--lamp);
+    box-shadow:
+        inset 0 0 0 1px rgba(0, 0, 0, 0.35),
+        0 0 7px var(--lamp);
+    animation: breathe 3.2s ease-in-out infinite;
+}
+
+@keyframes breathe {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.62;
+    }
+}
+
+.plate {
+    padding: 1.75rem 1.5rem 1.5rem;
+}
+
+.host {
+    margin: 0.375rem 0 1.5rem;
+    font-size: clamp(1.25rem, 5.5vw, 2rem);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+}
+
+.spec {
+    display: grid;
+    grid-template-columns: 5.5rem 1fr;
+    gap: 0.5rem 1rem;
+    margin: 0;
+    font-size: 0.875rem;
+}
+
+.spec dt {
+    padding-top: 0.15em;
+}
+
+.spec dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.note {
+    margin: 1.5rem 0 0;
+    padding: 0.625rem 0.875rem;
+    font-size: 0.875rem;
+    border-left: 2px solid var(--seam);
+    background-color: rgba(0, 0, 0, 0.04);
+}
+
+.controls {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    border-top: 1px solid var(--seam);
+    box-shadow: inset 0 1px 0 var(--panel-hi);
+}
+
+.tally-keys {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+/* Counter keys read as small machined buttons. */
+.key {
+    min-width: 3.5rem;
+    padding: 0.4375rem 0.625rem;
+    font-family: inherit;
+    font-size: 0.875rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--key);
+    background-color: var(--panel-hi);
+    border: 1px solid var(--seam);
+    border-radius: 3px;
+    cursor: pointer;
+    transition: transform 0.06s ease, background-color 0.15s ease;
+}
+
+.key:hover {
+    background-color: var(--panel);
+}
+
+.key:active {
+    transform: translateY(1px);
+}
+
+/* Signature: the emergency stop. Yellow collar, red mushroom head. */
+.estop {
+    text-align: center;
+}
+
+.estop-btn {
+    display: grid;
+    place-items: center;
+    width: 5.5rem;
+    height: 5.5rem;
+    margin-top: 0.5rem;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 50% 38%,
+            var(--estop-hi) 0 38%,
+            var(--estop) 38% 62%,
+            transparent 62%),
+        radial-gradient(circle at 50% 50%,
+            var(--estop-collar) 0 100%);
+    box-shadow:
+        0 2px 0 rgba(0, 0, 0, 0.28),
+        0 6px 14px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+
+.estop-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+/* Pressing it should feel like a real switch bottoming out. */
+.estop-btn:active:not(:disabled),
+.estop-btn:disabled {
+    transform: translateY(3px);
+    box-shadow:
+        0 0 0 rgba(0, 0, 0, 0.28),
+        0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.estop-btn:disabled {
+    cursor: default;
+}
+
+.estop-face {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #fff;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.45);
+}
+
+.status {
+    padding: 0 1.5rem 1.25rem;
+    font-size: 0.8125rem;
+    color: var(--engrave-dim);
+}
+
+/* Nothing to report yet — do not reserve panel space for it. */
+.status:empty,
+.readout:empty {
+    display: none;
+}
+
+/* Set by kill.js once the switch is thrown. */
+.panel.is-killing .lamp {
+    background-color: var(--estop);
+    box-shadow:
+        inset 0 0 0 1px rgba(0, 0, 0, 0.35),
+        0 0 7px var(--estop);
+    animation-duration: 0.7s;
+}
+
+.panel.is-killing .status {
+    color: var(--estop);
+}
+
+/* Version split rendered by dropper.js. */
+.readout {
+    padding: 0 1.5rem 1.5rem;
+}
+
+.progress {
+    display: flex;
+    height: 0.5rem;
+    margin-top: 0.5rem;
+    overflow: hidden;
+    background-color: var(--panel-low);
+    border-radius: 2px;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.progress-bar {
+    height: 100%;
+}
+
+/* Confirmation sheet — the safety cover over the switch. */
+.sheet {
+    width: calc(100% - 2rem);
+    max-width: 23rem;
+    padding: 1.5rem;
+    color: var(--engrave);
+    background-color: var(--panel);
+    background-image: repeating-linear-gradient(90deg,
+            rgba(255, 255, 255, 0.035) 0 1px,
+            transparent 1px 3px);
+    border: none;
+    border-radius: 6px;
+    box-shadow:
+        inset 0 1px 0 var(--panel-hi),
+        0 16px 40px rgba(0, 0, 0, 0.4);
+}
+
+.sheet::backdrop {
+    background-color: rgba(0, 0, 0, 0.55);
+}
+
+.sheet-body {
+    margin: 0.75rem 0 1.25rem;
+    font-size: 0.875rem;
+    line-height: 1.6;
+}
+
+.sheet-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+.key-danger {
+    color: #fff;
+    background-color: var(--estop);
+    border-color: var(--estop);
+}
+
+.key-danger:hover {
+    background-color: var(--estop-hi);
+}
+
+:focus-visible {
+    outline: 2px solid var(--engrave);
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+@media (max-width: 26rem) {
+    .controls {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1.75rem;
+    }
+
+    .estop {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+}

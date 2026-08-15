@@ -3,25 +3,30 @@
 
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.12.0/css/all.css">
-    <title>Hello, world!</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/style.css">
+    <title>sample-node · drop <%= rate %>%</title>
 </head>
 
 <body>
 
-    <main role="main">
-        <section class="jumbotron text-center">
-            <div class="container">
-                <h1><img src="https://nalbam.com/static/logo/nodejs.png"></h1>
-                <p id="drop-rate"></p>
-            </div>
+    <main class="panel">
+        <header class="panel-bar">
+            <span class="lamp"></span>
+            <span class="unit">sample-node</span>
+            <span class="bar-spec"><span class="tag">success</span> <%= rate %>%</span>
+            <nav class="modes">
+                <a class="mode" href="/">status</a>
+                <a class="mode is-on" href="/drop">drop</a>
+            </nav>
+        </header>
+
+        <section class="plate">
+            <p class="tag">version split</p>
+            <div id="drop-rate"></div>
         </section>
     </main>
 
-    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js"></script>
     <script>
         let rate = "<%= rate %>";
     </script>

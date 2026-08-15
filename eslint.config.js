@@ -29,7 +29,6 @@ export default [
       sourceType: 'script',
       globals: {
         ...globals.browser,
-        ...globals.jquery,
       },
     },
   },

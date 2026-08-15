@@ -63,6 +63,13 @@
         </div>
       </div>
 
+      <div class="stress">
+        <p class="tag">cpu load</p>
+        <div class="tally-keys">
+          <button class="key btn-stress">stress</button>
+        </div>
+      </div>
+
       <div class="estop">
         <p class="tag">kill switch</p>
         <button class="estop-btn btn-kill" aria-label="kill this instance with an OOM">
@@ -73,10 +80,9 @@
 
     <p class="status" id="kill-status"></p>
 
-    <section class="rotation" id="rotation" hidden>
-      <p class="tag">versions in rotation</p>
-      <div class="progress"></div>
-      <p class="tag rotation-legend"></p>
+    <section class="pods" id="pods" hidden>
+      <p class="tag">pods <span class="pods-count"></span></p>
+      <div class="pods-body"></div>
     </section>
   </main>
 
@@ -95,7 +101,8 @@
   <script src="/time.js"></script>
   <script src="/counter.js"></script>
   <script src="/kill.js"></script>
-  <script src="/rotation.js"></script>
+  <script src="/stress.js"></script>
+  <script src="/pods.js"></script>
 
 </body>
 

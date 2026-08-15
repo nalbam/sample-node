@@ -87,16 +87,49 @@ describe('GET /delay/:sec', () => {
 });
 
 describe('POST /stress', () => {
-  test('burns cpu and reports the sum', async () => {
+  // Without this a test would leave the process burning for a full minute.
+  afterEach(async () => {
+    await request(app).delete('/stress');
+  });
+
+  test('burns for the requested seconds', async () => {
+    const res = await request(app).post('/stress/1');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ result: 'ok', seconds: 1 });
+  });
+
+  test('falls back to a default duration', async () => {
     const res = await request(app).post('/stress');
 
     expect(res.status).toBe(200);
-    expect(res.body.result).toBe('ok');
+    expect(typeof res.body.seconds).toBe('number');
+  });
+
+  test('rejects an invalid duration', async () => {
+    const res = await request(app).post('/stress/abc');
+
+    expect(res.status).toBe(400);
+    expect(res.body.result).toBe('error');
   });
 
   test('is not reachable with GET', async () => {
     const res = await request(app).get('/stress');
 
     expect(res.status).toBe(404);
+  });
+});
+
+describe('GET /status', () => {
+  test('reports uptime, memory and cpu', async () => {
+    const res = await request(app).get('/status');
+
+    expect(res.status).toBe(200);
+    expect(res.body.result).toBe('ok');
+    expect(typeof res.body.uptime).toBe('number');
+    expect(res.body.memory).toHaveProperty('used');
+    expect(res.body.memory).toHaveProperty('percent');
+    expect(res.body.cpu).toHaveProperty('limit');
+    expect(res.body.cpu).toHaveProperty('percent');
   });
 });

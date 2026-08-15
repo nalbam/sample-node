@@ -12,6 +12,9 @@ const REDIS_PORT = parseInt(process.env.REDIS_PORT, 10) || 6379;
 const REDIS_PASS = process.env.REDIS_PASS ?? '';
 const VERSION = process.env.VERSION ?? 'v0.0.0';
 
+const MB = 1024 * 1024;
+
+import fs from 'fs';
 import os from 'os';
 import { fileURLToPath } from 'url';
 
@@ -75,6 +78,58 @@ prom.collectDefaultMetrics({ register });
 
 function sleep(sec) {
   return new Promise(resolve => setTimeout(resolve, sec * 1000));
+}
+
+// The CPU limit has to come from cgroup — Node exposes no equivalent of
+// constrainedMemory() for it.
+function readCpuLimit() {
+  try {
+    const [quota, period] = fs.readFileSync('/sys/fs/cgroup/cpu.max', 'utf8').trim().split(/\s+/);
+    return quota === 'max' ? null : parseInt(quota, 10) / parseInt(period, 10);
+  } catch {
+    // Not cgroup v2, try v1 below.
+  }
+
+  try {
+    const quota = parseInt(fs.readFileSync('/sys/fs/cgroup/cpu/cpu.cfs_quota_us', 'utf8'), 10);
+    const period = parseInt(fs.readFileSync('/sys/fs/cgroup/cpu/cpu.cfs_period_us', 'utf8'), 10);
+    return quota > 0 ? quota / period : null;
+  } catch {
+    // No cgroup at all, so nothing is capping this process.
+  }
+
+  return null;
+}
+
+// Node runs one thread, so a core is the ceiling when nothing else caps it.
+const CPU_LIMIT = readCpuLimit() ?? 1;
+
+// process.cpuUsage() is cumulative, so a rate needs two readings. Measuring on
+// request rather than on a timer keeps the number current even while /stress is
+// hogging the event loop, where an interval gets pushed back by seconds.
+const CPU_MIN_SAMPLE_MS = 500;
+
+let cpuLast = process.cpuUsage();
+let cpuLastAt = Date.now();
+let cpuCores = 0;
+
+function cpuUsageCores() {
+  const now = Date.now();
+  const elapsedMs = now - cpuLastAt;
+
+  // Too short a window reads as noise, so keep the previous figure.
+  if (elapsedMs < CPU_MIN_SAMPLE_MS) {
+    return cpuCores;
+  }
+
+  const current = process.cpuUsage();
+  const usedUs = (current.user - cpuLast.user) + (current.system - cpuLast.system);
+
+  cpuCores = usedUs / (elapsedMs * 1000);
+  cpuLast = current;
+  cpuLastAt = now;
+
+  return cpuCores;
 }
 
 async function handleRemoteService(res, serviceName) {
@@ -169,6 +224,33 @@ app.get('/health', async function (req, res) {
   }
 });
 
+// No request log: the info page polls this every couple of seconds, and the
+// noise would bury the lines that matter, like the oom plan.
+app.get('/status', async function (req, res) {
+  const limit = process.constrainedMemory();
+  const rss = process.memoryUsage.rss();
+  const cores = cpuUsageCores();
+
+  return res.status(200).json({
+    result: 'ok',
+    host: os.hostname(),
+    cluster: CLUSTER,
+    version: VERSION,
+    uptime: Math.round(process.uptime()),
+    memory: {
+      used: rss,
+      limit: limit || null,
+      percent: limit ? Math.round(rss / limit * 100) : null,
+    },
+    cpu: {
+      used: Math.round(cores * 1000) / 1000,
+      limit: CPU_LIMIT,
+      percent: Math.round(cores / CPU_LIMIT * 100),
+    },
+    stress: stressTimer !== null,
+  });
+});
+
 app.get('/loop/:count', async function (req, res) {
   let count = parseInt(req.params.count, 10);
 
@@ -209,27 +291,108 @@ app.get('/loop/:count', async function (req, res) {
   }
 });
 
+const STRESS_DEFAULT_SEC = 60;
+const STRESS_SLICE_MS = 20;
+const STRESS_DUTY = 0.9;
+
+let stressTimer = null;
+let stressUntil = 0;
+
+function burn(ms) {
+  const end = performance.now() + ms;
+  let sum = 0;
+  while (performance.now() < end) {
+    sum += Math.sqrt(sum + 1);
+  }
+  return sum;
+}
+
+function stopStress() {
+  clearTimeout(stressTimer);
+  stressTimer = null;
+  stressUntil = 0;
+}
+
+// Burns in slices rather than one long loop. Blocking the event loop outright
+// would starve the liveness probe and get the pod restarted, which is a
+// different demo than the one this switch is for.
+function stressTick() {
+  if (Date.now() >= stressUntil) {
+    console.log(`stress: done`);
+    stopStress();
+    return;
+  }
+
+  burn(STRESS_SLICE_MS * STRESS_DUTY);
+  stressTimer = setTimeout(stressTick, STRESS_SLICE_MS * (1 - STRESS_DUTY));
+}
+
+function startStress(seconds) {
+  stressUntil = Date.now() + seconds * 1000;
+
+  if (!stressTimer) {
+    console.log(`stress: burning ${STRESS_DUTY * 100}% for ${seconds}s`);
+    stressTick();
+  }
+}
+
 // POST because burning CPU is a side effect, not a safe read.
+app.post('/stress/:seconds', async function (req, res) {
+  const seconds = parseFloat(req.params.seconds);
+
+  console.log(`post /stress/${req.params.seconds}`);
+
+  if (Number.isNaN(seconds) || seconds < 0) {
+    return res.status(400).json({
+      result: 'error',
+      message: 'Invalid seconds value',
+    });
+  }
+
+  startStress(seconds);
+
+  return res.status(200).json({
+    result: 'ok',
+    host: os.hostname(),
+    seconds: seconds,
+    version: VERSION,
+  });
+});
+
 app.post('/stress', async function (req, res) {
   console.log(`post /stress`);
 
-  let sum = 0;
-  for (let i = 0; i < 5000000; i++) {
-    sum += Math.sqrt(i);
-  }
+  startStress(STRESS_DEFAULT_SEC);
+
   return res.status(200).json({
     result: 'ok',
+    host: os.hostname(),
+    seconds: STRESS_DEFAULT_SEC,
     version: VERSION,
-    sum: sum,
+  });
+});
+
+app.delete('/stress', async function (req, res) {
+  console.log(`delete /stress`);
+
+  stopStress();
+
+  return res.status(200).json({
+    result: 'ok',
+    host: os.hostname(),
+    version: VERSION,
   });
 });
 
 // Kill switch. Off-heap buffers grow RSS past the container memory limit, so the
 // kernel OOM killer ends the process with exit 137 (k8s: OOMKilled) instead of
 // V8 aborting on its own heap limit with 134.
-const OOM_FILL_MS = 30000;
+const OOM_FILL_MS = 60000;
 const OOM_INTERVAL_MS = 500;
-const MB = 1024 * 1024;
+
+// Aim past the limit rather than exactly at it, so rounding and a moving RSS
+// cannot leave the fill just short of the kill.
+const OOM_TARGET_RATIO = 1.1;
 
 // Safety cap, ~1.2Gi, for a process with no memory limit at all, where
 // unbounded growth would take the whole machine down instead of just this
@@ -249,7 +412,8 @@ function startOomAllocation() {
   // seconds on a small pod — too fast for a metrics scrape to show anything —
   // or never reaches a limit larger than the cap.
   const limit = process.constrainedMemory();
-  const headroom = Math.max((limit || OOM_MAX_BYTES) - process.memoryUsage.rss(), 0);
+  const target = limit ? limit * OOM_TARGET_RATIO : OOM_MAX_BYTES;
+  const headroom = Math.max(target - process.memoryUsage.rss(), 0);
   const chunk = Math.max(Math.ceil(headroom / (OOM_FILL_MS / OOM_INTERVAL_MS)), 1);
   // With a limit the kernel does the stopping; the cap is only for the case
   // where nothing else would.

@@ -87,8 +87,10 @@ npm test
 | GET    | `/drop`        | Rollout visualization, `/drop/:rate` sets the success rate    |
 
 `/` renders the pod that answered, and shows the local time in the reader's own zone.
-It samples `/health` every few seconds, and if more than one version answers it adds a
-`versions in rotation` bar — so a rollout is visible without leaving the page.
+It also samples `/status` every couple of seconds and lists the pods that reply, with
+each one's uptime, memory and CPU against its limits — enough to watch a rollout or a
+load test without leaving the page. Only pods that answer appear, so a `Pending` or
+`CrashLoopBackOff` pod shows up as a smaller count rather than a row.
 
 `/drop` polls `/success/:rate` every 100ms and drops a colored dot per response. Each
 `VERSION` that answers gets its own color, and the bar at the bottom shows how the
@@ -103,28 +105,44 @@ outage. It is a browser page, so open it rather than curl it.
 | GET    | `/read`     | Readiness probe                             |
 | GET    | `/live`     | Liveness probe                              |
 | GET    | `/health`   | Health check, fails at `FAULT_RATE` percent |
+| GET    | `/status`   | Uptime, memory and CPU against this pod's limits |
 | GET    | `/metrics`  | Prometheus metrics                          |
+
+`/status` is the observation endpoint and always succeeds; `/health` is the probe and
+fails at `FAULT_RATE`. Memory comes from `process.constrainedMemory()` and the CPU
+limit from cgroup, so both report `null` limits outside a container.
 
 ### Chaos
 
 | Method | Path             | Description                                            |
 | ------ | ---------------- | ------------------------------------------------------ |
-| POST   | `/stress`        | Burns CPU                                              |
-| POST   | `/oom`           | Kill switch, fills the container memory limit over ~30s until the kernel OOM kills it (exit 137) |
+| POST   | `/stress/:sec`   | Holds CPU at ~90% for `sec` seconds, `/stress` defaults to 60 |
+| DELETE | `/stress`        | Stops the burn early                                   |
+| POST   | `/oom`           | Kill switch, fills the container memory limit over ~60s until the kernel OOM kills it (exit 137) |
 | GET    | `/delay/:sec`    | Responds after `sec` seconds                           |
 | GET    | `/success/:rate` | Returns 200 at `rate` percent                          |
 | GET    | `/fault/:rate`   | Returns 500 at `rate` percent                          |
 | GET    | `/loop/:count`   | Calls `LOOP_HOST` recursively `count` times            |
 
-`POST /oom` reads the container memory limit and sizes its allocations to fill the
-headroom over about 30 seconds, so it dies at the same pace on a 128Mi pod and a 4Gi
-one — slow enough for a metrics scrape to catch the climb. Without a memory limit
-there is nothing to trigger the kernel, so it stops at a 1.2Gi cap and keeps running. The write methods are `POST` so a
-prefetch, crawler or probe cannot trip them.
+`POST /oom` reads the memory limit and sizes its allocations to reach 110% of it over
+about 60 seconds, so it dies at the same pace on a 128Mi pod and a 4Gi one — slow
+enough for a metrics scrape to catch the climb. Without a memory limit there is
+nothing to trigger the kernel, so it stops at a 1.2Gi cap and keeps running.
+
+`POST /stress/:sec` burns in short slices instead of one long loop, yielding just
+enough for the liveness probe to keep answering. Under a small `limits.cpu` the kernel
+throttles on top of that and the probe may still time out — the pod restarting is then
+part of what you are demonstrating.
+
+Both are `POST` so a prefetch, crawler or probe cannot trip them. Which pod picks up
+the request is the load balancer's choice, including the `DELETE` that stops a burn —
+the pod list on `/` is what shows where it actually landed.
 
 ```bash
-curl -X POST localhost:3000/stress
+curl -X POST localhost:3000/stress/60
+curl -X DELETE localhost:3000/stress
 curl -X POST localhost:3000/oom
+curl localhost:3000/status
 curl localhost:3000/delay/3
 curl localhost:3000/fault/50
 ```

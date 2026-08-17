@@ -69,19 +69,69 @@ function _stop() {
     _until = 0;
 }
 
+// Where the marks are remembered. A demo runs off one browser over and over,
+// and picking 10m and 8x again after every reload is a tax on whoever is
+// presenting. Storage is per origin, so each cluster's page keeps its own.
+const LOAD_STORE = 'sample-node.load';
+
+function _stored() {
+    try {
+        return JSON.parse(localStorage.getItem(LOAD_STORE)) || {};
+    } catch {
+        // Storage can be turned off and the value can be anything a previous
+        // version left behind. Either way the markup's own marks are the
+        // fallback, so there is nothing to repair here.
+        return {};
+    }
+}
+
+function _remember(key, value) {
+    let all = _stored();
+    all[key] = value;
+
+    try {
+        localStorage.setItem(LOAD_STORE, JSON.stringify(all));
+    } catch {
+        // Full, or off. The switch still works, it just forgets.
+    }
+}
+
 // The marks under the button are two rows of the same thing: pick one, it
-// lights, and the caller keeps whatever it stands for.
-function _marks(row, choose) {
+// lights, and the caller keeps whatever it stands for. `key` names both the
+// data attribute the marks carry and the field they are remembered under.
+//
+// The starting mark comes from storage when it is still one of the marks on
+// offer, and from the markup otherwise — which covers a first visit and a
+// remembered value that no longer exists.
+function _marks(row, key, choose) {
+    let marks = Array.from(row.querySelectorAll('.range'));
+    let saved = _stored()[key];
+
+    function light(pick) {
+        marks.forEach(function (el) {
+            el.classList.toggle('is-on', el === pick);
+        });
+        choose(pick);
+    }
+
+    let start = marks.find(function (el) {
+        return el.dataset[key] === saved;
+    }) || marks.find(function (el) {
+        return el.classList.contains('is-on');
+    });
+
+    if (start) {
+        light(start);
+    }
+
     row.addEventListener('click', function (event) {
         let pick = event.target.closest('.range');
         if (!pick) {
             return;
         }
 
-        choose(pick);
-        row.querySelectorAll('.range').forEach(function (el) {
-            el.classList.toggle('is-on', el === pick);
-        });
+        light(pick);
+        _remember(key, pick.dataset[key]);
     });
 }
 
@@ -108,12 +158,12 @@ document.addEventListener('DOMContentLoaded', function () {
         face.textContent = _clock(left);
     }
 
-    _marks(document.querySelector('.load-time'), function (pick) {
+    _marks(document.querySelector('.load-time'), 'seconds', function (pick) {
         seconds = parseInt(pick.dataset.seconds, 10);
     });
 
     // Read on every refill, so turning it up reaches the pods without a restart.
-    _marks(document.querySelector('.load-level'), function (pick) {
+    _marks(document.querySelector('.load-level'), 'cores', function (pick) {
         _cores = parseInt(pick.dataset.cores, 10);
     });
 

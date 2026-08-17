@@ -1,19 +1,25 @@
 /**
- * Drives the CPU load switch.
+ * Drives the load switch.
  *
- * An HPA scales on the average across pods, so one busy pod out of two only
- * moves the average halfway. Each press is therefore spread over several
- * requests — the load balancer decides where each lands, and the pod list is
- * what shows where they actually did.
+ * Rather than telling a pod to burn its own CPU, this sends a steady stream of
+ * requests at the service and lets the pods spend CPU answering them. The load
+ * balancer decides where each one lands, so every pod carries a share — and
+ * because the total is fixed, that share falls when an HPA scales up. The pod
+ * list is where you watch it happen.
  */
 
-/* global podCount */ // defined in public/pods.js
+// 20 req/s x 50ms = 1.0 core of work in total, however many pods are answering.
+const LOAD_TICK_MS = 50;
+const LOAD_WORK_MS = 50;
 
-// Three requests per pod makes it very likely every pod gets at least one.
-const LOAD_SPREAD = 3;
-const LOAD_GAP_MS = 100;
+// A browser opens about six connections per host, so anything past that queues
+// in the browser instead of reaching a pod. Skipping a tick when the requests
+// are already in flight also lets the rate fall on its own when the cluster
+// cannot keep up, rather than piling on.
+const LOAD_MAX_INFLIGHT = 6;
 
-let _generation = 0;
+let _pump = null;
+let _inflight = 0;
 
 function _clock(seconds) {
     let m = Math.floor(seconds / 60);
@@ -22,30 +28,30 @@ function _clock(seconds) {
     return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-function _spread(request) {
-    // Each press supersedes the last. Without this the tail of a stop can land
-    // after the start that followed it and cancel it — background tabs throttle
-    // setTimeout to a second, which makes that tail long.
-    let mine = ++_generation;
-
-    // pods.js owns the list; fall back to a single call before it has answered.
-    let pods = typeof podCount === 'function' ? podCount() : 1;
-    let calls = Math.max(pods, 1) * LOAD_SPREAD;
-    let sent = 0;
-
-    function next() {
-        if (mine !== _generation || sent >= calls) {
-            return;
-        }
-
-        sent += 1;
-        request().catch(function () {
-            // One lost call out of several does not change the outcome.
-        });
-        setTimeout(next, LOAD_GAP_MS);
+function _send() {
+    if (_inflight >= LOAD_MAX_INFLIGHT) {
+        return;
     }
 
-    next();
+    _inflight += 1;
+    fetch(`/work/${LOAD_WORK_MS}`)
+        .catch(function () {
+            // One lost call out of twenty a second does not change the outcome.
+        })
+        .then(function () {
+            _inflight -= 1;
+        });
+}
+
+function _start() {
+    if (!_pump) {
+        _pump = setInterval(_send, LOAD_TICK_MS);
+    }
+}
+
+function _stop() {
+    clearInterval(_pump);
+    _pump = null;
 }
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -57,6 +63,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let remaining = 0;
 
     function idle() {
+        _stop();
         clearInterval(ticker);
         ticker = null;
         remaining = 0;
@@ -87,16 +94,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     button.addEventListener('click', function () {
         if (ticker) {
-            _spread(function () {
-                return fetch('/stress', { method: 'DELETE' });
-            });
             idle();
             return;
         }
 
-        _spread(function () {
-            return fetch(`/stress/${seconds}`, { method: 'POST' });
-        });
+        _start();
 
         remaining = seconds;
         button.classList.add('is-on');

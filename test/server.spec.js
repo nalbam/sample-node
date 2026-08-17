@@ -60,6 +60,8 @@ describe('parameter validation', () => {
     ['/success/abc'],
     ['/fault/abc'],
     ['/drop/abc'],
+    ['/work/abc'],
+    ['/work/-1'],
   ])('GET %s is rejected', async (path) => {
     const res = await request(app).get(path);
 
@@ -86,37 +88,20 @@ describe('GET /delay/:sec', () => {
   });
 });
 
-describe('POST /stress', () => {
-  // Without this a test would leave the process burning for a full minute.
-  afterEach(async () => {
-    await request(app).delete('/stress');
-  });
-
-  test('burns for the requested seconds', async () => {
-    const res = await request(app).post('/stress/1');
+describe('GET /work/:ms', () => {
+  test('burns for the requested milliseconds', async () => {
+    const res = await request(app).get('/work/10');
 
     expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({ result: 'ok', seconds: 1 });
+    expect(res.body).toMatchObject({ result: 'ok', ms: 10 });
   });
 
-  test('falls back to a default duration', async () => {
-    const res = await request(app).post('/stress');
-
-    expect(res.status).toBe(200);
-    expect(typeof res.body.seconds).toBe('number');
-  });
-
-  test('rejects an invalid duration', async () => {
-    const res = await request(app).post('/stress/abc');
+  // The burn blocks the event loop, so a long one would starve the probes.
+  test('rejects a duration past the cap', async () => {
+    const res = await request(app).get('/work/5000');
 
     expect(res.status).toBe(400);
     expect(res.body.result).toBe('error');
-  });
-
-  test('is not reachable with GET', async () => {
-    const res = await request(app).get('/stress');
-
-    expect(res.status).toBe(404);
   });
 });
 

@@ -105,7 +105,7 @@ function readCpuLimit() {
 const CPU_LIMIT = readCpuLimit() ?? 1;
 
 // process.cpuUsage() is cumulative, so a rate needs two readings. Measuring on
-// request rather than on a timer keeps the number current even while /stress is
+// request rather than on a timer keeps the number current even while /work is
 // hogging the event loop, where an interval gets pushed back by seconds.
 const CPU_MIN_SAMPLE_MS = 500;
 
@@ -247,7 +247,6 @@ app.get('/status', async function (req, res) {
       limit: CPU_LIMIT,
       percent: Math.round(cores / CPU_LIMIT * 100),
     },
-    stress: stressTimer !== null,
   });
 });
 
@@ -291,12 +290,15 @@ app.get('/loop/:count', async function (req, res) {
   }
 });
 
-const STRESS_DEFAULT_SEC = 60;
-const STRESS_SLICE_MS = 20;
-const STRESS_DUTY = 0.9;
-
-let stressTimer = null;
-let stressUntil = 0;
+// Load target. One request burns a fixed slice of CPU, so a steady request rate
+// lands as a predictable amount of CPU spread over whatever pods are behind the
+// service — which is the average an HPA scales on. The total stays put as pods
+// come and go, so the per-pod share falls when one scales up.
+//
+// Capped because the burn blocks the event loop for its whole duration; past a
+// second the liveness probe starts timing out and the pod restart becomes the
+// demo instead.
+const WORK_MAX_MS = 1000;
 
 function burn(ms) {
   const end = performance.now() + ms;
@@ -307,79 +309,24 @@ function burn(ms) {
   return sum;
 }
 
-function stopStress() {
-  clearTimeout(stressTimer);
-  stressTimer = null;
-  stressUntil = 0;
-}
+// No request log: the load switch calls this many times a second, and the noise
+// would bury the lines that matter, like the oom plan.
+app.get('/work/:ms', async function (req, res) {
+  const ms = parseFloat(req.params.ms);
 
-// Burns in slices rather than one long loop. Blocking the event loop outright
-// would starve the liveness probe and get the pod restarted, which is a
-// different demo than the one this switch is for.
-function stressTick() {
-  if (Date.now() >= stressUntil) {
-    console.log(`stress: done`);
-    stopStress();
-    return;
-  }
-
-  burn(STRESS_SLICE_MS * STRESS_DUTY);
-  stressTimer = setTimeout(stressTick, STRESS_SLICE_MS * (1 - STRESS_DUTY));
-}
-
-function startStress(seconds) {
-  stressUntil = Date.now() + seconds * 1000;
-
-  if (!stressTimer) {
-    console.log(`stress: burning ${STRESS_DUTY * 100}% for ${seconds}s`);
-    stressTick();
-  }
-}
-
-// POST because burning CPU is a side effect, not a safe read.
-app.post('/stress/:seconds', async function (req, res) {
-  const seconds = parseFloat(req.params.seconds);
-
-  console.log(`post /stress/${req.params.seconds}`);
-
-  if (Number.isNaN(seconds) || seconds < 0) {
+  if (Number.isNaN(ms) || ms < 0 || ms > WORK_MAX_MS) {
     return res.status(400).json({
       result: 'error',
-      message: 'Invalid seconds value',
+      message: 'Invalid ms value',
     });
   }
 
-  startStress(seconds);
+  burn(ms);
 
   return res.status(200).json({
     result: 'ok',
     host: os.hostname(),
-    seconds: seconds,
-    version: VERSION,
-  });
-});
-
-app.post('/stress', async function (req, res) {
-  console.log(`post /stress`);
-
-  startStress(STRESS_DEFAULT_SEC);
-
-  return res.status(200).json({
-    result: 'ok',
-    host: os.hostname(),
-    seconds: STRESS_DEFAULT_SEC,
-    version: VERSION,
-  });
-});
-
-app.delete('/stress', async function (req, res) {
-  console.log(`delete /stress`);
-
-  stopStress();
-
-  return res.status(200).json({
-    result: 'ok',
-    host: os.hostname(),
+    ms: ms,
     version: VERSION,
   });
 });

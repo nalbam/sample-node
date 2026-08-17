@@ -1,6 +1,6 @@
 {
   "name": "sample-node",
-  "version": "v0.15.0",
+  "version": "v0.16.0",
   "description": "Node.js sample app",
   "type": "module",
   "main": "server.js",

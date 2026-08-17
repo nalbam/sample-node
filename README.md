@@ -92,8 +92,9 @@ each one's uptime, memory and CPU against its limits — enough to watch a rollo
 load test without leaving the page. Only pods that answer appear, so a `Pending` or
 `CrashLoopBackOff` pod shows up as a smaller count rather than a row.
 
-The controls under it are the two switches: a CPU load selector for 1, 5 or 10 minutes
-— long enough to watch an HPA scale up, hold and scale back down — and the kill switch.
+The controls under it are the two switches: a load selector for 1, 5 or 10 minutes —
+long enough to watch an HPA scale up, hold and scale back down — and the kill switch.
+The load switch sends traffic rather than burning CPU in place; see *Chaos* below.
 
 `/drop` polls `/success/:rate` every 100ms and drops a colored dot per response. Each
 `VERSION` that answers gets its own color, and the bar at the bottom shows how the
@@ -119,8 +120,7 @@ limit from cgroup, so both report `null` limits outside a container.
 
 | Method | Path             | Description                                            |
 | ------ | ---------------- | ------------------------------------------------------ |
-| POST   | `/stress/:sec`   | Holds CPU at ~90% for `sec` seconds, `/stress` defaults to 60 |
-| DELETE | `/stress`        | Stops the burn early                                   |
+| GET    | `/work/:ms`      | Burns `ms` milliseconds of CPU answering this one request, up to 1000 |
 | POST   | `/oom`           | Kill switch, fills the container memory limit over ~60s until the kernel OOM kills it (exit 137) |
 | GET    | `/delay/:sec`    | Responds after `sec` seconds                           |
 | GET    | `/success/:rate` | Returns 200 at `rate` percent                          |
@@ -130,21 +130,24 @@ limit from cgroup, so both report `null` limits outside a container.
 `POST /oom` reads the memory limit and sizes its allocations to reach 110% of it over
 about 60 seconds, so it dies at the same pace on a 128Mi pod and a 4Gi one — slow
 enough for a metrics scrape to catch the climb. Without a memory limit there is
-nothing to trigger the kernel, so it stops at a 1.2Gi cap and keeps running.
+nothing to trigger the kernel, so it stops at a 1.2Gi cap and keeps running. It is
+`POST` so a prefetch, crawler or probe cannot trip it.
 
-`POST /stress/:sec` burns in short slices instead of one long loop, yielding just
-enough for the liveness probe to keep answering. Under a small `limits.cpu` the kernel
-throttles on top of that and the probe may still time out — the pod restarting is then
-part of what you are demonstrating.
+`GET /work/:ms` is the target for load rather than a switch that turns load on. The
+load selector on `/` sends 20 requests a second at 50ms each — one core of work in
+total — and the load balancer decides which pod answers each one. Because the total
+stays put as pods come and go, an HPA scaling up cuts the per-pod share instead of
+being handed more work, and the CPU meters in the pod list settle at the new level.
+That is the behavior to watch; a self-inflicted burn on one pod would only move the
+average by its share. A single request is capped at a second because the burn blocks
+the event loop, and the liveness probe has to keep answering.
 
-Both are `POST` so a prefetch, crawler or probe cannot trip them. Which pod picks up a
-request is the load balancer's choice, so the load selector on `/` fires several
-requests per pod to cover them all — an HPA scales on the average, and one busy pod out
-of two only moves that halfway. The pod list shows where the load actually landed.
+The load runs from the browser, so leave the tab open and in the foreground —
+background tabs get their timers throttled to about once a second and the rate
+collapses. For a run that outlives the tab, drive `/work` from a shell instead.
 
 ```bash
-curl -X POST localhost:3000/stress/60
-curl -X DELETE localhost:3000/stress
+while true; do curl -s localhost:3000/work/50 >/dev/null; done
 curl -X POST localhost:3000/oom
 curl localhost:3000/status
 curl localhost:3000/delay/3

@@ -433,17 +433,6 @@ body {
     font-variant-numeric: tabular-nums;
 }
 
-.pod-flag {
-    padding: 0.1em 0.4em;
-    font-size: 0.6875rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: #fff;
-    background-color: var(--estop);
-    border-radius: 3px;
-}
-
 /* The load switch is the same panel-mounted button as the stop, in amber
    instead of red — the two things you can do to a pod should feel alike. */
 .load {

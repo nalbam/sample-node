@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "cors": "^2.8.5",
-    "ejs": "^3.0.1",
+    "ejs": "^6.0.1",
     "express": "^4.17.1",
     "moment-timezone": "^0.5.27",
     "prom-client": "^15.1.2",

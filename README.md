@@ -93,8 +93,9 @@ load test without leaving the page. Only pods that answer appear, so a `Pending`
 `CrashLoopBackOff` pod shows up as a smaller count rather than a row.
 
 The controls under it are the two switches: a load selector for 1, 5 or 10 minutes —
-long enough to watch an HPA scale up, hold and scale back down — and the kill switch.
-The load switch sends traffic rather than burning CPU in place; see *Chaos* below.
+long enough to watch an HPA scale up, hold and scale back down — at 1x, 4x or 8x for
+how hard, and the kill switch. The load switch sends traffic rather than burning CPU
+in place; see *Chaos* below.
 
 `/drop` polls `/success/:rate` every 100ms and drops a colored dot per response. Each
 `VERSION` that answers gets its own color, and the bar at the bottom shows how the
@@ -134,17 +135,24 @@ nothing to trigger the kernel, so it stops at a 1.2Gi cap and keeps running. It 
 `POST` so a prefetch, crawler or probe cannot trip it.
 
 `GET /work/:ms` is the target for load rather than a switch that turns load on. The
-load selector on `/` sends 20 requests a second at 50ms each — one core of work in
-total — and the load balancer decides which pod answers each one. Because the total
-stays put as pods come and go, an HPA scaling up cuts the per-pod share instead of
-being handed more work, and the CPU meters in the pod list settle at the new level.
-That is the behavior to watch; a self-inflicted burn on one pod would only move the
-average by its share. A single request is capped at a second because the burn blocks
-the event loop, and the liveness probe has to keep answering.
+switch on `/` keeps a set number of requests in flight at 100ms of work each, so its
+level marks — 1x, 4x, 8x — are about that many cores of work, and the load balancer
+decides which pod answers each request. Because the total stays put as pods come and
+go, an HPA scaling up cuts the per-pod share instead of being handed more work, and
+the CPU meters in the pod list settle at the new level. That is the behavior to
+watch; a self-inflicted burn on one pod would only move the average by its share. A
+single request is capped at a second because the burn blocks the event loop, and the
+liveness probe has to keep answering.
 
-The load runs from the browser, so leave the tab open and in the foreground —
-background tabs get their timers throttled to about once a second and the rate
-collapses. For a run that outlives the tab, drive `/work` from a shell instead.
+Each response starts the next request, rather than a timer doing it, so the load
+holds while you watch `kubectl` in another window — a hidden tab throttles timers to
+once a second, and to once a minute after five minutes, which used to gut it. The
+deadline is checked on the same refill, so a throttled tab stops on time too.
+
+Two things still bound it. A browser opens about six connections per host over
+HTTP/1.1, so 8x only lands in full over HTTP/2 and the rest waits in the browser.
+And the round trip counts against the 100ms, so a distant cluster delivers somewhat
+less than the mark says. For a run that outlives the tab, drive `/work` from a shell.
 
 ```bash
 while true; do curl -s localhost:3000/work/50 >/dev/null; done

@@ -8,18 +8,21 @@
  * list is where you watch it happen.
  */
 
-// 20 req/s x 50ms = 1.0 core of work in total, however many pods are answering.
-const LOAD_TICK_MS = 50;
-const LOAD_WORK_MS = 50;
+// Each request burns 100ms, so one of them in flight at all times is about one
+// core kept busy and the level mark is simply how many to keep in flight. The
+// round trip eats into that a little: a 20ms hop delivers 100/120 of a core per
+// request, which is why the marks are a target rather than a promise.
+const LOAD_WORK_MS = 100;
 
-// A browser opens about six connections per host, so anything past that queues
-// in the browser instead of reaching a pod. Skipping a tick when the requests
-// are already in flight also lets the rate fall on its own when the cluster
-// cannot keep up, rather than piling on.
-const LOAD_MAX_INFLIGHT = 6;
+// Refilling on completion instead of on a timer is what keeps the load up while
+// you watch kubectl in another window: a hidden tab throttles timers to about
+// once a second, and to once a minute after five minutes, which would leave the
+// switch latched down sending almost nothing. Network callbacks keep running.
+const LOAD_RETRY_MS = 250;
 
-let _pump = null;
+let _until = 0;
 let _inflight = 0;
+let _cores = 4;
 
 function _clock(seconds) {
     let m = Math.floor(seconds / 60);
@@ -28,68 +31,90 @@ function _clock(seconds) {
     return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-function _send() {
-    if (_inflight >= LOAD_MAX_INFLIGHT) {
-        return;
-    }
-
-    _inflight += 1;
-    fetch(`/work/${LOAD_WORK_MS}`)
-        .catch(function () {
-            // One lost call out of twenty a second does not change the outcome.
-        })
-        .then(function () {
-            _inflight -= 1;
-        });
+function _remaining() {
+    return Math.max(Math.ceil((_until - Date.now()) / 1000), 0);
 }
 
-function _start() {
-    if (!_pump) {
-        _pump = setInterval(_send, LOAD_TICK_MS);
+// Tops the requests back up to the level, and every completion calls back in.
+// The deadline is checked here rather than left to the countdown, so a throttled
+// timer cannot leave the load running long after its time is up.
+function _fill() {
+    while (_inflight < _cores && Date.now() < _until) {
+        _inflight += 1;
+        fetch(`/work/${LOAD_WORK_MS}`)
+            .then(function () {
+                return 0;
+            }, function () {
+                // Nothing is answering. Wait a beat rather than spinning on a
+                // connection that fails the moment it is made.
+                return LOAD_RETRY_MS;
+            })
+            .then(function (wait) {
+                _inflight -= 1;
+                if (wait) {
+                    setTimeout(_fill, wait);
+                } else {
+                    _fill();
+                }
+            });
     }
+}
+
+function _start(seconds) {
+    _until = Date.now() + seconds * 1000;
+    _fill();
 }
 
 function _stop() {
-    clearInterval(_pump);
-    _pump = null;
+    _until = 0;
 }
 
-document.addEventListener('DOMContentLoaded', function () {
-    let button = document.querySelector('.load-btn');
-    let face = button.querySelector('.load-face');
-    let range = document.querySelector('.load-range');
-    let seconds = 60;
-    let ticker = null;
-    let remaining = 0;
-
-    function idle() {
-        _stop();
-        clearInterval(ticker);
-        ticker = null;
-        remaining = 0;
-        face.textContent = 'load';
-        button.classList.remove('is-on');
-    }
-
-    function countdown() {
-        remaining -= 1;
-        if (remaining <= 0) {
-            idle();
-            return;
-        }
-        face.textContent = _clock(remaining);
-    }
-
-    range.addEventListener('click', function (event) {
+// The marks under the button are two rows of the same thing: pick one, it
+// lights, and the caller keeps whatever it stands for.
+function _marks(row, choose) {
+    row.addEventListener('click', function (event) {
         let pick = event.target.closest('.range');
         if (!pick) {
             return;
         }
 
-        seconds = parseInt(pick.dataset.seconds, 10);
-        range.querySelectorAll('.range').forEach(function (el) {
+        choose(pick);
+        row.querySelectorAll('.range').forEach(function (el) {
             el.classList.toggle('is-on', el === pick);
         });
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    let button = document.querySelector('.load-btn');
+    let face = button.querySelector('.load-face');
+    let seconds = 60;
+    let ticker = null;
+
+    function idle() {
+        _stop();
+        clearInterval(ticker);
+        ticker = null;
+        face.textContent = 'load';
+        button.classList.remove('is-on');
+    }
+
+    function countdown() {
+        let left = _remaining();
+        if (left <= 0) {
+            idle();
+            return;
+        }
+        face.textContent = _clock(left);
+    }
+
+    _marks(document.querySelector('.load-time'), function (pick) {
+        seconds = parseInt(pick.dataset.seconds, 10);
+    });
+
+    // Read on every refill, so turning it up reaches the pods without a restart.
+    _marks(document.querySelector('.load-level'), function (pick) {
+        _cores = parseInt(pick.dataset.cores, 10);
     });
 
     button.addEventListener('click', function () {
@@ -98,11 +123,10 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        _start();
+        _start(seconds);
 
-        remaining = seconds;
         button.classList.add('is-on');
-        face.textContent = _clock(remaining);
+        face.textContent = _clock(_remaining());
         ticker = setInterval(countdown, 1000);
     });
 

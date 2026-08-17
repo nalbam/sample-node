@@ -68,10 +68,15 @@
         <button class="estop-btn load-btn" aria-label="send steady traffic to this service">
           <span class="estop-face load-face">load</span>
         </button>
-        <div class="load-range">
+        <div class="load-range load-time">
           <button class="range is-on" data-seconds="60">1m</button>
           <button class="range" data-seconds="300">5m</button>
           <button class="range" data-seconds="600">10m</button>
+        </div>
+        <div class="load-range load-level">
+          <button class="range" data-cores="1">1x</button>
+          <button class="range is-on" data-cores="4">4x</button>
+          <button class="range" data-cores="8">8x</button>
         </div>
       </div>
 

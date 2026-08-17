@@ -473,6 +473,11 @@ body {
     margin-top: 0.625rem;
 }
 
+/* The second row of marks belongs to the same dial, so it sits closer. */
+.load-range + .load-range {
+    margin-top: 0.25rem;
+}
+
 .range {
     padding: 0;
     font-family: inherit;

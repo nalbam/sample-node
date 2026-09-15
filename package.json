@@ -28,7 +28,7 @@
     "globals": "^16.0.0",
     "jest": "^30.0.0",
     "jest-sonar-reporter": "^2.0.0",
-    "sonarqube-scanner": "^4.2.6",
+    "sonarqube-scanner": "^5.0.0",
     "supertest": "^7.0.0"
   },
   "jest": {

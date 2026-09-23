@@ -190,15 +190,16 @@ the kill switch is allocating, its start time, allocated bytes, and safety-cap s
 | Method | Path             | Description                                            |
 | ------ | ---------------- | ------------------------------------------------------ |
 | GET    | `/work/:ms`      | Burns `ms` milliseconds of CPU answering this one request, up to 1000 |
-| POST   | `/oom`           | Kill switch, fills the container memory limit over ~60s until the kernel OOM kills it (exit 137) |
+| POST   | `/oom`           | Kill switch, allocates memory at a 30s fill target until the kernel OOM kills it (exit 137) |
 | GET    | `/delay/:sec`    | Responds after `sec` seconds                           |
 | GET    | `/success/:rate` | Returns 200 at `rate` percent                          |
 | GET    | `/fault/:rate`   | Returns 500 at `rate` percent                          |
 | GET    | `/loop/:count`   | Calls `LOOP_HOST` recursively `count` times            |
 
-`POST /oom` reads the memory limit and sizes its allocations to reach 110% of it over
-about 60 seconds, so it dies at the same pace on a 128Mi pod and a 4Gi one — slow
-enough for a metrics scrape to catch the climb. Without a memory limit there is
+`POST /oom` reads the memory limit and sizes each 500ms allocation from the gap
+between current RSS and 110% of the limit, using a 30-second fill target. Actual
+OOM timing also depends on cgroup accounting, memory reclaim, and CPU throttling.
+Without a memory limit there is
 nothing to trigger the kernel, so it stops at a 1.2Gi cap and keeps running. It is
 `POST` so a prefetch, crawler or probe cannot trip it.
 

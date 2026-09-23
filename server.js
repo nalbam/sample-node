@@ -280,7 +280,7 @@ app.get('/work/:ms', async function (req, res) {
 // Kill switch. Off-heap buffers grow RSS past the container memory limit, so the
 // kernel OOM killer ends the process with exit 137 (k8s: OOMKilled) instead of
 // V8 aborting on its own heap limit with 134.
-const OOM_FILL_MS = 60000;
+const OOM_FILL_MS = 30000;
 const OOM_INTERVAL_MS = 500;
 
 // Aim past the limit rather than exactly at it, so rounding and a moving RSS

@@ -126,10 +126,33 @@ the GitHub Release job. Git tags are the release version source; the legacy
 | GET    | `/drop`        | Rollout visualization, `/drop/:rate` sets the success rate    |
 
 `/` renders the pod that answered, and shows the local time in the reader's own zone.
-It also samples `/status` every couple of seconds and lists the pods that reply, with
-each one's uptime, memory and CPU against its limits — enough to watch a rollout or a
-load test without leaving the page. Only pods that answer appear, so a `Pending` or
-`CrashLoopBackOff` pod shows up as a smaller count rather than a row.
+The dashboard fills the viewport, with CPU and the HPA load test on the left and
+memory and the OOM/alert test on the right. Pod and event panels scroll internally.
+The live dashboard samples `/status` about once a second. Select a responding pod
+to see app-container CPU in millicores, memory in MiB, usage against its limits,
+and process uptime. The charts retain five minutes of observations; choose a
+1/3/5-minute window, freeze the charts, or scrub through individual samples.
+Freezing charts keeps collection running. Background tabs pause collection.
+
+The kill switch automatically selects the pod that accepted `POST /oom`. Its
+trace retains the memory climb, peak, 90% warning, and process restart. A new
+process identity under the same pod name confirms a restart, even if it happened
+between polls. The switch re-arms when that target responds after restarting.
+Red chart markers show kill requests and green markers show recovery observations.
+The HPA test records load start/stop markers, concurrent request intensity, remaining
+time, and observed pod counts. These are responding pods seen by the browser, not
+the HPA controller's desired replica count. OOM tests track the process lifecycle;
+alert delivery must be checked in the connected monitoring system.
+
+Only responding pods are discovered through the service. Previously seen pods
+remain visible with their last values and a stale indicator after 10 seconds
+without a sample; this is not proof of an outage. The UI observes restarts rather
+than asserting their cause. Confirm `OOMKilled` and the restart count in Kubernetes:
+
+```bash
+kubectl --context eks-demo -n sample get pods -l app.kubernetes.io/name=sample-node
+kubectl --context eks-demo -n sample get pod <pod-name> -o jsonpath='{.status.containerStatuses[?(@.name=="app")].lastState.terminated.reason}'
+```
 
 The controls under it are the two switches: a load selector for 1, 5 or 10 minutes —
 long enough to watch an HPA scale up, hold and scale back down — at 1x, 4x or 8x for
@@ -149,12 +172,18 @@ outage. It is a browser page, so open it rather than curl it.
 | GET    | `/read`     | Readiness probe                             |
 | GET    | `/live`     | Liveness probe                              |
 | GET    | `/health`   | Health check, fails at `FAULT_RATE` percent |
-| GET    | `/status`   | Uptime, memory and CPU against this pod's limits |
+| GET    | `/status`   | Process identity, uptime, app-container CPU/memory, limits, and OOM allocation state |
 | GET    | `/metrics`  | Prometheus metrics                          |
 
-`/status` is the observation endpoint and always succeeds; `/health` is the probe and
-fails at `FAULT_RATE`. Memory comes from `process.constrainedMemory()` and the CPU
-limit from cgroup, so both report `null` limits outside a container.
+`/status` is not affected by `FAULT_RATE` and sends `Cache-Control: no-store`.
+`/health` is the probe and fails at `FAULT_RATE`. On Linux, cgroup v2/v1 counters
+measure the app container rather than the whole node or its sidecars. Memory usage
+includes cgroup-charged cache; `memory.rss` separately reports process RSS. CPU is
+the change in cumulative CPU time over a monotonic sample interval (at least 500ms).
+Outside cgroups the endpoint explicitly reports process scope; unknown limits and
+CPU percentages without a limit are `null`. CPU usage is `null` until a rate can
+be measured. `instanceId` changes on every process start, and `oom` reports whether
+the kill switch is allocating, its start time, allocated bytes, and safety-cap state.
 
 ### Chaos
 

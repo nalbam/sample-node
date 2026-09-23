@@ -10,7 +10,7 @@ export default [
   },
   js.configs.recommended,
   {
-    files: ['server.js', 'test/**/*.js', 'eslint.config.js'],
+    files: ['server.js', 'lib/**/*.js', 'test/**/*.js', 'eslint.config.js'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
@@ -29,5 +29,9 @@ export default [
         ...globals.browser,
       },
     },
+  },
+  {
+    files: ['public/pods.js', 'public/telemetry.js'],
+    languageOptions: { sourceType: 'module' },
   },
 ];

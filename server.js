@@ -14,9 +14,10 @@ const VERSION = process.env.VERSION ?? 'v0.0.0';
 
 const MB = 1024 * 1024;
 
-import fs from 'fs';
 import os from 'os';
 import { fileURLToPath } from 'url';
+import { randomUUID } from 'node:crypto';
+import { createTelemetry } from './lib/telemetry.js';
 
 import cors from 'cors';
 import express from 'express';
@@ -80,57 +81,10 @@ function sleep(sec) {
   return new Promise(resolve => setTimeout(resolve, sec * 1000));
 }
 
-// The CPU limit has to come from cgroup — Node exposes no equivalent of
-// constrainedMemory() for it.
-function readCpuLimit() {
-  try {
-    const [quota, period] = fs.readFileSync('/sys/fs/cgroup/cpu.max', 'utf8').trim().split(/\s+/);
-    return quota === 'max' ? null : parseInt(quota, 10) / parseInt(period, 10);
-  } catch {
-    // Not cgroup v2, try v1 below.
-  }
-
-  try {
-    const quota = parseInt(fs.readFileSync('/sys/fs/cgroup/cpu/cpu.cfs_quota_us', 'utf8'), 10);
-    const period = parseInt(fs.readFileSync('/sys/fs/cgroup/cpu/cpu.cfs_period_us', 'utf8'), 10);
-    return quota > 0 ? quota / period : null;
-  } catch {
-    // No cgroup at all, so nothing is capping this process.
-  }
-
-  return null;
-}
-
-// Node runs one thread, so a core is the ceiling when nothing else caps it.
-const CPU_LIMIT = readCpuLimit() ?? 1;
-
-// process.cpuUsage() is cumulative, so a rate needs two readings. Measuring on
-// request rather than on a timer keeps the number current even while /work is
-// hogging the event loop, where an interval gets pushed back by seconds.
-const CPU_MIN_SAMPLE_MS = 500;
-
-let cpuLast = process.cpuUsage();
-let cpuLastAt = Date.now();
-let cpuCores = 0;
-
-function cpuUsageCores() {
-  const now = Date.now();
-  const elapsedMs = now - cpuLastAt;
-
-  // Too short a window reads as noise, so keep the previous figure.
-  if (elapsedMs < CPU_MIN_SAMPLE_MS) {
-    return cpuCores;
-  }
-
-  const current = process.cpuUsage();
-  const usedUs = (current.user - cpuLast.user) + (current.system - cpuLast.system);
-
-  cpuCores = usedUs / (elapsedMs * 1000);
-  cpuLast = current;
-  cpuLastAt = now;
-
-  return cpuCores;
-}
+const sampleTelemetry = createTelemetry();
+const INSTANCE_ID = randomUUID();
+const STARTED_AT = new Date(Date.now() - process.uptime() * 1000).toISOString();
+sampleTelemetry();
 
 async function handleRemoteService(res, serviceName) {
   console.log(`get /${serviceName}`);
@@ -224,29 +178,21 @@ app.get('/health', async function (req, res) {
   }
 });
 
-// No request log: the info page polls this every couple of seconds, and the
+// No request log: the info page polls this every second, and the
 // noise would bury the lines that matter, like the oom plan.
-app.get('/status', async function (req, res) {
-  const limit = process.constrainedMemory();
-  const rss = process.memoryUsage.rss();
-  const cores = cpuUsageCores();
-
+app.get('/status', function (req, res) {
+  res.set('Cache-Control', 'no-store');
   return res.status(200).json({
     result: 'ok',
     host: os.hostname(),
     cluster: CLUSTER,
     version: VERSION,
+    instanceId: INSTANCE_ID,
+    startedAt: STARTED_AT,
+    sampledAt: new Date().toISOString(),
     uptime: Math.round(process.uptime()),
-    memory: {
-      used: rss,
-      limit: limit || null,
-      percent: limit ? Math.round(rss / limit * 100) : null,
-    },
-    cpu: {
-      used: Math.round(cores * 1000) / 1000,
-      limit: CPU_LIMIT,
-      percent: Math.round(cores / CPU_LIMIT * 100),
-    },
+    ...sampleTelemetry(),
+    oom: {...oomState},
   });
 });
 
@@ -348,11 +294,14 @@ const OOM_MAX_BYTES = 1229 * MB;
 
 const oomBallast = [];
 let oomTimer = null;
+const oomState = {active: false, startedAt: null, allocatedBytes: 0, capped: false};
 
 function startOomAllocation() {
   if (oomTimer) {
     return;
   }
+  oomState.active = true;
+  oomState.startedAt = new Date().toISOString();
 
   // Size each chunk to the headroom that actually exists, so the fill takes
   // about OOM_FILL_MS whatever the limit is. A fixed rate either dies in a few
@@ -371,6 +320,8 @@ function startOomAllocation() {
   oomTimer = setInterval(() => {
     if (oomBallast.length * chunk >= cap) {
       clearInterval(oomTimer);
+      oomState.active = false;
+      oomState.capped = true;
       console.log(`oom: stopped at the ${Math.round(OOM_MAX_BYTES / MB)}mb cap, this process has no memory limit`);
       return;
     }
@@ -378,6 +329,7 @@ function startOomAllocation() {
     // Fill with a non-zero byte. A zero-filled buffer is backed by the kernel
     // zero page, so it never commits real memory and RSS stays flat.
     oomBallast.push(Buffer.alloc(chunk, 1));
+    oomState.allocatedBytes += chunk;
     console.log(`oom: rss ${Math.round(process.memoryUsage.rss() / MB)}mb`);
   }, OOM_INTERVAL_MS);
 }
@@ -394,6 +346,8 @@ app.post('/oom', async function (req, res) {
     result: 'oom',
     host: os.hostname(),
     version: VERSION,
+    instanceId: INSTANCE_ID,
+    fillMs: OOM_FILL_MS,
   });
 });
 

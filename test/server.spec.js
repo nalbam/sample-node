@@ -1,4 +1,5 @@
 import request from 'supertest';
+import {jest} from '@jest/globals';
 
 import app from '../server.js';
 
@@ -112,9 +113,35 @@ describe('GET /status', () => {
     expect(res.status).toBe(200);
     expect(res.body.result).toBe('ok');
     expect(typeof res.body.uptime).toBe('number');
+    expect(res.headers['cache-control']).toBe('no-store');
+    expect(res.body.instanceId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(Number.isNaN(Date.parse(res.body.startedAt))).toBe(false);
+    expect(res.body.oom).toEqual({active: false, startedAt: null, allocatedBytes: 0, capped: false});
     expect(res.body.memory).toHaveProperty('used');
     expect(res.body.memory).toHaveProperty('percent');
     expect(res.body.cpu).toHaveProperty('limit');
     expect(res.body.cpu).toHaveProperty('percent');
+    expect(['cgroup', 'process']).toContain(res.body.memory.source);
+    const next = await request(app).get('/status');
+    expect(next.body.instanceId).toBe(res.body.instanceId);
+    expect(next.body.startedAt).toBe(res.body.startedAt);
+  });
+});
+
+describe('OOM observation contract', () => {
+  test('identifies the target and reports allocation without scheduling duplicate fills', async () => {
+    const interval = jest.spyOn(global, 'setInterval').mockReturnValue({});
+    try {
+      const first = await request(app).post('/oom');
+      const duplicate = await request(app).post('/oom');
+      const status = await request(app).get('/status');
+      expect(first.status).toBe(202);
+      expect(first.body.instanceId).toBe(status.body.instanceId);
+      expect(duplicate.body.instanceId).toBe(first.body.instanceId);
+      expect(status.body.oom).toMatchObject({active: true, allocatedBytes: 0, capped: false});
+      expect(interval).toHaveBeenCalledTimes(1);
+    } finally {
+      interval.mockRestore();
+    }
   });
 });

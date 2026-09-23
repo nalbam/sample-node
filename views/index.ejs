@@ -1,119 +1,84 @@
 <!doctype html>
 <html lang="en">
-
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="/style.css">
   <title>sample-node · <%= host %></title>
 </head>
-
-<body>
-
-  <main class="panel">
+<body class="dashboard-page">
+  <main class="panel panel-dashboard">
     <header class="panel-bar">
-      <span class="lamp"></span>
-      <span class="unit">sample-node</span>
-      <nav class="modes">
-        <a class="mode is-on" href="/">status</a>
-        <a class="mode" href="/drop">drop</a>
-      </nav>
+      <span class="lamp"></span><span class="unit">sample-node</span>
+      <span class="bar-context"><%= cluster %> · <%= version %></span>
+      <nav class="modes"><a class="mode is-on" href="/">status</a><a class="mode" href="/drop">drop</a></nav>
     </header>
+    <div class="console-overview">
+      <div class="served-by"><span class="tag">served by</span><span><%= host %></span><time datetime="<%= date %>"><%= date %></time></div>
+      <div class="tally-keys">
+        <button class="key btn-thumbs-up" aria-label="thumbs up">👍 <span id="thumbs-up-count">0</span></button>
+        <button class="key btn-thumbs-down" aria-label="thumbs down">👎 <span id="thumbs-down-count">0</span></button>
+      </div>
+    </div>
 
-    <section class="plate">
-      <p class="tag">host</p>
-      <h1 class="host" style="--len: <%= host.length %>">
-        <%= host %>
-      </h1>
-
-      <dl class="spec">
-        <dt class="tag">cluster</dt>
-        <dd>
-          <%= cluster %>
-        </dd>
-        <dt class="tag">profile</dt>
-        <dd>
-          <%= profile %>
-        </dd>
-        <dt class="tag">version</dt>
-        <dd>
-          <%= version %>
-        </dd>
-        <dt class="tag">time</dt>
-        <dd>
-          <time datetime="<%= date %>">
-            <%= date %>
-          </time>
-        </dd>
-      </dl>
-
-      <% if (message) { %>
-      <p class="note">
-        <%= message %>
-      </p>
-      <% } %>
-    </section>
-
-    <section class="controls">
-      <div class="tally">
-        <p class="tag">tally</p>
-        <div class="tally-keys">
-          <button class="key btn-thumbs-up" aria-label="thumbs up">👍 <span id="thumbs-up-count">0</span></button>
-          <button class="key btn-thumbs-down" aria-label="thumbs down">👎 <span id="thumbs-down-count">0</span></button>
-        </div>
+    <section class="telemetry" aria-labelledby="telemetry-title">
+      <div class="telemetry-heading">
+        <h1 id="telemetry-title">Scale. Break. Recover.</h1>
+        <span class="stream-state" id="stream-state" role="status">Connecting…</span>
       </div>
 
-      <div class="load">
-        <p class="tag">cpu load</p>
-        <button class="estop-btn load-btn" aria-label="send steady traffic to this service">
-          <span class="estop-face load-face">load</span>
-        </button>
-        <div class="load-range load-time">
-          <button class="range is-on" data-seconds="60">1m</button>
-          <button class="range" data-seconds="300">5m</button>
-          <button class="range" data-seconds="600">10m</button>
-        </div>
-        <div class="load-range load-level">
-          <button class="range" data-cores="1">1x</button>
-          <button class="range is-on" data-cores="4">4x</button>
-          <button class="range" data-cores="8">8x</button>
-        </div>
+      <div class="scenario-controls">
+        <section class="scenario scenario-hpa load" aria-labelledby="hpa-title">
+          <div class="scenario-copy">
+            <p class="tag">01 · HPA test</p><h2 id="hpa-title">CPU load</h2>
+            <p>Drive CPU up. Watch pods join and share the load.</p>
+            <div class="scenario-options">
+              <div class="load-range load-time" aria-label="Load duration"><button class="range is-on" data-seconds="60">1m</button><button class="range" data-seconds="300">5m</button><button class="range" data-seconds="600">10m</button></div>
+              <div class="load-range load-level" aria-label="Concurrent requests"><button class="range" data-cores="1">1x</button><button class="range is-on" data-cores="4">4x</button><button class="range" data-cores="8">8x</button></div>
+            </div>
+            <p class="scenario-status" id="load-status" role="status">Ready to send traffic</p>
+            <p class="scenario-hint" id="load-observed">Pod counts are observations, not the HPA desired count.</p>
+          </div>
+          <button class="estop-btn load-btn" aria-label="Start CPU load for HPA test"><span class="estop-face load-face">load</span></button>
+        </section>
+        <section class="scenario scenario-oom estop" aria-labelledby="oom-title">
+          <div class="scenario-copy">
+            <p class="tag">02 · OOM / alert test</p><h2 id="oom-title">Kill switch</h2>
+            <p>Fill one pod's memory. Check alerts and recovery.</p>
+            <p class="scenario-status status" id="kill-status" role="status">Ready to inject an OOM</p>
+            <p class="scenario-hint">Request → memory pressure → restart.<br>Alert delivery is checked in your monitoring system.</p>
+          </div>
+          <button class="estop-btn btn-kill" aria-label="Inject OOM into one pod"><span class="estop-face">kill</span></button>
+        </section>
       </div>
 
-      <div class="estop">
-        <p class="tag">kill switch</p>
-        <button class="estop-btn btn-kill" aria-label="kill this instance with an OOM">
-          <span class="estop-face">kill</span>
-        </button>
+      <div class="telemetry-toolbar">
+        <label class="pod-picker">Inspect pod <select id="pod-select" aria-label="Inspect pod"><option value="">Waiting for a sample…</option></select></label>
+        <div class="history-windows" aria-label="Chart window"><button class="key" data-window="60" aria-pressed="false">1m</button><button class="key" data-window="180" aria-pressed="true">3m</button><button class="key" data-window="300" aria-pressed="false">5m</button></div>
+        <button class="key" id="freeze-chart" aria-pressed="false">Freeze charts</button>
       </div>
-    </section>
-
-    <p class="status" id="kill-status"></p>
-
-    <section class="pods" id="pods" hidden>
-      <p class="tag">pods <span class="pods-count"></span></p>
-      <div class="pods-body"></div>
+      <div class="telemetry-stats">
+        <div class="readout"><p class="tag" id="cpu-scope">cpu</p><strong id="cpu-value">—</strong><span id="cpu-detail">Waiting for data</span></div>
+        <div class="readout"><p class="tag" id="memory-scope">memory</p><strong id="memory-value">—</strong><span id="memory-detail">Waiting for data</span></div>
+      </div>
+      <div class="charts-grid">
+        <figure class="chart-card cpu-chart"><figcaption><span>CPU <small>millicores</small></span><span id="cpu-peak">Peak —</span></figcaption><svg id="cpu-chart" viewBox="0 0 600 190" role="img" aria-label="CPU usage history"></svg></figure>
+        <figure class="chart-card memory-chart"><figcaption><span>Memory <small>MiB</small></span><span id="memory-peak">Peak —</span></figcaption><svg id="memory-chart" viewBox="0 0 600 190" role="img" aria-label="Memory usage history"></svg></figure>
+      </div>
+      <label class="history-scrubber">Inspect a sample<input id="history-scrubber" type="range" min="0" max="0" value="0" disabled><output id="history-readout">Collecting history…</output></label>
+      <aside class="incident" id="incident" hidden aria-labelledby="incident-title"><p class="tag" id="incident-title">OOM recovery trace</p><strong id="incident-phase"></strong><p id="incident-detail"></p></aside>
+      <div class="telemetry-bottom">
+        <div class="pod-panel"><p class="tag" id="pods-summary">observed pods</p><div class="process-readout"><strong id="uptime-value">—</strong><span id="process-detail">Restarts observed in this session</span></div><div id="pod-list" class="pod-list"></div></div>
+        <div><p class="tag">test timeline</p><ol id="telemetry-events" class="telemetry-events" aria-live="polite"></ol></div>
+      </div>
+      <p class="sampling-note">Live samples from responding pods · 5-minute browser history · No recent sample ≠ confirmed outage · Restart detected by process identity; confirm OOMKilled in Kubernetes.</p>
     </section>
   </main>
-
   <dialog class="sheet" id="kill-dialog" aria-labelledby="kill-dialog-title">
-    <p class="tag" id="kill-dialog-title">kill switch</p>
-    <p class="sheet-body">
-      This allocates memory until the kernel kills the process. The pod goes down and its
-      controller decides whether to bring it back.
-    </p>
-    <div class="sheet-actions">
-      <button class="key" type="button" id="kill-cancel">cancel</button>
-      <button class="key key-danger" type="button" id="kill-confirm">kill</button>
-    </div>
+    <p class="tag" id="kill-dialog-title">Inject OOM · alert &amp; recovery test</p>
+    <p class="sheet-body">One pod selected by the service will allocate memory until the kernel kills its process. Its trace will be selected automatically. Watch the memory climb, check your alert channel, and confirm recovery after the restart.</p>
+    <div class="sheet-actions"><button class="key" type="button" id="kill-cancel">cancel</button><button class="key key-danger" type="button" id="kill-confirm">inject OOM</button></div>
   </dialog>
-
-  <script src="/time.js"></script>
-  <script src="/counter.js"></script>
-  <script src="/kill.js"></script>
-  <script src="/load.js"></script>
-  <script src="/pods.js"></script>
-
+  <script src="/time.js"></script><script src="/counter.js"></script><script src="/kill.js"></script><script src="/load.js"></script><script type="module" src="/pods.js"></script>
 </body>
-
 </html>

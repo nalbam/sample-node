@@ -62,6 +62,7 @@ function _fill() {
 
 function _start(seconds) {
     _until = Date.now() + seconds * 1000;
+    document.dispatchEvent(new CustomEvent('load:start', {detail: {seconds, concurrency: _cores}}));
     _fill();
 }
 
@@ -110,6 +111,7 @@ function _marks(row, key, choose) {
     function light(pick) {
         marks.forEach(function (el) {
             el.classList.toggle('is-on', el === pick);
+            el.setAttribute('aria-pressed', String(el === pick));
         });
         choose(pick);
     }
@@ -142,11 +144,15 @@ document.addEventListener('DOMContentLoaded', function () {
     let ticker = null;
 
     function idle() {
+        if (ticker) document.dispatchEvent(new CustomEvent('load:stop'));
         _stop();
         clearInterval(ticker);
         ticker = null;
         face.textContent = 'load';
         button.classList.remove('is-on');
+        button.setAttribute('aria-label', 'Start CPU load for HPA test');
+        button.setAttribute('aria-pressed', 'false');
+        document.getElementById('load-status').textContent = 'Idle · watch CPU fall and pods settle';
     }
 
     function countdown() {
@@ -156,6 +162,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
         face.textContent = _clock(left);
+        document.getElementById('load-status').textContent = `${_cores} concurrent requests · ${_clock(left)} remaining`;
     }
 
     _marks(document.querySelector('.load-time'), 'seconds', function (pick) {
@@ -176,7 +183,10 @@ document.addEventListener('DOMContentLoaded', function () {
         _start(seconds);
 
         button.classList.add('is-on');
+        button.setAttribute('aria-label', 'Stop CPU load');
+        button.setAttribute('aria-pressed', 'true');
         face.textContent = _clock(_remaining());
+        countdown();
         ticker = setInterval(countdown, 1000);
     });
 

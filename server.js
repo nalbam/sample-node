@@ -18,6 +18,7 @@ import os from 'os';
 import { fileURLToPath } from 'url';
 import { randomUUID } from 'node:crypto';
 import { createTelemetry } from './lib/telemetry.js';
+import { createTelemetryStore, startTelemetryPublisher, validCursor } from './lib/telemetry-store.js';
 
 import cors from 'cors';
 import express from 'express';
@@ -85,6 +86,7 @@ const sampleTelemetry = createTelemetry();
 const INSTANCE_ID = randomUUID();
 const STARTED_AT = new Date(Date.now() - process.uptime() * 1000).toISOString();
 sampleTelemetry();
+const telemetryStore = createTelemetryStore(client, `sample-node:telemetry:${encodeURIComponent(CLUSTER)}:${encodeURIComponent(PROFILE)}`);
 
 async function handleRemoteService(res, serviceName) {
   console.log(`get /${serviceName}`);
@@ -178,11 +180,9 @@ app.get('/health', async function (req, res) {
   }
 });
 
-// No request log: the info page polls this every second, and the
-// noise would bury the lines that matter, like the oom plan.
-app.get('/status', function (req, res) {
-  res.set('Cache-Control', 'no-store');
-  return res.status(200).json({
+// Keep periodic snapshots quiet so they do not bury the OOM diagnostics.
+function statusSnapshot() {
+  return {
     result: 'ok',
     host: os.hostname(),
     cluster: CLUSTER,
@@ -193,7 +193,29 @@ app.get('/status', function (req, res) {
     uptime: Math.round(process.uptime()),
     ...sampleTelemetry(),
     oom: {...oomState},
-  });
+  };
+}
+
+app.get('/status', function (req, res) {
+  res.set('Cache-Control', 'no-store');
+  return res.status(200).json(statusSnapshot());
+});
+
+app.get('/telemetry', async function (req, res) {
+  res.set('Cache-Control', 'no-store');
+  const after = req.query.after;
+  if (after !== undefined && !validCursor(after)) {
+    return res.status(400).json({result: 'error', message: 'Invalid telemetry cursor'});
+  }
+  if (!(await ensureRedisConnection())) {
+    return res.status(503).json({result: 'error', message: 'Telemetry storage unavailable'});
+  }
+  try {
+    return res.json({result: 'ok', ...await telemetryStore.read(after)});
+  } catch (error) {
+    console.error(`telemetry read failed: ${error.message}`);
+    return res.status(503).json({result: 'error', message: 'Telemetry storage unavailable'});
+  }
 });
 
 app.get('/loop/:count', async function (req, res) {
@@ -541,6 +563,9 @@ export default app;
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   console.log(`connecting to redis: ${REDIS_HOST}:${REDIS_PORT}`);
   ensureRedisConnection();
+  startTelemetryPublisher(async () => {
+    if (await ensureRedisConnection()) await telemetryStore.publish(statusSnapshot());
+  }, error => console.error(`telemetry publish failed: ${error.message}`));
 
   app.listen(PORT, function () {
     console.log(`[${PROFILE}] Listening on port ${PORT}!`);

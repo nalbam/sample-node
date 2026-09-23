@@ -1,4 +1,4 @@
-import {createMonitor, STALE_MS} from './telemetry.js';
+import {createMonitor, STALE_MS, averageSamples, averageHistory} from './telemetry.js';
 
 const monitor = createMonitor();
 const MB = 1024 * 1024;
@@ -14,6 +14,10 @@ let latestError = '';
 let lastSuccess = 0;
 let lastEvent = null;
 let completedIncident = null;
+let cursor = '';
+let catchingUp = true;
+let pollTimer;
+let polling = false;
 const rows = new Map();
 let loadRun = null;
 
@@ -45,10 +49,21 @@ function choose(host) {
     render();
 }
 
+function historyPoints() {
+    return selected ? monitor.pods.get(selected)?.points ?? [] : averageHistory(monitor.pods.values());
+}
+
+function viewPod(now) {
+    if (selected) return monitor.pods.get(selected);
+    const active = [...monitor.pods.values()].filter(pod => now - pod.seenAt <= STALE_MS);
+    if (!active.length) return null;
+    return {latest: averageSamples(active.map(pod => pod.latest)),
+        seenAt: Math.min(...active.map(pod => pod.seenAt)),
+        count: active.length, restarts: active.reduce((sum, pod) => sum + pod.restarts, 0)};
+}
+
 function renderPods(now) {
     const select = $('pod-select');
-    if (!selected && monitor.pods.size) selected = monitor.pods.keys().next().value;
-    if (monitor.pods.size && select.options[0]?.value === '') select.options[0].remove();
     for (const [host, pod] of monitor.pods) {
         if (!rows.has(host)) {
             const option = document.createElement('option');
@@ -58,7 +73,7 @@ function renderPods(now) {
             const row = element('button', 'pod-card');
             row.type = 'button';
             row.append(element('span', 'pod-host', host), element('span', 'pod-numbers'), element('span', 'pod-state'));
-            row.addEventListener('click', () => choose(host));
+            row.addEventListener('click', () => choose(selected === host ? '' : host));
             $('pod-list').append(row);
             rows.set(host, {row, option});
         }
@@ -67,7 +82,7 @@ function renderPods(now) {
         row.setAttribute('aria-pressed', String(host === selected));
         row.classList.toggle('is-stale', pod.stale);
         row.querySelector('.pod-numbers').textContent = `${number(pod.latest.memory.used / MB)} MiB · ${number(pod.latest.cpu.used === null ? null : pod.latest.cpu.used * 1000)}m CPU`;
-        row.querySelector('.pod-state').textContent = `${pod.stale ? 'No recent sample' : pod.latest.oom?.active ? 'OOM allocation active' : 'Responding'} · ${age}s ago · ${pod.latest.version}`;
+        row.querySelector('.pod-state').textContent = `${pod.stale ? 'No recent sample' : pod.latest.oom?.active ? 'OOM allocation active' : 'Reporting'} · ${age}s ago · ${pod.latest.version}`;
     }
     for (const [host, {row, option}] of rows) {
         if (!monitor.pods.has(host)) { row.remove(); option.remove(); rows.delete(host); }
@@ -83,7 +98,7 @@ function renderPods(now) {
     }
     select.value = selected;
     const responding = [...monitor.pods.values()].filter(pod => !pod.stale).length;
-    text('pods-summary', `observed pods · ${responding}/${monitor.pods.size} recently seen`);
+    text('pods-summary', `reporting pods · ${responding}/${monitor.pods.size} recently seen`);
     if (loadRun) {
         loadRun.peak = Math.max(loadRun.peak, responding);
         text('load-observed', `Observed pods: ${loadRun.baseline} at start → ${responding} now · peak ${loadRun.peak}. HPA state is not queried.`);
@@ -134,21 +149,20 @@ function drawChart(id, points, metric, end, cursor) {
         nodes.append(svgElement('path', {d: path, class: 'chart-line'}));
         if (part.length === 1) nodes.append(svgElement('circle', {cx: part[0][0], cy: part[0][1], r: 3, class: 'chart-point'}));
     }
-    for (const event of monitor.events.filter(event => (event.host === selected || event.kind === 'load') && event.at >= start && event.at <= end && ['kill', 'recovery', 'load'].includes(event.kind))) {
+    for (const event of monitor.events.filter(event => (!selected || event.host === selected || event.kind === 'load') && event.at >= start && event.at <= end && ['kill', 'recovery', 'load'].includes(event.kind))) {
         nodes.append(svgElement('line', {x1: x(event.at), x2: x(event.at), y1: 20, y2: bottom, class: `chart-event ${event.kind}`}));
     }
     if (cursor) nodes.append(svgElement('line', {x1: x(cursor.at), x2: x(cursor.at), y1: 20, y2: bottom, class: 'chart-cursor'}));
     nodes.append(svgElement('text', {x: 46, y: height - 4, class: 'chart-label'}, `−${windowMs / 60000}m`));
     nodes.append(svgElement('text', {x: right, y: height - 4, 'text-anchor': 'end', class: 'chart-label'}, frozen ? clock(end) : 'now'));
     svg.replaceChildren(nodes);
-    svg.setAttribute('aria-label', `${metric} history for ${selected}, peak ${peak.toFixed(1)} ${metric === 'memory' ? 'MiB' : 'millicores'}`);
+    svg.setAttribute('aria-label', `${metric} history for ${selected || 'all pods (average)'}, peak ${peak.toFixed(1)} ${metric === 'memory' ? 'MiB' : 'millicores'}`);
     text(`${metric}-peak`, `Peak ${peak.toFixed(1)}${metric === 'memory' ? ' MiB' : 'm'}`);
 }
 
 function renderCharts(now) {
-    const pod = monitor.pods.get(selected);
     const end = frozen?.at ?? now;
-    const points = (frozen?.points ?? pod?.points ?? []).filter(point => point.at >= end - windowMs && point.at <= end);
+    const points = (frozen?.points ?? historyPoints()).filter(point => point.at >= end - windowMs && point.at <= end);
     const index = inspected === null ? points.length - 1 : Math.min(inspected, points.length - 1);
     const cursor = points[index];
     const slider = $('history-scrubber');
@@ -179,23 +193,23 @@ function renderIncident(now) {
 
 function render() {
     const now = Date.now();
-    monitor.tick(now);
+    if (!catchingUp && !document.hidden) monitor.tick(now);
     renderPods(now);
-    const pod = monitor.pods.get(selected);
+    const pod = viewPod(now);
     const stale = !pod || pod.stale;
     document.querySelector('.telemetry-stats').classList.toggle('is-stale', stale);
     const live = lastSuccess && now - lastSuccess <= STALE_MS && !latestError;
-    text('stream-state', document.hidden ? 'Sampling paused · tab hidden' : latestError || (live ? '● Live · 1s sampling' : 'Waiting for telemetry…'));
-    $('stream-state').classList.toggle('is-error', Boolean(latestError));
+    text('stream-state', document.hidden ? 'View paused · recording continues' : latestError || (catchingUp ? 'Loading recent history…' : live ? '● Live · all pods · 1s samples' : 'Waiting for fresh telemetry…'));
+    $('stream-state').classList.toggle('is-error', Boolean(latestError) || Boolean(!catchingUp && lastSuccess && !live));
     if (pod) {
         const {memory, cpu} = pod.latest;
-        text('memory-scope', memory.source === 'cgroup' ? 'app container memory' : 'process memory · RSS');
+        text('memory-scope', !selected ? 'memory · pod average' : memory.source === 'cgroup' ? 'app container memory' : 'process memory · RSS');
         text('memory-value', `${number(memory.used / MB)} MiB`);
         text('memory-detail', `${memory.limit ? `${number(memory.percent)}% of ${number(memory.limit / MB)} MiB` : 'No memory limit'}${stale ? ' · last known sample' : ''}`);
-        text('cpu-scope', cpu.source === 'cgroup' ? 'app container cpu' : 'process cpu');
+        text('cpu-scope', !selected ? 'cpu · pod average' : cpu.source === 'cgroup' ? 'app container cpu' : 'process cpu');
         text('cpu-value', `${number(cpu.used === null ? null : cpu.used * 1000)}m`);
         text('cpu-detail', cpu.used === null ? 'Warming up the CPU sample' : `${cpu.limit ? `${number(cpu.percent)}% of ${number(cpu.limit * 1000)}m` : 'No CPU limit'}${stale ? ' · last known sample' : ''}`);
-        text('uptime-value', uptime(pod.latest.uptime));
+        text('uptime-value', selected ? uptime(pod.latest.uptime) : `${pod.count} pods · average`);
         text('process-detail', `${pod.restarts} restart${pod.restarts === 1 ? '' : 's'} observed · ${Math.floor((now - pod.seenAt) / 1000)}s since sample`);
     } else {
         for (const id of ['memory-value', 'cpu-value', 'uptime-value']) text(id, '—');
@@ -214,21 +228,32 @@ function render() {
 }
 
 async function poll() {
+    if (polling) return;
+    polling = true;
+    let more = false;
     if (!document.hidden) {
         try {
-            const response = await fetch('/status', {cache: 'no-store', signal: AbortSignal.timeout(3000)});
+            const response = await fetch(`/telemetry${cursor ? `?after=${encodeURIComponent(cursor)}` : ''}`, {cache: 'no-store', signal: AbortSignal.timeout(5000)});
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const sample = await response.json();
-            if (!sample.host || !sample.memory || !sample.cpu) throw new Error('Invalid telemetry response');
-            monitor.ingest(sample);
-            lastSuccess = Date.now();
+            const batch = await response.json();
+            if (!Array.isArray(batch.samples) || typeof batch.cursor !== 'string') throw new Error('Invalid telemetry response');
+            for (const {sample, at} of batch.samples) {
+                if (!sample.host || !sample.memory || !sample.cpu || !Number.isFinite(at)) throw new Error('Invalid telemetry sample');
+                monitor.ingest(sample, at);
+                lastSuccess = Math.max(lastSuccess, at);
+            }
+            cursor = batch.cursor;
+            more = batch.more;
+            catchingUp = more;
             latestError = '';
         } catch (error) {
+            catchingUp = false;
             latestError = `Telemetry unavailable · ${error.name === 'TimeoutError' ? 'request timeout' : error.message}`;
         }
     }
     render();
-    setTimeout(poll, 1000);
+    polling = false;
+    pollTimer = setTimeout(poll, more ? 0 : 1000);
 }
 
 $('pod-select').addEventListener('change', event => choose(event.target.value));
@@ -239,12 +264,12 @@ document.querySelectorAll('[data-window]').forEach(button => button.addEventList
     render();
 }));
 $('freeze-chart').addEventListener('click', () => {
-    frozen = frozen ? null : {at: Date.now(), points: [...(monitor.pods.get(selected)?.points ?? [])]};
+    frozen = frozen ? null : {at: Date.now(), points: [...historyPoints()]};
     inspected = null;
     render();
 });
 $('history-scrubber').addEventListener('input', event => {
-    frozen ??= {at: Date.now(), points: [...(monitor.pods.get(selected)?.points ?? [])]};
+    frozen ??= {at: Date.now(), points: [...historyPoints()]};
     inspected = Number(event.target.value);
     renderCharts(Date.now());
 });
@@ -264,6 +289,19 @@ document.addEventListener('load:stop', () => {
     monitor.record('service', 'HPA load stopped · watch CPU and pod count settle', 'load', Date.now());
     render();
 });
-document.addEventListener('visibilitychange', render);
+document.addEventListener('click', event => {
+    if (selected && !event.target.closest('.pod-card, .pod-picker, button, input, select, a, dialog')) choose('');
+});
+document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && !$('kill-dialog').open) choose('');
+});
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+        catchingUp = true;
+        clearTimeout(pollTimer);
+        poll();
+    }
+    render();
+});
 window.addEventListener('resize', render);
 poll();

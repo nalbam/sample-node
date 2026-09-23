@@ -128,6 +128,15 @@ describe('GET /status', () => {
   });
 });
 
+describe('GET /telemetry', () => {
+  test.each(['invalid', '-1-0', '1', '18446744073709551616-0', '1-18446744073709551616'])('rejects invalid cursor %s before accessing Redis', async (cursor) => {
+    const response = await request(app).get('/telemetry').query({after: cursor});
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe('Invalid telemetry cursor');
+    expect(response.headers['cache-control']).toBe('no-store');
+  });
+});
+
 describe('OOM observation contract', () => {
   test('identifies the target and reports allocation without scheduling duplicate fills', async () => {
     const interval = jest.spyOn(global, 'setInterval').mockReturnValue({});

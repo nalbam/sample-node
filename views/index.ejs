@@ -53,7 +53,7 @@
       </div>
 
       <div class="telemetry-toolbar">
-        <label class="pod-picker">Inspect pod <select id="pod-select" aria-label="Inspect pod"><option value="">Waiting for a sample…</option></select></label>
+        <label class="pod-picker">Inspect pod <select id="pod-select" aria-label="Inspect pod"><option value="">All pods · average</option></select></label>
         <div class="history-windows" aria-label="Chart window"><button class="key" data-window="60" aria-pressed="false">1m</button><button class="key" data-window="180" aria-pressed="true">3m</button><button class="key" data-window="300" aria-pressed="false">5m</button></div>
         <button class="key" id="freeze-chart" aria-pressed="false">Freeze charts</button>
       </div>
@@ -71,7 +71,7 @@
         <div class="pod-panel"><p class="tag" id="pods-summary">observed pods</p><div class="process-readout"><strong id="uptime-value">—</strong><span id="process-detail">Restarts observed in this session</span></div><div id="pod-list" class="pod-list"></div></div>
         <div><p class="tag">test timeline</p><ol id="telemetry-events" class="telemetry-events" aria-live="polite"></ol></div>
       </div>
-      <p class="sampling-note">Live samples from responding pods · 5-minute browser history · No recent sample ≠ confirmed outage · Restart detected by process identity; confirm OOMKilled in Kubernetes.</p>
+      <p class="sampling-note">All pods record every second · Shared 5-minute history survives reloads · Gaps mean missing recordings or a restart · Confirm OOMKilled in Kubernetes.</p>
     </section>
   </main>
   <dialog class="sheet" id="kill-dialog" aria-labelledby="kill-dialog-title">

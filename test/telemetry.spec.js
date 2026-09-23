@@ -1,5 +1,5 @@
 import {createTelemetry} from '../lib/telemetry.js';
-import {createMonitor, HISTORY_MS, STALE_MS} from '../public/telemetry.js';
+import {createMonitor, HISTORY_MS, STALE_MS, averageSamples, averageHistory} from '../public/telemetry.js';
 
 function fixture(files = {}) {
   let time = 0;
@@ -57,7 +57,67 @@ function pod(overrides = {}) {
   return {host: 'pod-a', instanceId: 'process-1', uptime: 120, memory: {used: 80, limit: 128, percent: 62.5}, cpu: {used: 0.05, limit: 0.1, percent: 50}, ...overrides};
 }
 
+describe('fleet averages', () => {
+  test('averages per-pod usage and limits instead of summing the workload', () => {
+    const result = averageSamples([pod(), pod({memory: {used: 40, limit: 128}, cpu: {used: 0.01, limit: 0.1}})]);
+    expect(result.memory.used).toBe(60);
+    expect(result.memory.percent).toBe(46.875);
+    expect(result.cpu.used).toBeCloseTo(0.03);
+    expect(result.cpu.percent).toBeCloseTo(30);
+  });
+
+  test('does not turn unknown CPU samples or limits into zero utilization', () => {
+    const result = averageSamples([pod({cpu: {used: null, limit: 0.1}}), pod({cpu: {used: 0.1, limit: null}})]);
+    expect(result.cpu.used).toBe(0.1);
+    expect(result.cpu.limit).toBeNull();
+    expect(result.cpu.percent).toBeNull();
+  });
+
+  test('gives each pod one vote in each second despite uneven sample timing', () => {
+    const history = averageHistory([
+      {host: 'a', points: [{at: 1100, sample: pod()}, {at: 1900, sample: pod({memory: {used: 100, limit: 128}})}, {at: 3100, sample: pod({memory: {used: 110, limit: 128}})}]},
+      {host: 'b', points: [{at: 1200, sample: pod({memory: {used: 40, limit: 128}})}, {at: 2100, sample: pod({memory: {used: 50, limit: 128}})}]},
+    ]);
+    expect(history.map(point => point.at)).toEqual([2000, 3000]);
+    expect(history.map(point => point.sample.memory.used)).toEqual([70, 75]);
+  });
+
+  test('does not bridge a recording outage across the entire fleet', () => {
+    const history = averageHistory([
+      {host: 'a', points: [{at: 1000, sample: pod()}]},
+      {host: 'b', points: [{at: 12000, sample: pod({memory: {used: 50, limit: 128}})}]},
+    ]);
+    expect(history.map(point => point.at)).toEqual([1000, 12000]);
+    expect(history.map(point => point.sample.memory.used)).toEqual([80, 50]);
+  });
+});
+
 describe('live pod observations', () => {
+  test('backfills delayed browser polls without breaking a continuous pod recording', () => {
+    const monitor = createMonitor();
+    monitor.ingest(pod(), 1000);
+    monitor.tick(20000);
+    expect(monitor.pods.get('pod-a').stale).toBe(true);
+    for (let at = 2000; at <= 20000; at += 1000) monitor.ingest(pod({uptime: 120 + at / 1000}), at);
+    const history = monitor.pods.get('pod-a');
+    expect(history.points).toHaveLength(20);
+    expect(history.points.every(point => !point.breakBefore)).toBe(true);
+    expect(history.stale).toBe(false);
+    monitor.ingest(pod(), 1000);
+    expect(history.points).toHaveLength(20);
+    expect(history.seenAt).toBe(20000);
+  });
+
+  test('does not confuse historical process identities with recovery after a new kill request', () => {
+    const monitor = createMonitor();
+    monitor.markOom({host: 'pod-a', instanceId: 'process-2'}, 10000);
+    monitor.ingest(pod(), 1000);
+    monitor.ingest(pod({instanceId: 'process-2'}), 9000);
+    expect(monitor.incident.phase).toBe('requested');
+    monitor.ingest(pod({instanceId: 'process-3', uptime: 1}), 12000);
+    expect(monitor.incident.phase).toBe('restarted');
+  });
+
   test('keeps the memory climb and detects recovery even when the restart is faster than the stale threshold', () => {
     const monitor = createMonitor();
     monitor.ingest(pod(), 1000);

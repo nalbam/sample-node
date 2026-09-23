@@ -67,8 +67,9 @@ spec:
 
 ## Development
 
-Requires Node.js 24 or later. Redis is optional — the app starts without it and the
-Redis-backed endpoints answer `503` until it is reachable.
+Requires Node.js 24 or later. The live dashboard needs Redis 6.2 or later for shared
+telemetry history. The app and local `/status` endpoint still work without Redis;
+the Redis-backed endpoints answer `503` until it is reachable.
 
 ```bash
 npm install
@@ -128,11 +129,20 @@ the GitHub Release job. Git tags are the release version source; the legacy
 `/` renders the pod that answered, and shows the local time in the reader's own zone.
 The dashboard fills the viewport, with CPU and the HPA load test on the left and
 memory and the OOM/alert test on the right. Pod and event panels scroll internally.
-The live dashboard samples `/status` about once a second. Select a responding pod
-to see app-container CPU in millicores, memory in MiB, usage against its limits,
-and process uptime. The charts retain five minutes of observations; choose a
+Each app process records its own `/status` snapshot in Redis every
+second, independently of browser requests and load balancing. The dashboard reads
+`/telemetry` with a stream cursor, so a different responding replica still returns
+the next records from every pod. With no pod selected, the dashboard shows the
+per-pod average across fresh recordings. Average history aligns each pod's latest
+fresh sample on a common one-second timeline. Click a pod to inspect it; click the chart or an
+empty area, press Escape, or choose "All pods · average" to clear the selection.
+Chart controls preserve the selection. The readouts show app-container CPU in
+millicores, memory in MiB, usage against its limits,
+and process uptime. Redis retains five minutes of observations; choose a
 1/3/5-minute window, freeze the charts, or scrub through individual samples.
-Freezing charts keeps collection running. Background tabs pause collection.
+Freezing charts keeps collection running. Background tabs pause browser reads;
+each pod keeps recording. Returning to the tab or reloading backfills the retained
+history. Genuine recording gaps and process restarts remain marked as breaks.
 
 The kill switch automatically selects the pod that accepted `POST /oom`. Its
 trace retains the memory climb, peak, 90% warning, and process restart. A new
@@ -140,14 +150,16 @@ process identity under the same pod name confirms a restart, even if it happened
 between polls. The switch re-arms when that target responds after restarting.
 Red chart markers show kill requests and green markers show recovery observations.
 The HPA test records load start/stop markers, concurrent request intensity, remaining
-time, and observed pod counts. These are responding pods seen by the browser, not
+time, and observed pod counts. These are pods publishing fresh telemetry, not
 the HPA controller's desired replica count. OOM tests track the process lifecycle;
 alert delivery must be checked in the connected monitoring system.
 
-Only responding pods are discovered through the service. Previously seen pods
-remain visible with their last values and a stale indicator after 10 seconds
-without a sample; this is not proof of an outage. The UI observes restarts rather
-than asserting their cause. Confirm `OOMKilled` and the restart count in Kubernetes:
+Pods are discovered from their recordings rather than by sampling load-balancer
+responses. Previously seen pods remain visible with their last values and a stale
+indicator after 10 seconds without a recording; this is not proof of an outage.
+Redis failures are shown as telemetry unavailable, while existing charts remain
+visible. The UI observes restarts rather than asserting their cause.
+Confirm `OOMKilled` and the restart count in Kubernetes:
 
 ```bash
 kubectl --context eks-demo -n sample get pods -l app.kubernetes.io/name=sample-node
@@ -173,6 +185,7 @@ outage. It is a browser page, so open it rather than curl it.
 | GET    | `/live`     | Liveness probe                              |
 | GET    | `/health`   | Health check, fails at `FAULT_RATE` percent |
 | GET    | `/status`   | Process identity, uptime, app-container CPU/memory, limits, and OOM allocation state |
+| GET    | `/telemetry` | Shared pod history; use the returned `cursor` as `?after=<cursor>` for subsequent records |
 | GET    | `/metrics`  | Prometheus metrics                          |
 
 `/status` is not affected by `FAULT_RATE` and sends `Cache-Control: no-store`.
@@ -184,6 +197,15 @@ Outside cgroups the endpoint explicitly reports process scope; unknown limits an
 CPU percentages without a limit are `null`. CPU usage is `null` until a rate can
 be measured. `instanceId` changes on every process start, and `oom` reports whether
 the kill switch is allocating, its start time, allocated bytes, and safety-cap state.
+
+`/telemetry` returns at most 500 records per response and sets `more` when the next
+page should be requested immediately. Stream IDs order recordings across pods;
+the UI uses recording times, not fetch arrival times, to draw the chart. Storage
+uses the `sample-node:telemetry:<cluster>:<profile>` stream as an index. Each sample
+payload is stored under its own `:sample:<id>` key, expiring exactly 300 seconds
+after its capture time, even if a write is delayed or every publisher stops.
+Index entries older than five minutes are
+trimmed on publish; the index itself expires after five minutes without a publisher.
 
 ### Chaos
 

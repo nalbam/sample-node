@@ -1,8 +1,43 @@
 export const STALE_MS = 10000;
 export const HISTORY_MS = 5 * 60 * 1000;
 
-// Keep observations across process restarts. A missed load-balanced sample is
-// not evidence of OOM; only a changed process identity proves a restart here.
+export function averageSamples(samples) {
+    function metric(name) {
+        const values = samples.map(sample => sample[name]).filter(value => Number.isFinite(value.used));
+        const mean = field => values.length ? values.reduce((sum, value) => sum + value[field], 0) / values.length : null;
+        const used = mean('used');
+        const limit = values.length && values.every(value => Number.isFinite(value.limit) && value.limit > 0) ? mean('limit') : null;
+        return {used, limit, percent: limit ? used / limit * 100 : null,
+            source: values.every(value => value.source === 'cgroup') ? 'cgroup' : 'process'};
+    }
+    return {memory: metric('memory'), cpu: metric('cpu')};
+}
+
+// Align the latest fresh recording from each pod on the same one-second grid.
+// A partial second or a jittering publisher must not change a pod's weight.
+export function averageHistory(pods) {
+    const points = [...pods].flatMap(pod => pod.points.map(point => ({...point, host: pod.host})))
+        .sort((a, b) => a.at - b.at);
+    if (!points.length) return [];
+    const latest = new Map();
+    const history = [];
+    let index = 0;
+    const end = Math.floor(points.at(-1).at / 1000) * 1000;
+    for (let at = Math.ceil(points[0].at / 1000) * 1000; at <= end; at += 1000) {
+        while (index < points.length && points[index].at <= at) {
+            const point = points[index++];
+            latest.set(point.host, point);
+        }
+        if (index > 0 && index < points.length && points[index].at - points[index - 1].at > STALE_MS
+            && at > points[index - 1].at) continue;
+        const fresh = [...latest.values()].filter(point => at - point.at <= STALE_MS);
+        if (fresh.length) history.push({at, sample: averageSamples(fresh.map(point => point.sample)), breakBefore: false});
+    }
+    return history;
+}
+
+// Samples retain their Redis recording times across reconnects and restarts.
+// A delayed browser response is not a gap in the underlying pod history.
 export function createMonitor() {
     const pods = new Map();
     const events = [];
@@ -10,6 +45,7 @@ export function createMonitor() {
 
     function event(host, message, kind, at) {
         events.unshift({host, message, kind, at});
+        events.sort((a, b) => b.at - a.at);
         events.splice(50);
     }
 
@@ -21,7 +57,9 @@ export function createMonitor() {
             event(sample.host, 'Pod discovered', 'info', at);
         }
         const before = pod.latest;
-        const targetRestarted = incident?.host === sample.host && sample.instanceId && incident.instanceId
+        if (before && at <= pod.seenAt) return pod;
+        const gap = before && at - pod.seenAt > STALE_MS;
+        const targetRestarted = incident?.host === sample.host && at >= incident.at && sample.instanceId && incident.instanceId
             && sample.instanceId !== incident.instanceId;
         const restarted = before ? ((before.instanceId && sample.instanceId && before.instanceId !== sample.instanceId)
             || sample.uptime + 3 < before.uptime) : targetRestarted;
@@ -30,7 +68,10 @@ export function createMonitor() {
             pod.high = false;
             event(sample.host, 'Process restarted', 'recovery', at);
         } else if (pod.stale) {
-            event(sample.host, 'Samples resumed', 'recovery', at);
+            event(sample.host, gap ? 'Samples resumed' : 'History caught up', gap ? 'recovery' : 'info', at);
+        }
+        if (sample.oom?.active && !before?.oom?.active) {
+            event(sample.host, 'OOM allocation observed', 'kill', at);
         }
         if (sample.memory.percent >= 90 && !pod.high) {
             event(sample.host, 'Memory reached 90% of limit', 'warning', at);
@@ -38,7 +79,7 @@ export function createMonitor() {
         } else if (sample.memory.percent < 80) {
             pod.high = false;
         }
-        pod.points.push({at, sample, breakBefore: Boolean(restarted || pod.stale)});
+        pod.points.push({at, sample, breakBefore: Boolean(restarted || gap)});
         pod.latest = sample;
         pod.seenAt = at;
         pod.stale = false;

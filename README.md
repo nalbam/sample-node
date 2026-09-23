@@ -1,6 +1,6 @@
 # sample-node
 
-[![build](https://img.shields.io/github/actions/workflow/status/nalbam/sample-node/push.yml?branch=main&style=for-the-badge&logo=github)](https://github.com/nalbam/sample-node/actions/workflows/push.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/nalbam/sample-node/push.yml?branch=main&style=for-the-badge&logo=github)](https://github.com/nalbam/sample-node/actions/workflows/push.yml)
 [![release](https://img.shields.io/github/v/release/nalbam/sample-node?style=for-the-badge&logo=github)](https://github.com/nalbam/sample-node/releases)
 
 [![Docker Image Version (latest by date)](https://img.shields.io/docker/v/nalbam/sample-node?label=Docker%20Hub&style=for-the-badge&logo=docker)](https://hub.docker.com/r/nalbam/sample-node)
@@ -76,6 +76,45 @@ npm start          # http://localhost:3000
 npm run lint
 npm test
 ```
+
+## Release
+
+Pull requests and pushes to `main` or `master` run `npm ci`, lint, and tests on
+Node.js 24. Branch pushes only run CI; versions are released by pushing a `v*`
+SemVer tag such as `v0.16.10` or `v0.17.0-rc.1`.
+Tags must fit Docker's 128-character limit and omit `+build` metadata so the Git,
+image, and deployment versions stay identical.
+
+```bash
+git tag v0.16.10
+git push origin v0.16.10
+```
+
+The [release workflow](.github/workflows/release.yml) runs the same checks, then:
+
+1. Builds and pushes `nalbam/sample-node:<tag>` for `linux/amd64` and `linux/arm64`.
+   Stable versions also update `latest`; prereleases only publish their version tag.
+2. Creates a GitHub Release with commit notes since the previous reachable version
+   tag, excluding merge commits and `chore: release` commits. Reruns update the
+   existing release. Tags with a prerelease suffix create GitHub prereleases.
+3. Sends a GitOps dispatch to `opspresso/argocd-env-demo` for the `sample-node`
+   project's `app` container in `alpha`.
+4. For stable tags, sends the same version to `prod` through the GitHub `prod`
+   environment, with `auto_merge=true` so GitOps updates its main branch directly.
+   Prereleases stop at alpha. Configure required reviewers on the `prod`
+   environment if production deployment requires manual approval.
+
+Each stage requires the previous stage to succeed. Release runs are serialized
+because they share `latest` and the deployment targets. A successful alpha dispatch
+allows the prod job to proceed; it does not wait for the alpha rollout to finish.
+GitOps dispatches request deployment; their success does not confirm that the
+rollouts have completed.
+
+Repository secrets: `DOCKER_USERNAME` and `DOCKER_PASSWORD` must allow pushing to
+`nalbam/sample-node`; `GHP_TOKEN` must allow repository dispatches to
+`opspresso/argocd-env-demo`. The workflow's `GITHUB_TOKEN` has write access only in
+the GitHub Release job. Git tags are the release version source; the legacy
+`VERSION` file is not used by this workflow.
 
 ## Endpoints
 

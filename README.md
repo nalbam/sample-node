@@ -69,12 +69,14 @@ spec:
 
 Requires Node.js 24 or later. The live dashboard needs Redis 6.2 or later for shared
 telemetry history. Set `REDIS_ENABLED=false` to run without Redis. This disables
-Redis connections and telemetry publishing, hides counters and telemetry controls,
+Redis connections and telemetry publishing, hides counters,
 and makes `/cache/*`, `/counter/*`, and `/telemetry` return `404`.
-The app, CPU load and OOM controls, probes, and local `/status` endpoint still work.
-Check OOM recovery in Kubernetes and reload the page to re-arm the kill switch.
-When Redis is enabled but unreachable, the page hides the same Redis controls and
-the Redis-backed endpoints answer `503`. Reload after Redis recovers to show them.
+The dashboard reads CPU and memory from `/status` every second while visible.
+It samples whichever pod answers each request and keeps five minutes of history
+in the current tab; reloads clear this history. CPU load and OOM controls, probes,
+and metrics still work. When Redis is enabled but unreachable, the page uses the
+same direct sampling and hides counters; Redis-backed endpoints answer `503`.
+Reload after Redis recovers to restore counters and shared telemetry history.
 
 ```bash
 npm install
@@ -134,7 +136,7 @@ the GitHub Release job. Git tags are the release version source; the legacy
 `/` renders the pod that answered, and shows the local time in the reader's own zone.
 The dashboard fills the viewport, with CPU and the HPA load test on the left and
 memory and the OOM/alert test on the right. Pod and event panels scroll internally.
-Each app process records its own `/status` snapshot in Redis every
+When Redis is available, each app process records its own `/status` snapshot in Redis every
 second, independently of browser requests and load balancing. The dashboard reads
 `/telemetry` with a stream cursor, so a different responding replica still returns
 the next records from every pod. With no pod selected, the dashboard shows the

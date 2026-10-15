@@ -1,6 +1,8 @@
-import {createMonitor, STALE_MS, averageSamples, averageHistory} from './telemetry.js';
+import {createMonitor, STALE_MS, averageSamples, averageHistory, readTelemetry} from './telemetry.js';
 
 const monitor = createMonitor();
+const telemetrySource = document.querySelector('.panel').dataset.telemetrySource;
+const sharedHistory = telemetrySource === 'redis';
 const MB = 1024 * 1024;
 const $ = id => document.getElementById(id);
 const text = (id, value) => { $(id).textContent = value; };
@@ -199,7 +201,7 @@ function render() {
     const stale = !pod || pod.stale;
     document.querySelector('.telemetry-stats').classList.toggle('is-stale', stale);
     const live = lastSuccess && now - lastSuccess <= STALE_MS && !latestError;
-    text('stream-state', document.hidden ? 'View paused · recording continues' : latestError || (catchingUp ? 'Loading recent history…' : live ? '● Live · all pods · 1s samples' : 'Waiting for fresh telemetry…'));
+    text('stream-state', document.hidden ? (sharedHistory ? 'View paused · recording continues' : 'Sampling paused while hidden') : latestError || (catchingUp ? 'Loading recent history…' : live ? (sharedHistory ? '● Live · all pods · 1s samples' : '● Live · responding pod · 1s samples') : 'Waiting for fresh telemetry…'));
     $('stream-state').classList.toggle('is-error', Boolean(latestError) || Boolean(!catchingUp && lastSuccess && !live));
     if (pod) {
         const {memory, cpu} = pod.latest;
@@ -233,12 +235,8 @@ async function poll() {
     let more = false;
     if (!document.hidden) {
         try {
-            const response = await fetch(`/telemetry${cursor ? `?after=${encodeURIComponent(cursor)}` : ''}`, {cache: 'no-store', signal: AbortSignal.timeout(5000)});
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const batch = await response.json();
-            if (!Array.isArray(batch.samples) || typeof batch.cursor !== 'string') throw new Error('Invalid telemetry response');
+            const batch = await readTelemetry(telemetrySource, cursor);
             for (const {sample, at} of batch.samples) {
-                if (!sample.host || !sample.memory || !sample.cpu || !Number.isFinite(at)) throw new Error('Invalid telemetry sample');
                 monitor.ingest(sample, at);
                 lastSuccess = Math.max(lastSuccess, at);
             }

@@ -1,6 +1,21 @@
 export const STALE_MS = 10000;
 export const HISTORY_MS = 5 * 60 * 1000;
 
+export async function readTelemetry(source, cursor = '', request = fetch) {
+    const url = source === 'redis' ? `/telemetry${cursor ? `?after=${encodeURIComponent(cursor)}` : ''}` : '/status';
+    const response = await request(url, {cache: 'no-store', signal: AbortSignal.timeout(5000)});
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const payload = await response.json();
+    const batch = source === 'redis' ? payload : {
+        samples: [{sample: payload, at: Date.parse(payload.sampledAt)}], cursor: '', more: false,
+    };
+    if (!Array.isArray(batch.samples) || typeof batch.cursor !== 'string') throw new Error('Invalid telemetry response');
+    for (const {sample, at} of batch.samples) {
+        if (!sample?.host || !sample.memory || !sample.cpu || !Number.isFinite(at)) throw new Error('Invalid telemetry sample');
+    }
+    return batch;
+}
+
 export function averageSamples(samples) {
     function metric(name) {
         const values = samples.map(sample => sample[name]).filter(value => Number.isFinite(value.used));
@@ -36,8 +51,7 @@ export function averageHistory(pods) {
     return history;
 }
 
-// Samples retain their Redis recording times across reconnects and restarts.
-// A delayed browser response is not a gap in the underlying pod history.
+// Use server sampling times so a delayed browser response does not move a sample.
 export function createMonitor() {
     const pods = new Map();
     const events = [];

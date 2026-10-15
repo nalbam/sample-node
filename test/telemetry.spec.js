@@ -1,5 +1,5 @@
 import {createTelemetry} from '../lib/telemetry.js';
-import {createMonitor, HISTORY_MS, STALE_MS, averageSamples, averageHistory} from '../public/telemetry.js';
+import {createMonitor, HISTORY_MS, STALE_MS, averageSamples, averageHistory, readTelemetry} from '../public/telemetry.js';
 
 function fixture(files = {}) {
   let time = 0;
@@ -56,6 +56,37 @@ describe('container telemetry', () => {
 function pod(overrides = {}) {
   return {host: 'pod-a', instanceId: 'process-1', uptime: 120, memory: {used: 80, limit: 128, percent: 62.5}, cpu: {used: 0.05, limit: 0.1, percent: 50}, ...overrides};
 }
+
+describe('telemetry sources', () => {
+  test('direct sampling reads /status and feeds CPU and memory into chart history', async () => {
+    const sample = pod({sampledAt: '2026-10-15T15:00:00.000Z'});
+    const batch = await readTelemetry('process', '123-0', async (url, options) => {
+      expect(url).toBe('/status');
+      expect(options.cache).toBe('no-store');
+      return {ok: true, json: async () => sample};
+    });
+    expect(batch).toEqual({samples: [{sample, at: Date.parse(sample.sampledAt)}], cursor: '', more: false});
+    const monitor = createMonitor();
+    for (const {sample, at} of batch.samples) monitor.ingest(sample, at);
+    expect(monitor.pods.get('pod-a').latest.cpu.used).toBe(0.05);
+    expect(monitor.pods.get('pod-a').points[0].sample.memory.used).toBe(80);
+  });
+
+  test('Redis reads retain cursor pagination and shared sample timestamps', async () => {
+    const batch = {samples: [{sample: pod(), at: 123}], cursor: '124-0', more: true};
+    expect(await readTelemetry('redis', '123-0', async url => {
+      expect(url).toBe('/telemetry?after=123-0');
+      return {ok: true, json: async () => batch};
+    })).toEqual(batch);
+  });
+
+  test('direct sampling reports HTTP and invalid sample errors', async () => {
+    await expect(readTelemetry('process', '', async () => ({ok: false, status: 503})))
+      .rejects.toThrow('HTTP 503');
+    await expect(readTelemetry('process', '', async () => ({ok: true, json: async () => pod({sampledAt: 'invalid'})})))
+      .rejects.toThrow('Invalid telemetry sample');
+  });
+});
 
 describe('fleet averages', () => {
   test('averages per-pod usage and limits instead of summing the workload', () => {

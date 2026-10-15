@@ -29,6 +29,7 @@ beforeEach(() => {
 test('Redis is enabled by default and renders counters and shared telemetry', async () => {
   const response = await request(app).get('/');
   expect(response.status).toBe(200);
+  expect(response.text).toContain('data-telemetry-source="redis"');
   for (const element of ['btn-thumbs-up', 'btn-thumbs-down', 'pod-select', 'freeze-chart',
     'history-scrubber', '/counter.js', '/pods.js']) {
     expect(response.text).toContain(element);
@@ -44,7 +45,8 @@ test('unreachable Redis hides dependent controls and returns an unavailable resp
     expect(page.status).toBe(200);
     expect(page.text).not.toContain('btn-thumbs-up');
     expect(page.text).not.toContain('/counter.js');
-    expect(page.text).not.toContain('/pods.js');
+    expect(page.text).toContain('data-telemetry-source="process"');
+    expect(page.text).toContain('/pods.js');
     expect((await request(app).post('/counter/up')).status).toBe(503);
     expect(client.incr).not.toHaveBeenCalled();
   } finally {
@@ -55,12 +57,12 @@ test('unreachable Redis hides dependent controls and returns an unavailable resp
 test('an open but reconnecting socket does not advertise Redis features or queue commands', async () => {
   client.isOpen = true;
   const page = await request(app).get('/');
-  expect(page.text).not.toContain('/pods.js');
+  expect(page.text).toContain('data-telemetry-source="process"');
   expect((await request(app).get('/telemetry')).status).toBe(503);
   expect(client.connect).not.toHaveBeenCalled();
   expect(client.xRange).not.toHaveBeenCalled();
   client.isReady = true;
-  expect((await request(app).get('/')).text).toContain('/pods.js');
+  expect((await request(app).get('/')).text).toContain('data-telemetry-source="redis"');
 });
 
 test('enabled cache, counters, and telemetry retain their Redis operations', async () => {

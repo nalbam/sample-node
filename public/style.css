@@ -498,6 +498,7 @@ body {
 .console-overview { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 0.5rem 1rem; flex-shrink: 0; }
 .panel-dashboard .status { margin: 0; padding: 0.35rem 1rem; font-size: 0.7rem; flex-shrink: 0; }
 .telemetry { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) clamp(16rem, 24vw, 23rem); grid-template-rows: auto auto auto auto minmax(100px, 1fr) auto auto auto; gap: 0.7rem 1rem; border-top: 1px solid var(--seam); padding: 0.85rem 1rem; overflow: hidden; }
+.panel-dashboard[data-telemetry="false"] .telemetry { display: flex; flex-direction: column; overflow: auto; }
 .telemetry-heading { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .telemetry h1 { margin: 0; font-size: 1.4rem; letter-spacing: -0.05em; }
 .stream-state { font-size: 0.7rem; color: var(--lamp); text-align: right; overflow-wrap: anywhere; }

@@ -68,8 +68,13 @@ spec:
 ## Development
 
 Requires Node.js 24 or later. The live dashboard needs Redis 6.2 or later for shared
-telemetry history. The app and local `/status` endpoint still work without Redis;
-the Redis-backed endpoints answer `503` until it is reachable.
+telemetry history. Set `REDIS_ENABLED=false` to run without Redis. This disables
+Redis connections and telemetry publishing, hides counters and telemetry controls,
+and makes `/cache/*`, `/counter/*`, and `/telemetry` return `404`.
+The app, CPU load and OOM controls, probes, and local `/status` endpoint still work.
+Check OOM recovery in Kubernetes and reload the page to re-arm the kill switch.
+When Redis is enabled but unreachable, the page hides the same Redis controls and
+the Redis-backed endpoints answer `503`. Reload after Redis recovers to show them.
 
 ```bash
 npm install
@@ -295,6 +300,7 @@ curl -X DELETE localhost:3000/counter/hits
 | `VERSION`      | `v0.0.0`                     | Version reported in responses            |
 | `FAULT_RATE`   | `0`                          | Percentage of `/health` calls that fail  |
 | `LOOP_HOST`    | `http://sample-node`         | Target of `/loop/:count`                 |
+| `REDIS_ENABLED` | `true`                     | Set to `false` to disable Redis features and connections |
 | `REDIS_HOST`   | `redis`                      | Redis host                               |
 | `REDIS_PORT`   | `6379`                       | Redis port                               |
 | `REDIS_PASS`   | -                            | Redis password                           |

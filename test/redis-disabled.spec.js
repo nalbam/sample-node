@@ -6,13 +6,15 @@ jest.unstable_mockModule('redis', () => ({default: {createClient}}));
 process.env.REDIS_ENABLED = 'false';
 const {default: app} = await import('../server.js');
 
-test('Redis-free page omits dependent controls and polling scripts', async () => {
+test('Redis-free page hides counters and keeps live process telemetry', async () => {
   const response = await request(app).get('/');
   expect(response.status).toBe(200);
   expect(response.headers['cache-control']).toBe('no-store');
-  for (const element of ['btn-thumbs-up', 'btn-thumbs-down', 'pod-select', 'freeze-chart',
-    'history-scrubber', 'cpu-chart', 'memory-chart', 'telemetry-events', '/counter.js', '/pods.js']) {
+  for (const element of ['btn-thumbs-up', 'btn-thumbs-down', '/counter.js']) {
     expect(response.text).not.toContain(element);
+  }
+  for (const element of ['data-telemetry-source="process"', 'cpu-chart', 'memory-chart', '/pods.js']) {
+    expect(response.text).toContain(element);
   }
   expect(response.text).toContain('load-btn');
   expect(response.text).toContain('btn-kill');

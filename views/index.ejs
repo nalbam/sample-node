@@ -7,7 +7,7 @@
   <title>sample-node · <%= host %></title>
 </head>
 <body class="dashboard-page">
-  <main class="panel panel-dashboard" data-telemetry="<%= redisAvailable %>">
+  <main class="panel panel-dashboard" data-telemetry-source="<%= redisAvailable ? 'redis' : 'process' %>">
     <header class="panel-bar">
       <span class="lamp"></span><span class="unit">sample-node</span>
       <span class="bar-context"><%= cluster %> · <%= version %></span>
@@ -26,7 +26,7 @@
     <section class="telemetry" aria-labelledby="telemetry-title">
       <div class="telemetry-heading">
         <h1 id="telemetry-title">Scale. Break. Recover.</h1>
-        <% if (redisAvailable) { %><span class="stream-state" id="stream-state" role="status">Connecting…</span><% } %>
+        <span class="stream-state" id="stream-state" role="status">Connecting…</span>
       </div>
 
       <div class="scenario-controls">
@@ -39,7 +39,7 @@
               <div class="load-range load-level" aria-label="Concurrent requests"><button class="range" data-cores="1">1x</button><button class="range is-on" data-cores="4">4x</button><button class="range" data-cores="8">8x</button></div>
             </div>
             <p class="scenario-status" id="load-status" role="status">Ready to send traffic</p>
-            <p class="scenario-hint" id="load-observed"><%= redisAvailable ? 'Pod counts are observations, not the HPA desired count.' : 'Check CPU usage and pod counts in your monitoring system.' %></p>
+            <p class="scenario-hint" id="load-observed">Pod counts are observations, not the HPA desired count.</p>
           </div>
           <button class="estop-btn load-btn" aria-label="Start CPU load for HPA test"><span class="estop-face load-face">load</span></button>
         </section>
@@ -54,9 +54,8 @@
         </section>
       </div>
 
-      <% if (redisAvailable) { %>
       <div class="telemetry-toolbar">
-        <label class="pod-picker">Inspect pod <select id="pod-select" aria-label="Inspect pod"><option value="">All pods · average</option></select></label>
+        <label class="pod-picker">Inspect pod <select id="pod-select" aria-label="Inspect pod"><option value=""><%= redisAvailable ? 'All pods · average' : 'Observed pods · average' %></option></select></label>
         <div class="history-windows" aria-label="Chart window"><button class="key" data-window="60" aria-pressed="false">1m</button><button class="key" data-window="180" aria-pressed="true">3m</button><button class="key" data-window="300" aria-pressed="false">5m</button></div>
         <button class="key" id="freeze-chart" aria-pressed="false">Freeze charts</button>
       </div>
@@ -74,16 +73,16 @@
         <div class="pod-panel"><p class="tag" id="pods-summary">observed pods</p><div class="process-readout"><strong id="uptime-value">—</strong><span id="process-detail">Restarts observed in this session</span></div><div id="pod-list" class="pod-list"></div></div>
         <div><p class="tag">test timeline</p><ol id="telemetry-events" class="telemetry-events" aria-live="polite"></ol></div>
       </div>
-      <p class="sampling-note">All pods record every second · Shared 5-minute history survives reloads · Gaps mean missing recordings or a restart · Confirm OOMKilled in Kubernetes.</p>
-      <% } %>
+      <p class="sampling-note"><%= redisAvailable ? 'All pods record every second · Shared 5-minute history survives reloads' : 'Samples the responding pod every second while this page is visible · History is kept in this tab and resets on reload' %> · Gaps mean missing recordings or a restart · Confirm OOMKilled in Kubernetes.</p>
     </section>
   </main>
   <dialog class="sheet" id="kill-dialog" aria-labelledby="kill-dialog-title">
     <p class="tag" id="kill-dialog-title">Inject OOM · alert &amp; recovery test</p>
-    <p class="sheet-body">One pod selected by the service will allocate memory until the kernel kills its process. <% if (redisAvailable) { %>Its trace will be selected automatically. Watch the memory climb, check your alert channel, and confirm recovery after the restart.<% } else { %>Check memory usage, alerts, and recovery in your monitoring system. Reload this page after recovery to re-arm the switch.<% } %></p>
+    <p class="sheet-body">One pod selected by the service will allocate memory until the kernel kills its process. Its trace will be selected automatically. Watch the memory climb, check your alert channel, and confirm recovery after the restart.</p>
     <div class="sheet-actions"><button class="key" type="button" id="kill-cancel">cancel</button><button class="key key-danger" type="button" id="kill-confirm">inject OOM</button></div>
   </dialog>
   <script src="/time.js"></script><script src="/kill.js"></script><script src="/load.js"></script>
-  <% if (redisAvailable) { %><script src="/counter.js"></script><script type="module" src="/pods.js"></script><% } %>
+  <% if (redisAvailable) { %><script src="/counter.js"></script><% } %>
+  <script type="module" src="/pods.js"></script>
 </body>
 </html>

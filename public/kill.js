@@ -7,9 +7,7 @@ function _kill() {
         })
         .then(function (res) {
             document.querySelector('.panel').classList.add('is-killing');
-            status.textContent = document.querySelector('.panel').dataset.telemetry === 'false'
-                ? `OOM requested on ${res.host}. Check recovery in Kubernetes, then reload this page.`
-                : `killing ${res.host}`;
+            status.textContent = `killing ${res.host}`;
             document.dispatchEvent(new CustomEvent('oom:start', {detail: res}));
         })
         .catch(function () {

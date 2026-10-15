@@ -7,6 +7,7 @@ const MESSAGE = process.env.MESSAGE ?? '';
 const PORT = parseInt(process.env.PORT, 10) || 3000;
 const PROFILE = process.env.PROFILE ?? 'default';
 const PROTOCOL = process.env.PROTOCOL ?? 'http';
+const REDIS_ENABLED = process.env.REDIS_ENABLED !== 'false';
 const REDIS_HOST = process.env.REDIS_HOST ?? 'redis';
 const REDIS_PORT = parseInt(process.env.REDIS_PORT, 10) || 6379;
 const REDIS_PASS = process.env.REDIS_PASS ?? '';
@@ -27,7 +28,7 @@ import redis from 'redis';
 import prom from 'prom-client';
 
 // redis
-const client = redis.createClient({
+const client = REDIS_ENABLED ? redis.createClient({
   url: `redis://${REDIS_HOST}:${REDIS_PORT}`,
   password: REDIS_PASS,
   socket: {
@@ -36,11 +37,11 @@ const client = redis.createClient({
     // request that needs redis starts a fresh attempt.
     reconnectStrategy: retries => (retries >= 2 ? new Error('redis unreachable') : 100),
   }
-});
-client.on('connect', () => {
+}) : null;
+client?.on('connect', () => {
   console.log(`connected to redis: ${REDIS_HOST}:${REDIS_PORT}`);
 });
-client.on('error', err => {
+client?.on('error', err => {
   console.error(`${err}`);
 });
 
@@ -49,9 +50,13 @@ client.on('error', err => {
 let connecting = null;
 
 function ensureRedisConnection() {
-  if (client.isOpen) {
+  if (!client) return Promise.resolve(false);
+  if (client.isReady) {
     return Promise.resolve(true);
   }
+  if (connecting) return connecting;
+  // An open socket can still be reconnecting or authenticating.
+  if (client.isOpen) return Promise.resolve(false);
   if (!connecting) {
     connecting = client.connect()
       .then(() => true)
@@ -73,6 +78,12 @@ app.set('view engine', 'ejs');
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
+app.use(['/telemetry', '/cache', '/counter'], (req, res, next) => {
+  if (!REDIS_ENABLED) {
+    return res.status(404).json({result: 'error', message: 'Redis features disabled'});
+  }
+  next();
+});
 
 // prom-client
 const register = new prom.Registry();
@@ -86,7 +97,7 @@ const sampleTelemetry = createTelemetry();
 const INSTANCE_ID = randomUUID();
 const STARTED_AT = new Date(Date.now() - process.uptime() * 1000).toISOString();
 sampleTelemetry();
-const telemetryStore = createTelemetryStore(client, `sample-node:telemetry:${encodeURIComponent(CLUSTER)}:${encodeURIComponent(PROFILE)}`);
+const telemetryStore = client ? createTelemetryStore(client, `sample-node:telemetry:${encodeURIComponent(CLUSTER)}:${encodeURIComponent(PROFILE)}`) : null;
 
 async function handleRemoteService(res, serviceName) {
   console.log(`get /${serviceName}`);
@@ -113,7 +124,9 @@ app.get('/', async function (req, res) {
 
   const host = os.hostname();
   const date = moment().tz('Asia/Seoul').format();
+  res.set('Cache-Control', 'no-store');
   res.render('index.ejs', {
+    redisAvailable: await ensureRedisConnection(),
     host: host,
     date: date,
     cluster: CLUSTER,
@@ -561,11 +574,12 @@ app.get('/metrics', async function (req, res) {
 export default app;
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  console.log(`connecting to redis: ${REDIS_HOST}:${REDIS_PORT}`);
-  ensureRedisConnection();
-  startTelemetryPublisher(async () => {
-    if (await ensureRedisConnection()) await telemetryStore.publish(statusSnapshot());
-  }, error => console.error(`telemetry publish failed: ${error.message}`));
+  if (REDIS_ENABLED) {
+    console.log(`connecting to redis: ${REDIS_HOST}:${REDIS_PORT}`);
+    startTelemetryPublisher(async () => {
+      if (await ensureRedisConnection()) await telemetryStore.publish(statusSnapshot());
+    }, error => console.error(`telemetry publish failed: ${error.message}`));
+  }
 
   app.listen(PORT, function () {
     console.log(`[${PROFILE}] Listening on port ${PORT}!`);

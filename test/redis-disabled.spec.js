@@ -23,7 +23,6 @@ test('Redis-free page hides counters and keeps live process telemetry', async ()
 
 test.each([
   ['get', '/telemetry'], ['get', '/cache/demo'], ['put', '/cache/demo'],
-  ['get', '/counter/up'], ['post', '/counter/up'], ['delete', '/counter/up'],
 ])('%s %s is disabled without creating a Redis client', async (method, path) => {
   const response = await request(app)[method](path);
   expect(response.status).toBe(404);

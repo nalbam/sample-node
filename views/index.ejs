@@ -15,12 +15,6 @@
     </header>
     <div class="console-overview">
       <div class="served-by"><span class="tag">served by</span><span><%= host %></span><time datetime="<%= date %>"><%= date %></time></div>
-      <% if (redisAvailable) { %>
-      <div class="tally-keys">
-        <button class="key btn-thumbs-up" aria-label="thumbs up">👍 <span id="thumbs-up-count">0</span></button>
-        <button class="key btn-thumbs-down" aria-label="thumbs down">👎 <span id="thumbs-down-count">0</span></button>
-      </div>
-      <% } %>
     </div>
 
     <section class="telemetry" aria-labelledby="telemetry-title">
@@ -82,7 +76,6 @@
     <div class="sheet-actions"><button class="key" type="button" id="kill-cancel">cancel</button><button class="key key-danger" type="button" id="kill-confirm">inject OOM</button></div>
   </dialog>
   <script src="/time.js"></script><script src="/kill.js"></script><script src="/load.js"></script>
-  <% if (redisAvailable) { %><script src="/counter.js"></script><% } %>
   <script type="module" src="/pods.js"></script>
 </body>
 </html>

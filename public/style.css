@@ -226,13 +226,7 @@ body {
     box-shadow: inset 0 1px 0 var(--panel-hi);
 }
 
-.tally-keys {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
-}
-
-/* Counter keys read as small machined buttons. */
+/* Control keys read as small machined buttons. */
 .key {
     min-width: 3.5rem;
     padding: 0.4375rem 0.625rem;
@@ -598,7 +592,6 @@ body {
 .served-by { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem 0.8rem; min-width: 0; font-size: 0.65rem; }
 .served-by > span:not(.tag) { overflow-wrap: anywhere; }
 .served-by time { color: var(--engrave-dim); }
-.console-overview .tally-keys { margin: 0; flex-shrink: 0; }
 .console-overview .key { min-width: 2rem; padding: 0.25rem 0.5rem; font-size: 0.65rem; }
 .scenario-controls { grid-column: 1; grid-row: 2; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem; }
 .scenario { display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 0.6rem; padding: 0.8rem; text-align: left; border: 1px solid var(--seam); border-top: 2px solid var(--load); border-radius: 4px; }

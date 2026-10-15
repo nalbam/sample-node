@@ -78,7 +78,7 @@ app.set('view engine', 'ejs');
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
-app.use(['/telemetry', '/cache', '/counter'], (req, res, next) => {
+app.use(['/telemetry', '/cache'], (req, res, next) => {
   if (!REDIS_ENABLED) {
     return res.status(404).json({result: 'error', message: 'Redis features disabled'});
   }
@@ -499,68 +499,6 @@ app.put('/cache/:name', async function (req, res) {
       status: 500,
       message: 'internal server error',
     });
-  }
-});
-
-app.get('/counter/:name', async function (req, res) {
-  const name = req.params.name;
-
-  console.log(`get /counter/${name}`);
-
-  res.setHeader('Content-Type', 'text/plain; charset=UTF-8');
-
-  if (!(await ensureRedisConnection())) {
-    return res.status(503).send('redis unavailable');
-  }
-
-  try {
-    const result = await client.get(`counter:${name}`);
-    return res.send(result == null ? '0' : result.toString());
-  } catch (err) {
-    console.error(`${err}`);
-    return res.status(500).send('internal server error');
-  }
-});
-
-app.post('/counter/:name', async function (req, res) {
-  const name = req.params.name;
-
-  console.log(`post /counter/${name}`);
-
-  res.setHeader('Content-Type', 'text/plain; charset=UTF-8');
-
-  if (!(await ensureRedisConnection())) {
-    return res.status(503).send('redis unavailable');
-  }
-
-  try {
-    const result = await client.incr(`counter:${name}`);
-    return res.send(result == null ? '0' : result.toString());
-  } catch (err) {
-    console.error(`${err}`);
-    return res.status(500).send('internal server error');
-  }
-});
-
-app.delete('/counter/:name', async function (req, res) {
-  const name = req.params.name;
-
-  console.log(`delete /counter/${name}`);
-
-  res.setHeader('Content-Type', 'text/plain; charset=UTF-8');
-
-  if (!(await ensureRedisConnection())) {
-    return res.status(503).send('redis unavailable');
-  }
-
-  try {
-    await client.del(`counter:${name}`);
-    // The counter is gone, so its value is 0. DEL returns the number of keys
-    // removed, which would read as a counter value.
-    return res.send('0');
-  } catch (err) {
-    console.error(`${err}`);
-    return res.status(500).send('internal server error');
   }
 });
 

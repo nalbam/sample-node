@@ -69,14 +69,14 @@ spec:
 
 Requires Node.js 24 or later. The live dashboard needs Redis 6.2 or later for shared
 telemetry history. Set `REDIS_ENABLED=false` to run without Redis. This disables
-Redis connections and telemetry publishing, hides counters,
-and makes `/cache/*`, `/counter/*`, and `/telemetry` return `404`.
+Redis connections and telemetry publishing, and makes `/cache/*` and `/telemetry`
+return `404`.
 The dashboard reads CPU and memory from `/status` every second while visible.
 It samples whichever pod answers each request and keeps five minutes of history
 in the current tab; reloads clear this history. CPU load and OOM controls, probes,
 and metrics still work. When Redis is enabled but unreachable, the page uses the
-same direct sampling and hides counters; Redis-backed endpoints answer `503`.
-Reload after Redis recovers to restore counters and shared telemetry history.
+same direct sampling; Redis-backed endpoints answer `503`.
+Reload after Redis recovers to restore shared telemetry history.
 
 ```bash
 npm install
@@ -276,17 +276,10 @@ curl localhost:3000/fault/50
 | ------ | ---------------- | ------------------------------------- |
 | GET    | `/cache/:name`   | Reads a JSON value from Redis         |
 | PUT    | `/cache/:name`   | Writes the JSON request body to Redis |
-| GET    | `/counter/:name` | Reads a counter from Redis            |
-| POST   | `/counter/:name` | Increments a counter in Redis         |
-| DELETE | `/counter/:name` | Deletes a counter in Redis            |
 
 ```bash
 curl -X PUT localhost:3000/cache/foo -H 'Content-Type: application/json' -d '{"a":1}'
 curl localhost:3000/cache/foo
-
-curl -X POST localhost:3000/counter/hits
-curl localhost:3000/counter/hits
-curl -X DELETE localhost:3000/counter/hits
 ```
 
 ## Environment

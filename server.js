@@ -177,6 +177,14 @@ app.get('/live', async function (req, res) {
   });
 });
 
+app.get('/version', function (req, res) {
+  console.log(`get /version`);
+
+  return res.status(200).json({
+    version: VERSION,
+  });
+});
+
 app.get('/health', async function (req, res) {
   console.log(`get /health`);
 

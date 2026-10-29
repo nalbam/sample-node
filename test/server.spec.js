@@ -18,6 +18,14 @@ describe('probe endpoints', () => {
     expect(res.body).toEqual({ result: 'read' });
   });
 
+  test('GET /version', async () => {
+    const res = await request(app).get('/version');
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('application/json');
+    expect(res.body).toEqual({ version: process.env.VERSION ?? 'v0.0.0' });
+  });
+
   test('GET /health is ok while FAULT_RATE is 0', async () => {
     const res = await request(app).get('/health');
 

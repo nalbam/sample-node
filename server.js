@@ -209,6 +209,12 @@ app.get('/uptime', function (req, res) {
   });
 });
 
+app.get('/ping', function (req, res) {
+  console.log(`get /ping`);
+
+  return res.status(200).json({ pong: true });
+});
+
 app.get('/health', async function (req, res) {
   console.log(`get /health`);
 

@@ -24,8 +24,21 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 24
+          node-version: 26
           cache: npm
       - run: npm ci
       - run: npm run lint
       - run: npm test -- --runInBand
+      - name: Build Docker image
+        run: docker build -t sample-node:ci .
+      - name: Check container responds on port 3000
+        run: |
+          docker run -d --name sample-node-ci -e REDIS_ENABLED=false -p 3000:3000 sample-node:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:3000/live; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs sample-node-ci
+          exit 1

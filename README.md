@@ -316,3 +316,5 @@ curl localhost:3000/cache/foo
 ## License
 
 GPL-3.0. See [LICENSE](LICENSE).
+
+Verified with rovr workspaces.

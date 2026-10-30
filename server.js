@@ -227,6 +227,12 @@ app.get('/echo', function (req, res) {
   return res.status(200).json({ echo: msg });
 });
 
+app.get('/time', function (req, res) {
+  console.log(`get /time`);
+
+  return res.status(200).json({ time: new Date().toISOString() });
+});
+
 app.get('/random', function (req, res) {
   console.log(`get /random`);
 

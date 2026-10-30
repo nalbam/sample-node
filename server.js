@@ -227,6 +227,12 @@ app.get('/echo', function (req, res) {
   return res.status(200).json({ echo: msg });
 });
 
+app.get('/random', function (req, res) {
+  console.log(`get /random`);
+
+  return res.status(200).json({ value: Math.random() });
+});
+
 app.get('/health', async function (req, res) {
   console.log(`get /health`);
 

@@ -262,3 +262,15 @@ describe('X-Request-Id header', () => {
     expect(file.headers['x-request-id']).toMatch(uuid);
   });
 });
+
+describe('GET /random', () => {
+  test('returns a number in [0, 1) as JSON', async () => {
+    const res = await request(app).get('/random');
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/application\/json/);
+    expect(typeof res.body.value).toBe('number');
+    expect(res.body.value).toBeGreaterThanOrEqual(0);
+    expect(res.body.value).toBeLessThan(1);
+  });
+});

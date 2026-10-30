@@ -24,7 +24,19 @@ describe('probe endpoints', () => {
 
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toContain('application/json');
-    expect(res.body).toEqual({ version: process.env.VERSION ?? 'v0.0.0' });
+    expect(res.body.version).toBe(process.env.VERSION ?? 'v0.0.0');
+  });
+
+  test('GET /version includes the Node.js version', async () => {
+    const res = await request(app).get('/version');
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('application/json');
+    expect(res.body).toEqual({
+      version: process.env.VERSION ?? 'v0.0.0',
+      node: process.version,
+    });
+    expect(res.body.node).toMatch(/^v\d+\./);
   });
 
   test('GET /runtime', async () => {

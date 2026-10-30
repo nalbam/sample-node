@@ -35,6 +35,15 @@ describe('probe endpoints', () => {
     expect(res.body).toEqual({ node: process.version, platform: process.platform });
   });
 
+  test('GET /uptime', async () => {
+    const res = await request(app).get('/uptime');
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('application/json');
+    expect(typeof res.body.uptime).toBe('number');
+    expect(res.body.uptime).toBeGreaterThanOrEqual(0);
+  });
+
   test('GET /health is ok while FAULT_RATE is 0', async () => {
     const res = await request(app).get('/health');
 

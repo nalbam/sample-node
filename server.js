@@ -201,6 +201,14 @@ app.get('/runtime', function (req, res) {
   });
 });
 
+app.get('/uptime', function (req, res) {
+  console.log(`get /uptime`);
+
+  return res.status(200).json({
+    uptime: process.uptime(),
+  });
+});
+
 app.get('/health', async function (req, res) {
   console.log(`get /health`);
 

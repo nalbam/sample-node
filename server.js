@@ -215,6 +215,18 @@ app.get('/ping', function (req, res) {
   return res.status(200).json({ pong: true });
 });
 
+app.get('/echo', function (req, res) {
+  console.log(`get /echo`);
+
+  const msg = req.query.msg;
+
+  if (typeof msg !== 'string' || msg === '') {
+    return res.status(400).json({ error: 'msg is required' });
+  }
+
+  return res.status(200).json({ echo: msg });
+});
+
 app.get('/health', async function (req, res) {
   console.log(`get /health`);
 

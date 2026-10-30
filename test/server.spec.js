@@ -91,6 +91,17 @@ describe('probe endpoints', () => {
     expect(res.status).toBe(200);
     expect(res.body.result).toBe('ok');
   });
+
+  test('GET /health includes integer uptime seconds', async () => {
+    const res = await request(app).get('/health');
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('application/json');
+    expect(Number.isInteger(res.body.uptime)).toBe(true);
+    expect(res.body.uptime).toBeGreaterThanOrEqual(0);
+    expect(res.body.result).toBeDefined();
+    expect(res.body.version).toBeDefined();
+  });
 });
 
 describe('GET /metrics', () => {

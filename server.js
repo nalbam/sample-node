@@ -259,11 +259,13 @@ app.get('/health', async function (req, res) {
     return res.status(200).json({
       result: 'ok',
       version: VERSION,
+      uptime: Math.round(process.uptime()),
     });
   } else {
     return res.status(500).json({
       result: 'error',
       version: VERSION,
+      uptime: Math.round(process.uptime()),
     });
   }
 });

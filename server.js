@@ -176,6 +176,12 @@ app.get('/read', async function (req, res) {
   });
 });
 
+app.get('/ready', function (req, res) {
+  console.log(`get /ready`);
+
+  return res.status(200).json({ ready: true });
+});
+
 app.get('/live', async function (req, res) {
   console.log(`get /live`);
 

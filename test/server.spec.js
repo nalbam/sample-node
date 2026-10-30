@@ -5,6 +5,14 @@ import {jest} from '@jest/globals';
 import app from '../server.js';
 
 describe('probe endpoints', () => {
+  test('GET /ready', async () => {
+    const res = await request(app).get('/ready');
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('application/json');
+    expect(res.body).toEqual({ ready: true });
+  });
+
   test('GET /live', async () => {
     const res = await request(app).get('/live');
 

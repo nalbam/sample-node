@@ -185,6 +185,15 @@ app.get('/version', function (req, res) {
   });
 });
 
+app.get('/runtime', function (req, res) {
+  console.log(`get /runtime`);
+
+  return res.status(200).json({
+    node: process.version,
+    platform: process.platform,
+  });
+});
+
 app.get('/health', async function (req, res) {
   console.log(`get /health`);
 

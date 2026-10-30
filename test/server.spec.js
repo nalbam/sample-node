@@ -263,6 +263,17 @@ describe('X-Request-Id header', () => {
   });
 });
 
+describe('GET /time', () => {
+  test('returns the current time in ISO 8601', async () => {
+    const res = await request(app).get('/time');
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/application\/json/);
+    expect(typeof res.body.time).toBe('string');
+    expect(new Date(res.body.time).toISOString()).toBe(res.body.time);
+  });
+});
+
 describe('GET /random', () => {
   test('returns a number in [0, 1) as JSON', async () => {
     const res = await request(app).get('/random');

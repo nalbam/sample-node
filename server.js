@@ -30,7 +30,7 @@ import prom from 'prom-client';
 // redis
 const client = REDIS_ENABLED ? redis.createClient({
   url: `redis://${REDIS_HOST}:${REDIS_PORT}`,
-  password: REDIS_PASS,
+  ...(REDIS_PASS && {password: REDIS_PASS}),
   socket: {
     connectTimeout: 2000,
     // Stop retrying so a request fails fast instead of hanging. The next
@@ -45,7 +45,7 @@ client?.on('error', err => {
   console.error(`${err}`);
 });
 
-// The redis v4 client needs an explicit connect. Concurrent requests share the
+// The redis client needs an explicit connect. Concurrent requests share the
 // in-flight attempt so they never open a second connection.
 let connecting = null;
 

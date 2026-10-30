@@ -70,3 +70,20 @@ describe('telemetry publisher', () => {
     expect(publish).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('telemetry publish', () => {
+  test('stores the sample with a PXAT expiration and trims the stream index', async () => {
+    const chain = {};
+    for (const name of ['set', 'xAdd', 'expire']) chain[name] = jest.fn(() => chain);
+    chain.exec = jest.fn().mockResolvedValue([]);
+    const client = {multi: () => chain};
+    const sampledAt = new Date(600000).toISOString();
+    await createTelemetryStore(client, 'test-stream', () => 700000).publish({sampledAt});
+    expect(chain.set).toHaveBeenCalledWith(
+      expect.stringMatching(/^test-stream:sample:/), JSON.stringify({sampledAt}),
+      {expiration: {type: 'PXAT', value: 600000 + TELEMETRY_HISTORY_MS}});
+    expect(chain.xAdd).toHaveBeenCalledWith('test-stream', '*', {key: expect.any(String)},
+      {TRIM: {strategy: 'MINID', threshold: `${700000 - TELEMETRY_HISTORY_MS}-0`}});
+    expect(chain.exec).toHaveBeenCalled();
+  });
+});

@@ -202,13 +202,13 @@ outage. It is a browser page, so open it rather than curl it.
 | GET    | `/random`   | Random number in [0, 1) as `{"value": ...}` |
 | GET    | `/uuid`     | Random UUID v4 as `{"uuid": ...}` |
 | GET    | `/hostname` | Host name of the answering pod as `{"hostname": ...}` |
-| GET    | `/health`   | Health check, fails at `FAULT_RATE` percent |
+| GET    | `/health`   | Health check with `result`, `version` and `uptime` (integer seconds); fails at `FAULT_RATE` percent |
 | GET    | `/status`   | Process identity, uptime, app-container CPU/memory, limits, and OOM allocation state |
 | GET    | `/telemetry` | Shared pod history; use the returned `cursor` as `?after=<cursor>` for subsequent records |
 | GET    | `/metrics`  | Prometheus metrics                          |
 
 `/status` is not affected by `FAULT_RATE` and sends `Cache-Control: no-store`.
-`/health` is the probe and fails at `FAULT_RATE`. On Linux, cgroup v2/v1 counters
+`/health` is the probe and fails at `FAULT_RATE`. Both the 200 and the 500 response include `uptime` in integer seconds. On Linux, cgroup v2/v1 counters
 measure the app container rather than the whole node or its sidecars. Memory usage
 includes cgroup-charged cache; `memory.rss` separately reports process RSS. CPU is
 the change in cumulative CPU time over a monotonic sample interval (at least 500ms).

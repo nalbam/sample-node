@@ -196,6 +196,7 @@ outage. It is a browser page, so open it rather than curl it.
 | GET    | `/version`  | Running version as JSON                     |
 | GET    | `/runtime`  | Node.js version and platform as JSON        |
 | GET    | `/uptime`   | Process uptime in seconds as JSON           |
+| GET    | `/ping`     | Health check, returns `{"pong": true}` as JSON |
 | GET    | `/health`   | Health check, fails at `FAULT_RATE` percent |
 | GET    | `/status`   | Process identity, uptime, app-container CPU/memory, limits, and OOM allocation state |
 | GET    | `/telemetry` | Shared pod history; use the returned `cursor` as `?after=<cursor>` for subsequent records |

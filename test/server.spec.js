@@ -1,3 +1,4 @@
+import os from 'os';
 import request from 'supertest';
 import {jest} from '@jest/globals';
 
@@ -160,5 +161,29 @@ describe('OOM observation contract', () => {
     } finally {
       interval.mockRestore();
     }
+  });
+});
+
+describe('view rendering', () => {
+  test('GET / renders host, date, cluster, profile and version', async () => {
+    const res = await request(app).get('/');
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('text/html');
+    expect(res.headers['cache-control']).toBe('no-store');
+    expect(res.text).toContain(`<title>sample-node · ${os.hostname()}</title>`);
+    expect(res.text).toContain(`${process.env.CLUSTER_NAME ?? 'local'} · ${process.env.VERSION ?? 'v0.0.0'}`);
+    expect(res.text).toMatch(/<time datetime="[^"]+">[^<]+<\/time>/);
+    expect(res.text).not.toContain('<%');
+  });
+
+  test.each([['/drop', '100'], ['/drop/25', '25']])('GET %s renders the rate', async (path, rate) => {
+    const res = await request(app).get(path);
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('text/html');
+    expect(res.text).toContain(`<title>sample-node · drop ${rate}%</title>`);
+    expect(res.text).toContain(`let rate = "${rate}";`);
+    expect(res.text).not.toContain('<%');
   });
 });

@@ -193,7 +193,7 @@ outage. It is a browser page, so open it rather than curl it.
 | ------ | ----------- | ------------------------------------------- |
 | GET    | `/read`     | Readiness probe                             |
 | GET    | `/ready`    | Readiness check, returns `{"ready": true}` as JSON |
-| GET    | `/live`     | Liveness probe                              |
+| GET    | `/live`     | Liveness probe, returns `{"live": true}` as JSON |
 | GET    | `/version`  | Running version and Node.js version as JSON |
 | GET    | `/runtime`  | Node.js version and platform as JSON        |
 | GET    | `/uptime`   | Process uptime in seconds as JSON           |

@@ -17,7 +17,8 @@ describe('probe endpoints', () => {
     const res = await request(app).get('/live');
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ result: 'live' });
+    expect(res.headers['content-type']).toContain('application/json');
+    expect(res.body).toEqual({ live: true });
   });
 
   test('GET /read', async () => {

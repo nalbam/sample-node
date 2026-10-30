@@ -185,9 +185,7 @@ app.get('/ready', function (req, res) {
 app.get('/live', async function (req, res) {
   console.log(`get /live`);
 
-  return res.status(200).json({
-    result: 'live',
-  });
+  return res.status(200).json({ live: true });
 });
 
 app.get('/version', function (req, res) {

@@ -67,7 +67,7 @@ spec:
 
 ## Development
 
-Requires Node.js 24 or later. The live dashboard needs Redis 6.2 or later for shared
+Requires Node.js 26 or later. The live dashboard needs Redis 6.2 or later for shared
 telemetry history. Set `REDIS_ENABLED=false` to run without Redis. This disables
 Redis connections and telemetry publishing, and makes `/cache/*` and `/telemetry`
 return `404`.
@@ -87,8 +87,8 @@ npm test
 
 ## Release
 
-Pull requests and pushes to `main` or `master` run `npm ci`, lint, and tests on
-Node.js 24. Branch pushes only run CI; versions are released by pushing a `v*`
+Pull requests and pushes to `main` or `master` run `npm ci`, lint, tests, and a Docker
+build with a start check on port 3000, on Node.js 26. Branch pushes only run CI; versions are released by pushing a `v*`
 SemVer tag such as `v0.16.10` or `v0.17.0-rc.1`.
 Tags must fit Docker's 128-character limit and omit `+build` metadata so the Git,
 image, and deployment versions stay identical.

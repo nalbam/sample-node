@@ -52,6 +52,27 @@ describe('probe endpoints', () => {
     expect(res.body).toEqual({ pong: true });
   });
 
+  test('GET /echo returns msg', async () => {
+    const res = await request(app).get('/echo?msg=hi');
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('application/json');
+    expect(res.body).toEqual({ echo: 'hi' });
+  });
+
+  test.each([
+    ['missing msg', '/echo'],
+    ['empty msg', '/echo?msg='],
+    ['repeated msg (array)', '/echo?msg=a&msg=b'],
+    ['nested msg (object)', '/echo?msg[a]=b'],
+  ])('GET /echo rejects %s with 400', async (_name, url) => {
+    const res = await request(app).get(url);
+
+    expect(res.status).toBe(400);
+    expect(res.headers['content-type']).toContain('application/json');
+    expect(res.body).toEqual({ error: 'msg is required' });
+  });
+
   test('GET /health is ok while FAULT_RATE is 0', async () => {
     const res = await request(app).get('/health');
 

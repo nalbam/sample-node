@@ -173,7 +173,7 @@ describe('view rendering', () => {
     expect(res.headers['cache-control']).toBe('no-store');
     expect(res.text).toContain(`<title>sample-node · ${os.hostname()}</title>`);
     expect(res.text).toContain(`${process.env.CLUSTER_NAME ?? 'local'} · ${process.env.VERSION ?? 'v0.0.0'}`);
-    expect(res.text).toMatch(/<time datetime="[^"]+">[^<]+<\/time>/);
+    expect(res.text).toMatch(/<time datetime="\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+09:00">[^<]+<\/time>/);
     expect(res.text).not.toContain('<%');
   });
 

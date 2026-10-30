@@ -12,13 +12,14 @@
     "build": "npm ci",
     "start": "node server.js",
     "lint": "eslint .",
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest"
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "sonar": "sonar-scanner-npm"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "ejs": "^7.0.2",
     "express": "^5.1.0",
-    "moment-timezone": "^0.5.27",
+    "moment-timezone": "^0.6.6",
     "prom-client": "^15.1.2",
     "redis": "^6.3.1"
   },
@@ -28,7 +29,7 @@
     "globals": "^17.0.0",
     "jest": "^30.5.2",
     "jest-sonar-reporter": "^2.0.0",
-    "sonarqube-scanner": "^4.2.6",
+    "sonarqube-scanner": "^5.0.2",
     "supertest": "^7.3.1"
   },
   "jest": {

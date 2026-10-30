@@ -126,6 +126,9 @@ the GitHub Release job. Git tags are the release version source; the legacy
 
 ## Endpoints
 
+Every response carries an `X-Request-Id` header. The value of the request's `X-Request-Id`
+header is echoed back as is; without one, a new UUID is generated per request.
+
 ### Pages
 
 | Method | Path           | Description                                                  |

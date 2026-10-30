@@ -195,3 +195,32 @@ describe('view rendering', () => {
     expect(res.text).not.toContain('<%');
   });
 });
+
+describe('X-Request-Id header', () => {
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  test('echoes the id sent by the client', async () => {
+    const res = await request(app).get('/live').set('X-Request-Id', 'abc-123');
+
+    expect(res.headers['x-request-id']).toBe('abc-123');
+  });
+
+  test('generates a UUID when the header is missing', async () => {
+    const res = await request(app).get('/live');
+
+    expect(res.headers['x-request-id']).toMatch(uuid);
+  });
+
+  test('differs per request and is set on 404 and static responses', async () => {
+    const a = await request(app).get('/no-such-path');
+    const b = await request(app).get('/no-such-path');
+    const file = await request(app).get('/style.css');
+
+    expect(a.status).toBe(404);
+    expect(a.headers['x-request-id']).toMatch(uuid);
+    expect(b.headers['x-request-id']).toMatch(uuid);
+    expect(a.headers['x-request-id']).not.toBe(b.headers['x-request-id']);
+    expect(file.status).toBe(200);
+    expect(file.headers['x-request-id']).toMatch(uuid);
+  });
+});

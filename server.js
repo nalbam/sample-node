@@ -75,6 +75,13 @@ function ensureRedisConnection() {
 const app = express();
 app.set('view engine', 'ejs');
 
+// Registered first so every response, including static files and 404s, carries it.
+app.use((req, res, next) => {
+  req.id = req.get('X-Request-Id') || randomUUID();
+  res.set('X-Request-Id', req.id);
+  next();
+});
+
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));

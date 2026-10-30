@@ -285,3 +285,13 @@ describe('GET /random', () => {
     expect(res.body.value).toBeLessThan(1);
   });
 });
+
+describe('GET /uuid', () => {
+  test('returns a random UUID v4 as JSON', async () => {
+    const res = await request(app).get('/uuid');
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/application\/json/);
+    expect(res.body.uuid).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+  });
+});

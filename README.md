@@ -200,6 +200,7 @@ outage. It is a browser page, so open it rather than curl it.
 | GET    | `/echo`     | Returns the `msg` query as `{"echo": msg}`; 400 with `{"error": "msg is required"}` if `msg` is missing, empty, or not a single string |
 | GET    | `/time`     | Current time in ISO 8601 as `{"time": ...}` |
 | GET    | `/random`   | Random number in [0, 1) as `{"value": ...}` |
+| GET    | `/uuid`     | Random UUID v4 as `{"uuid": ...}` |
 | GET    | `/health`   | Health check, fails at `FAULT_RATE` percent |
 | GET    | `/status`   | Process identity, uptime, app-container CPU/memory, limits, and OOM allocation state |
 | GET    | `/telemetry` | Shared pod history; use the returned `cursor` as `?after=<cursor>` for subsequent records |

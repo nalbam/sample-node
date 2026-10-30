@@ -239,6 +239,12 @@ app.get('/random', function (req, res) {
   return res.status(200).json({ value: Math.random() });
 });
 
+app.get('/uuid', function (req, res) {
+  console.log(`get /uuid`);
+
+  return res.status(200).json({ uuid: randomUUID() });
+});
+
 app.get('/health', async function (req, res) {
   console.log(`get /health`);
 

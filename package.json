@@ -12,7 +12,8 @@
     "build": "npm ci",
     "start": "node server.js",
     "lint": "eslint .",
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest"
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "sonar": "sonar-scanner-npm"
   },
   "dependencies": {
     "cors": "^2.8.5",

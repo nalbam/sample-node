@@ -245,6 +245,12 @@ app.get('/uuid', function (req, res) {
   return res.status(200).json({ uuid: randomUUID() });
 });
 
+app.get('/hostname', function (req, res) {
+  console.log(`get /hostname`);
+
+  return res.status(200).json({ hostname: os.hostname() });
+});
+
 app.get('/health', async function (req, res) {
   console.log(`get /health`);
 

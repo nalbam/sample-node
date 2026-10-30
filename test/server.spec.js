@@ -295,3 +295,15 @@ describe('GET /uuid', () => {
     expect(res.body.uuid).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
   });
 });
+
+describe('GET /hostname', () => {
+  test('returns the host name as JSON', async () => {
+    const res = await request(app).get('/hostname');
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/application\/json/);
+    expect(typeof res.body.hostname).toBe('string');
+    expect(res.body.hostname).not.toBe('');
+    expect(res.body.hostname).toBe(os.hostname());
+  });
+});

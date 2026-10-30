@@ -20,7 +20,7 @@
     "express": "^5.1.0",
     "moment-timezone": "^0.5.27",
     "prom-client": "^15.1.2",
-    "redis": "^4.6.13"
+    "redis": "^6.3.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",

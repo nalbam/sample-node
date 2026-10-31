@@ -30,15 +30,41 @@ jobs:
       - run: npm run lint
       - run: npm test -- --runInBand
       - name: Build Docker image
-        run: docker build -t sample-node:ci .
-      - name: Check container responds on port 3000
         run: |
-          docker run -d --name sample-node-ci -e REDIS_ENABLED=false -p 3000:3000 sample-node:ci
-          for i in $(seq 1 30); do
-            if curl -fsS http://localhost:3000/live; then
-              exit 0
-            fi
-            sleep 1
-          done
-          docker logs sample-node-ci
-          exit 1
+          docker build --pull -t sample-node:ci .
+          docker run --rm sample-node:ci sh -c 'echo "node $(node -v), npm $(npm -v), alpine $(cat /etc/alpine-release)"'
+      - name: Smoke test container
+        env:
+          SMOKE_VERSION: v0.0.0-ci
+        run: |
+          docker run -d --name sample-node-ci -e REDIS_ENABLED=false -e VERSION="$SMOKE_VERSION" -p 3000:3000 sample-node:ci
+          node scripts/smoke.mjs http://localhost:3000 "$SMOKE_VERSION"
+      # Runs after a failed step too; the container is absent when the build failed.
+      - name: Show container logs and remove container
+        if: always()
+        run: |
+          if docker container inspect sample-node-ci >/dev/null 2>&1; then
+            docker logs sample-node-ci
+            docker rm -f sample-node-ci
+          fi
+
+  # Builds the release platforms without pushing, so a tag does not find a
+  # platform-specific build failure first.
+  platforms:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Build linux/amd64 and linux/arm64 without pushing
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          pull: true
+          push: false

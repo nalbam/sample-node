@@ -3,4 +3,5 @@ charts/
 .github/
 node_modules/
 reports/
+scripts/
 test/

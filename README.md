@@ -79,16 +79,38 @@ same direct sampling; Redis-backed endpoints answer `503`.
 Reload after Redis recovers to restore shared telemetry history.
 
 ```bash
-npm install
-npm start          # http://localhost:3000
+npm ci                     # install exactly what package-lock.json records
 npm run lint
-npm test
+npm test -- --runInBand
+npm start                  # http://localhost:3000
+```
+
+`npm run smoke -- <base-url> <version>` checks a running app that was started with
+`REDIS_ENABLED=false`. It waits up to 30 seconds for `/live`, then checks the status,
+`Content-Type` and key values of `/`, `/live`, `/ready`, `/read`, `/health`, `/version`
+and `/metrics`, the `404` from `/telemetry` and `/cache/*`, and the `X-Request-Id` echo.
+It prints one line per path and exits `1` when the app does not start or a response
+differs. Pass the same version as `VERSION`:
+
+```bash
+REDIS_ENABLED=false VERSION=v0.0.0-smoke npm start &
+npm run smoke -- http://localhost:3000 v0.0.0-smoke
+kill %1
+
+docker build --pull -t sample-node:local .
+docker run -d --name sample-node-smoke -e REDIS_ENABLED=false -e VERSION=v0.0.0-smoke \
+  -p 3000:3000 sample-node:local
+npm run smoke -- http://localhost:3000 v0.0.0-smoke
+docker rm -f sample-node-smoke
 ```
 
 ## Release
 
-Pull requests and pushes to `main` or `master` run `npm ci`, lint, tests, and a Docker
-build with a start check on port 3000, on Node.js 26. Branch pushes only run CI; versions are released by pushing a `v*`
+Pull requests and pushes to `main` or `master` run `npm ci`, lint and tests on
+Node.js 26, build the Docker image with `--pull`, and run `scripts/smoke.mjs` against
+the container with `REDIS_ENABLED=false`. A failed check fails the `verify` job; the
+container logs are printed and the container is removed in every case. The
+`platforms` job builds `linux/amd64` and `linux/arm64` without pushing. Branch pushes only run CI; versions are released by pushing a `v*`
 SemVer tag such as `v0.16.10` or `v0.17.0-rc.1`.
 Tags must fit Docker's 128-character limit and omit `+build` metadata so the Git,
 image, and deployment versions stay identical.
@@ -123,6 +145,37 @@ Repository secrets: `DOCKER_USERNAME` and `DOCKER_PASSWORD` must allow pushing t
 `opspresso/argocd-env-demo`. The workflow's `GITHUB_TOKEN` has write access only in
 the GitHub Release job. Git tags are the release version source; the legacy
 `VERSION` file is not used by this workflow.
+
+### Verify a release
+
+The image tag does not set the `VERSION` environment variable. A container started
+without `VERSION` reports `v0.0.0`; the deployment must pass the tag as `VERSION`.
+
+Before tagging, pick the commit and confirm that CI succeeded on it:
+
+```bash
+git fetch origin
+sha=$(git rev-parse origin/main)
+gh run list --workflow push.yml --commit "$sha" --json databaseId,status,conclusion
+```
+
+Create and push the tag as shown above, then check each stage for that tag
+(`tag=v0.16.10` in these examples):
+
+```bash
+gh run list --workflow release.yml --branch "$tag" --limit 1
+gh run view <run-id>                    # every job succeeded; prod is skipped for prereleases
+gh release view "$tag" --json tagName,isPrerelease,targetCommitish,body
+docker buildx imagetools inspect "nalbam/sample-node:$tag"   # lists linux/amd64 and linux/arm64
+
+docker run -d --name sample-node-release -e REDIS_ENABLED=false -e VERSION="$tag" \
+  -p 3000:3000 "nalbam/sample-node:$tag"
+npm run smoke -- http://localhost:3000 "$tag"
+docker rm -f sample-node-release
+```
+
+For a stable tag, also confirm that `docker buildx imagetools inspect nalbam/sample-node:latest`
+shows the same digest as `nalbam/sample-node:$tag`.
 
 ## Endpoints
 

@@ -12,6 +12,7 @@
     "build": "npm ci",
     "start": "node server.js",
     "lint": "eslint .",
+    "smoke": "node scripts/smoke.mjs",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "sonar": "sonar-scanner-npm"
   },

@@ -120,6 +120,9 @@ git tag v0.16.10
 git push origin v0.16.10
 ```
 
+These commands tag the local `HEAD`. To tag a commit whose CI you checked, use the
+SHA form in [Verify a release](#verify-a-release).
+
 The [release workflow](.github/workflows/release.yml) runs the same checks, then:
 
 1. Builds and pushes `nalbam/sample-node:<tag>` for `linux/amd64` and `linux/arm64`.
@@ -151,16 +154,23 @@ the GitHub Release job. Git tags are the release version source; the legacy
 The image tag does not set the `VERSION` environment variable. A container started
 without `VERSION` reports `v0.0.0`; the deployment must pass the tag as `VERSION`.
 
-Before tagging, pick the commit and confirm that CI succeeded on it:
+Before tagging, pick the commit and confirm that CI succeeded on it. Tag that
+exact SHA: `git tag "$tag"` without a commit argument tags the local `HEAD`,
+which `git fetch` does not move.
 
 ```bash
 git fetch origin
-sha=$(git rev-parse origin/main)
+sha=$(git rev-parse origin/main)   # or the full SHA of the commit you chose
 gh run list --workflow push.yml --commit "$sha" --json databaseId,status,conclusion
+# continue only when the run shows status "completed" and conclusion "success"
+
+tag=v0.16.10
+git tag "$tag" "$sha"
+git push origin "$tag"
+git rev-parse "$tag^{commit}"      # must print $sha
 ```
 
-Create and push the tag as shown above, then check each stage for that tag
-(`tag=v0.16.10` in these examples):
+Then check each stage for that tag:
 
 ```bash
 gh run list --workflow release.yml --branch "$tag" --limit 1

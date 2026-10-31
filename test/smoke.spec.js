@@ -1,6 +1,7 @@
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 import {jest} from '@jest/globals';
+import express from 'express';
 
 const createClient = jest.fn();
 jest.unstable_mockModule('redis', () => ({default: {createClient}}));
@@ -36,6 +37,23 @@ test('smoke exits non-zero when the version differs', async () => {
     code: 1,
     stderr: expect.stringContaining('FAIL GET /version: version is v9.9.9'),
   });
+});
+
+test('smoke exits non-zero when an endpoint redirects to a passing response', async () => {
+  const fixture = express();
+  fixture.get('/ready', (req, res) => res.redirect(302, '/ready-target'));
+  fixture.get('/ready-target', (req, res) => res.json({ready: true}));
+  fixture.use(app);
+  const redirecting = fixture.listen(0, '127.0.0.1');
+  await new Promise(resolve => redirecting.once('listening', resolve));
+  try {
+    await expect(smoke(`http://127.0.0.1:${redirecting.address().port}`, 'v1.2.3-smoke')).rejects.toMatchObject({
+      code: 1,
+      stderr: expect.stringContaining('FAIL GET /ready: status 302, expected 200'),
+    });
+  } finally {
+    await new Promise(resolve => redirecting.close(resolve));
+  }
 });
 
 test('smoke exits non-zero when the app never starts', async () => {

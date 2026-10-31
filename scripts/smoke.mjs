@@ -3,7 +3,8 @@
 //   node scripts/smoke.mjs <base-url> <expected-version>
 //
 // Waits for /live, then checks the public probe, page and metrics contracts.
-// Exits 1 when the app never starts or any response differs.
+// Exits 1 when the app never starts or any response differs. Redirects are not
+// followed, so a 3xx response fails the check for the requested path.
 
 import { readFileSync } from 'node:fs';
 
@@ -23,6 +24,7 @@ const minNodeMajor = parseInt(engines.match(/\d+/)[0], 10);
 function get(path) {
   return fetch(new URL(path, baseUrl), {
     headers: { 'X-Request-Id': REQUEST_ID },
+    redirect: 'manual',
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
 }

@@ -1,5 +1,6 @@
 import request from 'supertest';
 import {jest} from '@jest/globals';
+import {captureLogs} from './log-capture.js';
 
 const client = {
   isOpen: false,
@@ -14,7 +15,9 @@ jest.unstable_mockModule('redis', () => ({default: {createClient: () => client}}
 delete process.env.REDIS_ENABLED;
 const {default: app} = await import('../server.js');
 
+let logs;
 beforeEach(() => {
+  logs = captureLogs();
   jest.clearAllMocks();
   client.isOpen = false;
   client.isReady = false;
@@ -23,6 +26,7 @@ beforeEach(() => {
     client.isReady = true;
   });
 });
+afterEach(() => logs.restore());
 
 test('Redis is enabled by default and renders shared telemetry without thumbs', async () => {
   const response = await request(app).get('/');
@@ -38,20 +42,20 @@ test('Redis is enabled by default and renders shared telemetry without thumbs', 
 });
 
 test('unreachable Redis hides dependent controls and returns an unavailable response', async () => {
-  const log = jest.spyOn(console, 'error').mockImplementation(() => {});
   client.connect.mockRejectedValue(new Error('unreachable'));
-  try {
-    const page = await request(app).get('/');
-    expect(page.status).toBe(200);
-    expect(page.text).not.toContain('btn-thumbs-up');
-    expect(page.text).not.toContain('/counter.js');
-    expect(page.text).toContain('data-telemetry-source="process"');
-    expect(page.text).toContain('/pods.js');
-    expect((await request(app).get('/cache/demo')).status).toBe(503);
-    expect(client.get).not.toHaveBeenCalled();
-  } finally {
-    log.mockRestore();
-  }
+  const page = await request(app).get('/');
+  expect(page.status).toBe(200);
+  expect(page.text).not.toContain('btn-thumbs-up');
+  expect(page.text).not.toContain('/counter.js');
+  expect(page.text).toContain('data-telemetry-source="process"');
+  expect(page.text).toContain('/pods.js');
+  const cache = await request(app).get('/cache/demo');
+  expect(cache.status).toBe(503);
+  expect(client.get).not.toHaveBeenCalled();
+  const failures = logs.records().filter(record => record.event === 'redis.connect_failed');
+  expect(failures.map(record => record.request_id))
+    .toEqual([page.headers['x-request-id'], cache.headers['x-request-id']]);
+  expect(failures.every(record => record.level === 'error' && record.error.message === 'unreachable')).toBe(true);
 });
 
 test('an open but reconnecting socket does not advertise Redis features or queue commands', async () => {

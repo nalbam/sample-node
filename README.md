@@ -104,6 +104,74 @@ npm run smoke -- http://localhost:3000 v0.0.0-smoke
 docker rm -f sample-node-smoke
 ```
 
+### Logging
+
+The app writes one JSON object per line: `debug` and `info` records go to stdout,
+`warn` and `error` records to stderr. Every record has `time` (ISO 8601 UTC),
+`level` and `message`. Records written while handling a request also have
+`request_id`, the same value as the response's `X-Request-Id` header. This includes
+records from awaited work such as Redis connection failures and remote calls, and
+the `POST /oom` fill timer. Other fields depend on the event; `event` names a
+record kind for filtering.
+
+```json
+{"time":"2026-11-02T12:00:00.123Z","level":"info","message":"request completed","request_id":"3f0c9a52-6f6e-4f7e-9d1e-2b8f0f4f8c11","event":"http.request.completed","method":"GET","path":"/health","status":200,"duration_ms":0.412}
+{"time":"2026-11-02T12:00:01.456Z","level":"error","message":"failed to connect redis","request_id":"checkout-42","event":"redis.connect_failed","error":{"name":"Error","message":"connect ECONNREFUSED 10.0.0.5:6379","code":"ECONNREFUSED","stack":["at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)"]}}
+```
+
+To follow one request, send your own id (1-128 letters, digits, `-` or `_`) or read
+the generated one from the response header. Then filter the logs by that value:
+
+```bash
+curl -si -H 'X-Request-Id: checkout-42' localhost:3000/cache/foo | grep -i x-request-id
+docker logs sample-node 2>&1 | grep '"request_id":"checkout-42"'
+```
+
+Each request writes exactly one of these records when it ends:
+
+- `http.request.completed` (`info`): the whole response was sent. It includes
+  `method`, `path` without the query string, the actual `status`, and `duration_ms`
+  from a monotonic clock. Every path is covered, including static files, 404s,
+  rejected JSON bodies, `/status` and `/work/:ms`.
+- `http.request.aborted` (`warn`): the client closed the connection before the
+  response was sent. It has the same fields; `status` is the status the app had set
+  at that moment.
+
+Route handlers also write `debug` records such as `get /ready`. Errors that reach
+Express, such as a malformed JSON body, are logged as `http.request.error`: client
+errors (4xx) at `warn` with only the error name and type, others at `error`. The
+response status and body are the ones Express would send anyway.
+
+`LOG_LEVEL` sets the lowest level written: `debug`, `info` (default), `warn` or
+`error`, case-insensitive. Unset or empty means `info`. Any other value runs at
+`info` and writes one `logger.invalid_level` warning at startup; the warning does
+not repeat the value. Completion records are `info`, so `LOG_LEVEL=warn` or `error`
+drops them along with the rest of the request traffic, for example when the load
+switch sends many `/work` requests. Aborted requests and errors are still written.
+Redis client events (`redis.connected`, `redis.error`), the telemetry publisher
+(`telemetry.publish_failed`) and startup records belong to the process and never
+have `request_id`.
+
+Sensitive values are kept out of the logs:
+
+- Request headers, bodies, query strings and request objects are never logged.
+  `Authorization` and `Cookie` values are not written.
+- Each request's `Authorization`, `Proxy-Authorization` and `Cookie` values are
+  replaced by `[REDACTED]` in every record of that request, including error
+  messages and stack frames, and in records written later for it (completion,
+  OOM fill). The whole header value is always removed, and so are the
+  credential after the auth scheme and each cookie value of 4 or more
+  characters.
+- The value of `REDIS_PASS` is replaced by `[REDACTED]` wherever it appears,
+  including error messages and stack frames. So are credentials in URLs
+  (`//user:pass@`) and values under keys such as `password`, `token`, `secret`,
+  `authorization` or `cookie`.
+- Errors are reduced to `name`, `message`, `code`, `type`, `status` and the stack
+  frames. Other properties, such as the raw body that a JSON parse error carries,
+  are dropped. Messages of 4xx errors, which can quote the request body, are not
+  logged.
+- Newlines in messages or values are escaped, so input cannot start a new record.
+
 ## Release
 
 Pull requests and pushes to `main` or `master` run `npm ci`, lint and tests on
@@ -193,7 +261,8 @@ Every response carries an `X-Request-Id` header. The request's `X-Request-Id` va
 back only when the whole value is 1 to 128 ASCII letters, digits, hyphens (`-`) or underscores
 (`_`). A missing, empty or otherwise invalid value (longer than 128 characters, containing
 whitespace or any other character) is never echoed, trimmed or reused; a new UUID is generated
-for that request instead.
+for that request instead. Every log record written for the request carries the same value as
+`request_id`; see [Logging](#logging).
 
 ### Pages
 
@@ -377,7 +446,8 @@ curl localhost:3000/cache/foo
 | `REDIS_ENABLED` | `true`                     | Set to `false` to disable Redis features and connections |
 | `REDIS_HOST`   | `redis`                      | Redis host                               |
 | `REDIS_PORT`   | `6379`                       | Redis port                               |
-| `REDIS_PASS`   | -                            | Redis password                           |
+| `REDIS_PASS`   | -                            | Redis password; redacted from logs       |
+| `LOG_LEVEL`    | `info`                       | Lowest log level written: `debug`, `info`, `warn` or `error`; other values fall back to `info` with one warning. See [Logging](#logging) |
 
 ## License
 

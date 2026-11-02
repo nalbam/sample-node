@@ -21,6 +21,14 @@ export default [
     },
   },
   {
+    // Application code logs through lib/logger.js so every line is JSON with
+    // request_id; scripts/ and tests keep plain console output.
+    files: ['server.js', 'lib/**/*.js'],
+    rules: {
+      'no-console': 'error',
+    },
+  },
+  {
     files: ['public/**/*.js'],
     languageOptions: {
       ecmaVersion: 'latest',

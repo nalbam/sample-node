@@ -275,6 +275,57 @@ describe('X-Request-Id header', () => {
     expect(res.headers['x-request-id']).toBe('abc-123');
   });
 
+  test.each([
+    ['1 character', 'a'],
+    ['128 characters', 'A1-_'.repeat(32)],
+    ['mixed allowed characters', 'Req_42-abcXYZ-0_9'],
+  ])('echoes a valid id of %s', async (_label, id) => {
+    const res = await request(app).get('/live').set('X-Request-Id', id);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ live: true });
+    expect(res.headers['x-request-id']).toBe(id);
+  });
+
+  test.each([
+    ['129 characters', 'a'.repeat(129)],
+    ['1000 characters', 'b'.repeat(1000)],
+    ['inner whitespace', 'abc def'],
+    ['inner tab', 'abc\tdef'],
+    ['a dot', 'abc.123'],
+    ['a semicolon', 'abc;123'],
+    ['markup symbols', '<script>x</script>'],
+    ['non-ASCII letters', 'caf\u00e9-id'],
+  ])('replaces an invalid id with %s by a new UUID', async (_label, id) => {
+    const res = await request(app).get('/live').set('X-Request-Id', id);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ live: true });
+    expect(res.headers['x-request-id']).toMatch(uuid);
+    expect(res.headers['x-request-id']).not.toBe(id);
+    expect(res.text).not.toContain(id);
+  });
+
+  test('replaces an empty id by a new UUID', async () => {
+    const res = await request(app).get('/live').set('X-Request-Id', '');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ live: true });
+    expect(res.headers['x-request-id']).toMatch(uuid);
+  });
+
+  test('generates a different UUID per request for the same invalid id', async () => {
+    const id = 'bad id';
+    const a = await request(app).get('/no-such-path').set('X-Request-Id', id);
+    const b = await request(app).get('/no-such-path').set('X-Request-Id', id);
+
+    expect(a.status).toBe(404);
+    expect(a.headers['x-request-id']).toMatch(uuid);
+    expect(b.headers['x-request-id']).toMatch(uuid);
+    expect(a.headers['x-request-id']).not.toBe(b.headers['x-request-id']);
+    expect(a.text).not.toContain(id);
+  });
+
   test('generates a UUID when the header is missing', async () => {
     const res = await request(app).get('/live');
 

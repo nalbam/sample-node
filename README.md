@@ -189,8 +189,11 @@ shows the same digest as `nalbam/sample-node:$tag`.
 
 ## Endpoints
 
-Every response carries an `X-Request-Id` header. The value of the request's `X-Request-Id`
-header is echoed back as is; without one, a new UUID is generated per request.
+Every response carries an `X-Request-Id` header. The request's `X-Request-Id` value is echoed
+back only when the whole value is 1 to 128 ASCII letters, digits, hyphens (`-`) or underscores
+(`_`). A missing, empty or otherwise invalid value (longer than 128 characters, containing
+whitespace or any other character) is never echoed, trimmed or reused; a new UUID is generated
+for that request instead.
 
 ### Pages
 

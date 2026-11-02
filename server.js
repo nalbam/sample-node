@@ -75,9 +75,14 @@ function ensureRedisConnection() {
 const app = express();
 app.set('view engine', 'ejs');
 
+// Client ids are reused only when they are 1-128 ASCII letters, digits, '-' or '_';
+// anything else is replaced, never trimmed, so arbitrary input never becomes the id.
+const REQUEST_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
+
 // Registered first so every response, including static files and 404s, carries it.
 app.use((req, res, next) => {
-  req.id = req.get('X-Request-Id') || randomUUID();
+  const requestId = req.get('X-Request-Id');
+  req.id = requestId && REQUEST_ID_PATTERN.test(requestId) ? requestId : randomUUID();
   res.set('X-Request-Id', req.id);
   next();
 });

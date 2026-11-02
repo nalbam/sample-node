@@ -18,6 +18,8 @@ const MB = 1024 * 1024;
 import os from 'os';
 import { fileURLToPath } from 'url';
 import { randomUUID } from 'node:crypto';
+import { createRequire } from 'node:module';
+import { createLogger, runWithContext, runWithoutContext, secretsFromHeaders } from './lib/logger.js';
 import { createTelemetry } from './lib/telemetry.js';
 import { createTelemetryStore, startTelemetryPublisher, validCursor } from './lib/telemetry-store.js';
 
@@ -26,6 +28,26 @@ import express from 'express';
 import moment from 'moment-timezone';
 import redis from 'redis';
 import prom from 'prom-client';
+
+// Express's own default responder, resolved from express so the version always
+// matches. The error handler below answers through it without its console output.
+const require = createRequire(import.meta.url);
+const finalhandler = createRequire(require.resolve('express'))('finalhandler');
+
+// Request logs carry request_id from the async context set by the first
+// middleware. Process-level events use serviceLog, which never has one.
+const logger = createLogger({level: process.env.LOG_LEVEL, secrets: [REDIS_PASS]});
+const serviceLog = logger.detached();
+
+// Secret header values (Authorization, Cookie) of each request, removed from
+// every log of that request, including error messages and stacks.
+const requestSecrets = new WeakMap();
+
+// A logger bound to the request's id and secrets, for callbacks that run
+// outside the request's async context (response events, timers).
+function requestLogger(req) {
+  return logger.child({request_id: req.id}, {secrets: requestSecrets.get(req) ?? []});
+}
 
 // redis
 const client = REDIS_ENABLED ? redis.createClient({
@@ -38,37 +60,39 @@ const client = REDIS_ENABLED ? redis.createClient({
     reconnectStrategy: retries => (retries >= 2 ? new Error('redis unreachable') : 100),
   }
 }) : null;
+// The shared client's events belong to the process, not to the request that
+// happened to open the connection.
 client?.on('connect', () => {
-  console.log(`connected to redis: ${REDIS_HOST}:${REDIS_PORT}`);
+  serviceLog.info('connected to redis', {event: 'redis.connected', redis_host: REDIS_HOST, redis_port: REDIS_PORT});
 });
 client?.on('error', err => {
-  console.error(`${err}`);
+  serviceLog.error('redis client error', {event: 'redis.error', error: err});
 });
 
 // The redis client needs an explicit connect. Concurrent requests share the
-// in-flight attempt so they never open a second connection.
+// in-flight attempt so they never open a second connection. The attempt settles
+// to the connect error (or null), and every caller logs a failure in its own
+// request context.
 let connecting = null;
 
-function ensureRedisConnection() {
-  if (!client) return Promise.resolve(false);
-  if (client.isReady) {
-    return Promise.resolve(true);
-  }
-  if (connecting) return connecting;
+async function ensureRedisConnection() {
+  if (!client) return false;
+  if (client.isReady) return true;
   // An open socket can still be reconnecting or authenticating.
-  if (client.isOpen) return Promise.resolve(false);
+  if (!connecting && client.isOpen) return false;
   if (!connecting) {
-    connecting = client.connect()
-      .then(() => true)
-      .catch(err => {
-        console.error(`failed to connect redis: ${err}`);
-        return false;
-      })
+    connecting = runWithoutContext(() => client.connect())
+      .then(() => null, err => err)
       .finally(() => {
         connecting = null;
       });
   }
-  return connecting;
+  const error = await connecting;
+  if (error) {
+    logger.error('failed to connect redis', {event: 'redis.connect_failed', error});
+    return false;
+  }
+  return true;
 }
 
 // express
@@ -79,12 +103,42 @@ app.set('view engine', 'ejs');
 // anything else is replaced, never trimmed, so arbitrary input never becomes the id.
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
 
-// Registered first so every response, including static files and 404s, carries it.
+// Registered first so every response, including static files, 404s and errors,
+// carries the id and is logged under it.
+//
+// Completion: 'finish' means the whole response was handed to the OS, and logs
+// one info `http.request.completed` record. 'close' without 'finish' means the
+// client went away first and logs one warn `http.request.aborted` record
+// instead. Whichever fires first wins, so a request never logs both.
 app.use((req, res, next) => {
+  const started = performance.now();
   const requestId = req.get('X-Request-Id');
   req.id = requestId && REQUEST_ID_PATTERN.test(requestId) ? requestId : randomUUID();
   res.set('X-Request-Id', req.id);
-  next();
+  const secrets = secretsFromHeaders(req.headers);
+  requestSecrets.set(req, secrets);
+
+  // Response events run outside the request's async context, so bind the id.
+  const log = requestLogger(req);
+  const fields = () => ({
+    method: req.method,
+    path: req.originalUrl.split('?')[0],
+    status: res.statusCode,
+    duration_ms: Math.round((performance.now() - started) * 1000) / 1000,
+  });
+  let logged = false;
+  res.once('finish', () => {
+    if (logged) return;
+    logged = true;
+    log.info('request completed', {event: 'http.request.completed', ...fields()});
+  });
+  res.once('close', () => {
+    if (logged) return;
+    logged = true;
+    log.warn('request aborted', {event: 'http.request.aborted', ...fields()});
+  });
+
+  runWithContext({request_id: req.id, secrets}, next);
 });
 
 app.use(cors());
@@ -112,7 +166,7 @@ sampleTelemetry();
 const telemetryStore = client ? createTelemetryStore(client, `sample-node:telemetry:${encodeURIComponent(CLUSTER)}:${encodeURIComponent(PROFILE)}`) : null;
 
 async function handleRemoteService(res, serviceName) {
-  console.log(`get /${serviceName}`);
+  logger.debug(`get /${serviceName}`);
   const remoteService = PROFILE === 'default' ? `http://sample-${serviceName}` : `${PROTOCOL}://sample-${serviceName}.${HOSTNAME}`;
 
   try {
@@ -120,7 +174,7 @@ async function handleRemoteService(res, serviceName) {
     const body = await response.json();
     return res.status(response.status).json(body);
   } catch (err) {
-    console.error(`${err}`);
+    logger.error('remote service call failed', {event: 'remote.failed', service: serviceName, error: err});
     return res.status(500).json({
       result: 'error',
     });
@@ -132,7 +186,7 @@ app.get('/spring', async (req, res) => handleRemoteService(res, 'spring'));
 app.get('/tomcat', async (req, res) => handleRemoteService(res, 'tomcat'));
 
 app.get('/', async function (req, res) {
-  console.log(`get /`);
+  logger.debug(`get /`);
 
   const host = os.hostname();
   const date = moment().tz('Asia/Seoul').format();
@@ -149,7 +203,7 @@ app.get('/', async function (req, res) {
 });
 
 app.get('/drop', async function (req, res) {
-  console.log(`get /drop`);
+  logger.debug(`get /drop`);
 
   res.render('drop.ejs', {
     rate: 100,
@@ -159,7 +213,7 @@ app.get('/drop', async function (req, res) {
 app.get('/drop/:rate', async function (req, res) {
   const rate = parseFloat(req.params.rate);
 
-  console.log(`get /drop/${req.params.rate}`);
+  logger.debug(`get /drop/${req.params.rate}`);
 
   if (Number.isNaN(rate)) {
     return res.status(400).json({
@@ -174,7 +228,7 @@ app.get('/drop/:rate', async function (req, res) {
 });
 
 app.get('/read', async function (req, res) {
-  console.log(`get /read`);
+  logger.debug(`get /read`);
 
   return res.status(200).json({
     result: 'read',
@@ -182,19 +236,19 @@ app.get('/read', async function (req, res) {
 });
 
 app.get('/ready', function (req, res) {
-  console.log(`get /ready`);
+  logger.debug(`get /ready`);
 
   return res.status(200).json({ ready: true });
 });
 
 app.get('/live', async function (req, res) {
-  console.log(`get /live`);
+  logger.debug(`get /live`);
 
   return res.status(200).json({ live: true });
 });
 
 app.get('/version', function (req, res) {
-  console.log(`get /version`);
+  logger.debug(`get /version`);
 
   return res.status(200).json({
     version: VERSION,
@@ -203,7 +257,7 @@ app.get('/version', function (req, res) {
 });
 
 app.get('/runtime', function (req, res) {
-  console.log(`get /runtime`);
+  logger.debug(`get /runtime`);
 
   return res.status(200).json({
     node: process.version,
@@ -212,7 +266,7 @@ app.get('/runtime', function (req, res) {
 });
 
 app.get('/uptime', function (req, res) {
-  console.log(`get /uptime`);
+  logger.debug(`get /uptime`);
 
   return res.status(200).json({
     uptime: process.uptime(),
@@ -220,13 +274,13 @@ app.get('/uptime', function (req, res) {
 });
 
 app.get('/ping', function (req, res) {
-  console.log(`get /ping`);
+  logger.debug(`get /ping`);
 
   return res.status(200).json({ pong: true });
 });
 
 app.get('/echo', function (req, res) {
-  console.log(`get /echo`);
+  logger.debug(`get /echo`);
 
   const msg = req.query.msg;
 
@@ -238,31 +292,31 @@ app.get('/echo', function (req, res) {
 });
 
 app.get('/time', function (req, res) {
-  console.log(`get /time`);
+  logger.debug(`get /time`);
 
   return res.status(200).json({ time: new Date().toISOString() });
 });
 
 app.get('/random', function (req, res) {
-  console.log(`get /random`);
+  logger.debug(`get /random`);
 
   return res.status(200).json({ value: Math.random() });
 });
 
 app.get('/uuid', function (req, res) {
-  console.log(`get /uuid`);
+  logger.debug(`get /uuid`);
 
   return res.status(200).json({ uuid: randomUUID() });
 });
 
 app.get('/hostname', function (req, res) {
-  console.log(`get /hostname`);
+  logger.debug(`get /hostname`);
 
   return res.status(200).json({ hostname: os.hostname() });
 });
 
 app.get('/health', async function (req, res) {
-  console.log(`get /health`);
+  logger.debug(`get /health`);
 
   if (Math.random() * 100 >= FAULT_RATE) {
     return res.status(200).json({
@@ -279,7 +333,9 @@ app.get('/health', async function (req, res) {
   }
 });
 
-// Keep periodic snapshots quiet so they do not bury the OOM diagnostics.
+// The dashboard polls /status every second and the publisher snapshots every
+// second, so neither adds its own log line; each /status request still logs one
+// info completion record, which LOG_LEVEL=warn suppresses.
 function statusSnapshot() {
   return {
     result: 'ok',
@@ -312,7 +368,7 @@ app.get('/telemetry', async function (req, res) {
   try {
     return res.json({result: 'ok', ...await telemetryStore.read(after)});
   } catch (error) {
-    console.error(`telemetry read failed: ${error.message}`);
+    logger.error('telemetry read failed', {event: 'telemetry.read_failed', error});
     return res.status(503).json({result: 'error', message: 'Telemetry storage unavailable'});
   }
 });
@@ -320,7 +376,7 @@ app.get('/telemetry', async function (req, res) {
 app.get('/loop/:count', async function (req, res) {
   let count = parseInt(req.params.count, 10);
 
-  console.log(`get /loop/${req.params.count}`);
+  logger.debug(`get /loop/${req.params.count}`);
 
   if (Number.isNaN(count) || count < 0) {
     return res.status(400).json({
@@ -349,7 +405,7 @@ app.get('/loop/:count', async function (req, res) {
       data: body
     });
   } catch (err) {
-    console.error(`${err}`);
+    logger.error('loop call failed', {event: 'loop.failed', error: err});
     return res.status(500).json({
       result: 'error',
       version: VERSION,
@@ -376,8 +432,9 @@ function burn(ms) {
   return sum;
 }
 
-// No request log: the load switch calls this many times a second, and the noise
-// would bury the lines that matter, like the oom plan.
+// No handler log: the load switch calls this many times a second. Each request
+// still logs one info completion record; LOG_LEVEL=warn suppresses those so the
+// warn/error lines stand out.
 app.get('/work/:ms', async function (req, res) {
   const ms = parseFloat(req.params.ms);
 
@@ -417,7 +474,9 @@ const oomBallast = [];
 let oomTimer = null;
 const oomState = {active: false, startedAt: null, allocatedBytes: 0, capped: false};
 
-function startOomAllocation() {
+// `log` is bound to the request that started the fill, so the plan and every
+// timer line keep its request_id; later POSTs return here without touching it.
+function startOomAllocation(log) {
   if (oomTimer) {
     return;
   }
@@ -436,14 +495,19 @@ function startOomAllocation() {
   // where nothing else would.
   const cap = limit ? Infinity : OOM_MAX_BYTES;
 
-  console.log(`oom: limit ${limit ? `${Math.round(limit / MB)}mb` : 'none'}, filling ${Math.round(headroom / MB)}mb over ${OOM_FILL_MS / 1000}s in ${Math.round(chunk / MB)}mb chunks`);
+  log.info(`oom: limit ${limit ? `${Math.round(limit / MB)}mb` : 'none'}, filling ${Math.round(headroom / MB)}mb over ${OOM_FILL_MS / 1000}s in ${Math.round(chunk / MB)}mb chunks`, {
+    event: 'oom.started',
+    limit_bytes: limit || null,
+    headroom_bytes: headroom,
+    chunk_bytes: chunk,
+  });
 
   oomTimer = setInterval(() => {
     if (oomBallast.length * chunk >= cap) {
       clearInterval(oomTimer);
       oomState.active = false;
       oomState.capped = true;
-      console.log(`oom: stopped at the ${Math.round(OOM_MAX_BYTES / MB)}mb cap, this process has no memory limit`);
+      log.warn(`oom: stopped at the ${Math.round(OOM_MAX_BYTES / MB)}mb cap, this process has no memory limit`, {event: 'oom.capped'});
       return;
     }
 
@@ -451,17 +515,19 @@ function startOomAllocation() {
     // zero page, so it never commits real memory and RSS stays flat.
     oomBallast.push(Buffer.alloc(chunk, 1));
     oomState.allocatedBytes += chunk;
-    console.log(`oom: rss ${Math.round(process.memoryUsage.rss() / MB)}mb`);
+    const rss = process.memoryUsage.rss();
+    log.info(`oom: rss ${Math.round(rss / MB)}mb`, {event: 'oom.progress', rss_bytes: rss, allocated_bytes: oomState.allocatedBytes});
   }, OOM_INTERVAL_MS);
 }
 
 // POST so a prefetch, crawler or probe can never kill the instance.
 app.post('/oom', async function (req, res) {
-  console.log(`post /oom`);
+  logger.debug(`post /oom`);
 
   // Allocate only after the response is flushed, so the caller learns which
   // instance is going down.
-  res.on('finish', startOomAllocation);
+  const log = requestLogger(req);
+  res.on('finish', () => startOomAllocation(log));
 
   return res.status(202).json({
     result: 'oom',
@@ -491,7 +557,7 @@ function handleRateBasedResponse(res, rate, successCondition) {
 app.get('/success/:rate', async function (req, res) {
   const rate = parseFloat(req.params.rate);
 
-  console.log(`get /success/${req.params.rate}`);
+  logger.debug(`get /success/${req.params.rate}`);
 
   if (Number.isNaN(rate)) {
     return res.status(400).json({
@@ -506,7 +572,7 @@ app.get('/success/:rate', async function (req, res) {
 app.get('/fault/:rate', async function (req, res) {
   const rate = parseFloat(req.params.rate);
 
-  console.log(`get /fault/${req.params.rate}`);
+  logger.debug(`get /fault/${req.params.rate}`);
 
   if (Number.isNaN(rate)) {
     return res.status(400).json({
@@ -521,7 +587,7 @@ app.get('/fault/:rate', async function (req, res) {
 app.get('/delay/:sec', async function (req, res) {
   const sec = parseFloat(req.params.sec);
 
-  console.log(`get /delay/${req.params.sec}`);
+  logger.debug(`get /delay/${req.params.sec}`);
 
   if (Number.isNaN(sec) || sec < 0) {
     return res.status(400).json({
@@ -541,7 +607,7 @@ app.get('/delay/:sec', async function (req, res) {
 app.get('/cache/:name', async function (req, res) {
   const name = req.params.name;
 
-  console.log(`get /cache/${name}`);
+  logger.debug(`get /cache/${name}`);
 
   if (!(await ensureRedisConnection())) {
     return res.status(503).json({
@@ -554,7 +620,7 @@ app.get('/cache/:name', async function (req, res) {
     const result = await client.get(`cache:${name}`);
     return res.status(200).json(result == null ? {} : JSON.parse(result));
   } catch (err) {
-    console.error(`${err}`);
+    logger.error('cache operation failed', {event: 'cache.failed', error: err});
     return res.status(500).json({
       status: 500,
       message: 'internal server error',
@@ -566,7 +632,7 @@ app.get('/cache/:name', async function (req, res) {
 app.put('/cache/:name', async function (req, res) {
   const name = req.params.name;
 
-  console.log(`put /cache/${name}`);
+  logger.debug(`put /cache/${name}`);
 
   if (!(await ensureRedisConnection())) {
     return res.status(503).json({
@@ -580,7 +646,7 @@ app.put('/cache/:name', async function (req, res) {
     const result = await client.set(`cache:${name}`, json);
     return res.status(200).json(result == null ? {} : result);
   } catch (err) {
-    console.error(`${err}`);
+    logger.error('cache operation failed', {event: 'cache.failed', error: err});
     return res.status(500).json({
       status: 500,
       message: 'internal server error',
@@ -589,23 +655,44 @@ app.put('/cache/:name', async function (req, res) {
 });
 
 app.get('/metrics', async function (req, res) {
-  console.log(`get /metrics`);
+  logger.debug(`get /metrics`);
 
   res.setHeader('Content-Type', register.contentType);
   return res.send(await register.metrics());
+});
+
+// Last handler: logs errors passed to next() or thrown by a route, then answers
+// through Express's default responder, so status and body stay unchanged. For
+// client errors (4xx) only the error kind is logged: their messages can quote
+// the request body, e.g. a JSON parse failure.
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  const status = [err?.status, err?.statusCode].find(code => Number.isInteger(code) && code >= 400 && code < 600)
+    ?? (res.statusCode >= 400 && res.statusCode < 600 ? res.statusCode : 500);
+  const log = requestLogger(req);
+  if (status < 500) {
+    log.warn('request rejected', {
+      event: 'http.request.error',
+      status,
+      error: {name: err?.name, ...(typeof err?.type === 'string' && {type: err.type})},
+    });
+  } else {
+    log.error('request failed', {event: 'http.request.error', status, error: err});
+  }
+  finalhandler(req, res, {env: app.get('env')})(err);
 });
 
 export default app;
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   if (REDIS_ENABLED) {
-    console.log(`connecting to redis: ${REDIS_HOST}:${REDIS_PORT}`);
+    serviceLog.info('connecting to redis', {event: 'redis.connecting', redis_host: REDIS_HOST, redis_port: REDIS_PORT});
     startTelemetryPublisher(async () => {
       if (await ensureRedisConnection()) await telemetryStore.publish(statusSnapshot());
-    }, error => console.error(`telemetry publish failed: ${error.message}`));
+    }, error => serviceLog.error('telemetry publish failed', {event: 'telemetry.publish_failed', error}));
   }
 
   app.listen(PORT, function () {
-    console.log(`[${PROFILE}] Listening on port ${PORT}!`);
+    serviceLog.info(`[${PROFILE}] Listening on port ${PORT}!`, {event: 'server.listening', port: PORT, profile: PROFILE, version: VERSION, log_level: logger.level});
   });
 }

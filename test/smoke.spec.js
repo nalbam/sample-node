@@ -2,6 +2,7 @@ import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 import {jest} from '@jest/globals';
 import express from 'express';
+import {captureLogs} from './log-capture.js';
 
 const createClient = jest.fn();
 jest.unstable_mockModule('redis', () => ({default: {createClient}}));
@@ -13,6 +14,11 @@ const run = promisify(execFile);
 const smoke = (url, version) => run(process.execPath, ['scripts/smoke.mjs', url, version], {
   env: {...process.env, SMOKE_START_TIMEOUT_MS: '2000'},
 });
+
+// Keep the app's request logs out of the test output.
+let logs;
+beforeEach(() => { logs = captureLogs(); });
+afterEach(() => logs.restore());
 
 let server;
 let baseUrl;

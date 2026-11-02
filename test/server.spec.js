@@ -3,6 +3,12 @@ import request from 'supertest';
 import {jest} from '@jest/globals';
 
 import app from '../server.js';
+import {captureLogs} from './log-capture.js';
+
+// Keep request logs out of the test output; test/request-logging.spec.js checks them.
+let logs;
+beforeEach(() => { logs = captureLogs(); });
+afterEach(() => logs.restore());
 
 describe('probe endpoints', () => {
   test('GET /ready', async () => {

@@ -1,10 +1,16 @@
 import request from 'supertest';
 import {jest} from '@jest/globals';
+import {captureLogs} from './log-capture.js';
 
 const createClient = jest.fn();
 jest.unstable_mockModule('redis', () => ({default: {createClient}}));
 process.env.REDIS_ENABLED = 'false';
 const {default: app} = await import('../server.js');
+
+// Keep request logs out of the test output; test/request-logging.spec.js checks them.
+let logs;
+beforeEach(() => { logs = captureLogs(); });
+afterEach(() => logs.restore());
 
 test('Redis-free page hides counters and keeps live process telemetry', async () => {
   const response = await request(app).get('/');

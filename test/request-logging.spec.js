@@ -169,7 +169,15 @@ describe('sensitive headers', () => {
     const send = (req, id) => req.set('Authorization', AUTH).set('Cookie', COOKIE).set('X-Request-Id', id);
     await send(request(app).get('/live'), 'h-ok');
     await send(request(app).get('/no-such'), 'h-404');
-    await send(request(app).get('/node'), 'h-500');
+    // /node calls another service. Refuse that call at once so the test needs no network: a cluster resolver can
+    // leave the real connection pending past the test timeout.
+    const refused = jest.spyOn(global, 'fetch').mockRejectedValue(
+      new TypeError('fetch failed', {cause: Object.assign(new Error('connect ECONNREFUSED'), {code: 'ECONNREFUSED'})}));
+    try {
+      await send(request(app).get('/node'), 'h-500');
+    } finally {
+      refused.mockRestore();
+    }
     await send(request(app).put('/cache/x').set('Content-Type', 'application/json'), 'h-400').send('{bad');
     await settle();
 

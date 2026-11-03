@@ -51,6 +51,14 @@ test('the shared client gets the password and logs through its event handlers', 
   expect(handlers.error).toBeInstanceOf(Function);
 });
 
+test('the shared client fails fast instead of queueing offline or reconnecting on its own', () => {
+  // REDIS_TIMEOUT_MS is unset here, so connects use the 2000ms default.
+  expect(clientOptions).toMatchObject({
+    disableOfflineQueue: true,
+    socket: {connectTimeout: 2000, reconnectStrategy: false},
+  });
+});
+
 test('a shared failed connection logs the failure under each waiting request', async () => {
   client.connect.mockImplementation(async () => {
     await settle(30);

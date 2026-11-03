@@ -11,6 +11,7 @@ const REDIS_ENABLED = process.env.REDIS_ENABLED !== 'false';
 const REDIS_HOST = process.env.REDIS_HOST ?? 'redis';
 const REDIS_PORT = parseInt(process.env.REDIS_PORT, 10) || 6379;
 const REDIS_PASS = process.env.REDIS_PASS ?? '';
+const REDIS_TIMEOUT_MS = parseRedisTimeout(process.env.REDIS_TIMEOUT_MS);
 const VERSION = process.env.VERSION ?? 'v0.0.0';
 
 const MB = 1024 * 1024;
@@ -19,7 +20,8 @@ import os from 'os';
 import { fileURLToPath } from 'url';
 import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
-import { createLogger, runWithContext, runWithoutContext, secretsFromHeaders } from './lib/logger.js';
+import { createLogger, runWithContext, secretsFromHeaders } from './lib/logger.js';
+import { createRedisAccess, parseRedisTimeout, RedisUnavailableError } from './lib/redis.js';
 import { createTelemetry } from './lib/telemetry.js';
 import { createTelemetryStore, startTelemetryPublisher, validCursor } from './lib/telemetry-store.js';
 import { createShutdownManager, parseShutdownTimeout } from './lib/shutdown.js';
@@ -54,11 +56,15 @@ function requestLogger(req) {
 const client = REDIS_ENABLED ? redis.createClient({
   url: `redis://${REDIS_HOST}:${REDIS_PORT}`,
   ...(REDIS_PASS && {password: REDIS_PASS}),
+  // A command issued while there is no ready connection fails at once
+  // instead of waiting in the offline queue and running after recovery.
+  disableOfflineQueue: true,
   socket: {
-    connectTimeout: 2000,
-    // Stop retrying so a request fails fast instead of hanging. The next
-    // request that needs redis starts a fresh attempt.
-    reconnectStrategy: retries => (retries >= 2 ? new Error('redis unreachable') : 100),
+    connectTimeout: REDIS_TIMEOUT_MS,
+    // No background reconnect: its handshake would have no time limit. The
+    // next request or publish that needs Redis opens a new connection within
+    // its own REDIS_TIMEOUT_MS budget (lib/redis.js).
+    reconnectStrategy: false,
   }
 }) : null;
 // The shared client's events belong to the process, not to the request that
@@ -70,39 +76,9 @@ client?.on('error', err => {
   serviceLog.error('redis client error', {event: 'redis.error', error: err});
 });
 
-// The redis client needs an explicit connect. Concurrent requests share the
-// in-flight attempt so they never open a second connection. The attempt settles
-// to the connect error (or null), and every caller logs a failure in its own
-// request context.
-let connecting = null;
-
-// Set once shutdown starts closing Redis. From then on no new connection is
-// opened, and an attempt that completes late is torn down again.
-let redisClosed = false;
-
-async function ensureRedisConnection() {
-  if (!client || redisClosed) return false;
-  if (client.isReady) return true;
-  // An open socket can still be reconnecting or authenticating.
-  if (!connecting && client.isOpen) return false;
-  if (!connecting) {
-    connecting = runWithoutContext(() => client.connect())
-      .then(() => {
-        if (!redisClosed) return null;
-        client.destroy();
-        return new Error('redis closed during shutdown');
-      }, err => err)
-      .finally(() => {
-        connecting = null;
-      });
-  }
-  const error = await connecting;
-  if (error) {
-    logger.error('failed to connect redis', {event: 'redis.connect_failed', error});
-    return false;
-  }
-  return true;
-}
+// One REDIS_TIMEOUT_MS budget per Redis operation, from waiting for the
+// connection to the last reply. See lib/redis.js.
+const redisAccess = client ? createRedisAccess({client, timeoutMs: REDIS_TIMEOUT_MS, logger}) : null;
 
 // express
 const app = express();
@@ -240,7 +216,7 @@ app.get('/', async function (req, res) {
   const date = moment().tz('Asia/Seoul').format();
   res.set('Cache-Control', 'no-store');
   res.render('index.ejs', {
-    redisAvailable: await ensureRedisConnection(),
+    redisAvailable: redisAccess ? await redisAccess.available() : false,
     host: host,
     date: date,
     cluster: CLUSTER,
@@ -417,13 +393,13 @@ app.get('/telemetry', async function (req, res) {
   if (after !== undefined && !validCursor(after)) {
     return res.status(400).json({result: 'error', message: 'Invalid telemetry cursor'});
   }
-  if (!(await ensureRedisConnection())) {
-    return res.status(503).json({result: 'error', message: 'Telemetry storage unavailable'});
-  }
   try {
-    return res.json({result: 'ok', ...await telemetryStore.read(after)});
+    return res.json({result: 'ok', ...await redisAccess.run(() => telemetryStore.read(after))});
   } catch (error) {
-    logger.error('telemetry read failed', {event: 'telemetry.read_failed', error});
+    // An unavailable Redis is already logged by redisAccess.
+    if (!(error instanceof RedisUnavailableError)) {
+      logger.error('telemetry read failed', {event: 'telemetry.read_failed', error});
+    }
     return res.status(503).json({result: 'error', message: 'Telemetry storage unavailable'});
   }
 });
@@ -659,53 +635,50 @@ app.get('/delay/:sec', async function (req, res) {
   });
 });
 
+// Unavailable Redis (unreachable, connection lost, or no answer within
+// REDIS_TIMEOUT_MS) answers 503; anything else, such as a value that is not
+// JSON, answers 500 as before.
+function cacheFailure(res, err) {
+  if (err instanceof RedisUnavailableError) {
+    return res.status(503).json({
+      status: 503,
+      message: 'redis unavailable',
+    });
+  }
+  logger.error('cache operation failed', {event: 'cache.failed', error: err});
+  return res.status(500).json({
+    status: 500,
+    message: 'internal server error',
+  });
+}
+
 app.get('/cache/:name', async function (req, res) {
   const name = req.params.name;
 
   logger.debug(`get /cache/${name}`);
 
-  if (!(await ensureRedisConnection())) {
-    return res.status(503).json({
-      status: 503,
-      message: 'redis unavailable',
-    });
-  }
-
   try {
-    const result = await client.get(`cache:${name}`);
+    const result = await redisAccess.run(redis => redis.get(`cache:${name}`));
     return res.status(200).json(result == null ? {} : JSON.parse(result));
   } catch (err) {
-    logger.error('cache operation failed', {event: 'cache.failed', error: err});
-    return res.status(500).json({
-      status: 500,
-      message: 'internal server error',
-    });
+    return cacheFailure(res, err);
   }
 });
 
 // PUT because the client picks the key and the value is replaced wholesale.
+// A PUT that times out after SET was sent may or may not have been applied; it
+// is answered 503 and never retried by the app.
 app.put('/cache/:name', async function (req, res) {
   const name = req.params.name;
 
   logger.debug(`put /cache/${name}`);
 
-  if (!(await ensureRedisConnection())) {
-    return res.status(503).json({
-      status: 503,
-      message: 'redis unavailable',
-    });
-  }
-
   const json = JSON.stringify(req.body);
   try {
-    const result = await client.set(`cache:${name}`, json);
+    const result = await redisAccess.run(redis => redis.set(`cache:${name}`, json));
     return res.status(200).json(result == null ? {} : result);
   } catch (err) {
-    logger.error('cache operation failed', {event: 'cache.failed', error: err});
-    return res.status(500).json({
-      status: 500,
-      message: 'internal server error',
-    });
+    return cacheFailure(res, err);
   }
 });
 
@@ -762,8 +735,15 @@ export function startServer({port = PORT, exit = code => process.exit(code)} = {
       // this Promise for a publish that is already running. The publisher
       // reports a failure of run through onError; the tracked copy only
       // signals completion, so it settles without rejecting.
+      // Bounded by REDIS_TIMEOUT_MS, so a stalled Redis never stops the next
+      // tick. An unavailable Redis is logged by redisAccess and retried by the
+      // next tick on a new connection; other failures reach onError.
       const run = (async () => {
-        if (await ensureRedisConnection()) await telemetryStore.publish(statusSnapshot());
+        try {
+          await redisAccess.run(() => telemetryStore.publish(statusSnapshot()));
+        } catch (error) {
+          if (!(error instanceof RedisUnavailableError)) throw error;
+        }
       })();
       publishing = run.then(() => {}, () => {}).finally(() => { publishing = null; });
       return run;
@@ -821,19 +801,14 @@ export function startServer({port = PORT, exit = code => process.exit(code)} = {
       // Only idle keep-alive connections remain; drop them so close() settles.
       server.closeIdleConnections();
       await serverClosed;
-      if (!client) return;
-      redisClosed = true;
-      await connecting;
-      // close() waits for pending replies and rejects when the socket is not open.
-      if (client.isOpen) await client.close();
+      // No new connection from here on; a connect still in flight is waited
+      // for and, when it completes, torn down again.
+      await redisAccess?.close();
     },
     forceClose() {
       server.closeAllConnections();
       stopOom();
-      if (client) {
-        redisClosed = true;
-        client.destroy();
-      }
+      redisAccess?.destroy();
     },
     onError(error, {phase, signal}) {
       serviceLog.error('shutdown failed', {event: 'shutdown.failed', phase, signal, error});

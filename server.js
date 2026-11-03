@@ -174,25 +174,64 @@ const STARTED_AT = new Date(Date.now() - process.uptime() * 1000).toISOString();
 sampleTelemetry();
 const telemetryStore = client ? createTelemetryStore(client, `sample-node:telemetry:${encodeURIComponent(CLUSTER)}:${encodeURIComponent(PROFILE)}`) : null;
 
-async function handleRemoteService(res, serviceName) {
+// The /health contract shared by sample-node, sample-spring and sample-tomcat:
+// result is lowercase "ok" or "error", version is a string and uptime is whole
+// seconds since the process started. Other fields such as type are allowed.
+// Returns why a body breaks the contract, or null when it follows it.
+function healthContractViolation(body) {
+  if (body === null || typeof body !== 'object' || Array.isArray(body)) return 'body is not a JSON object';
+  if (body.result !== 'ok' && body.result !== 'error') return 'result is not "ok" or "error"';
+  if (typeof body.version !== 'string') return 'version is not a string';
+  if (!Number.isInteger(body.uptime) || body.uptime < 0) return 'uptime is not a non-negative integer';
+  return null;
+}
+
+// Calls /health of a remote sample service and answers with its status and body.
+// With checkHealthContract, a body that is not JSON or breaks the health contract
+// is answered with 502 instead, and a valid "error" body still passes through.
+// A failed call (connection, or reading the body) is answered with 500.
+async function handleRemoteService(res, serviceName, {checkHealthContract = false} = {}) {
   logger.debug(`get /${serviceName}`);
   const remoteService = PROFILE === 'default' ? `http://sample-${serviceName}` : `${PROTOCOL}://sample-${serviceName}.${HOSTNAME}`;
 
+  let response;
+  let text;
   try {
-    const response = await fetch(`${remoteService}/health`);
-    const body = await response.json();
-    return res.status(response.status).json(body);
+    response = await fetch(`${remoteService}/health`);
+    if (!checkHealthContract) {
+      const body = await response.json();
+      return res.status(response.status).json(body);
+    }
+    text = await response.text();
   } catch (err) {
     logger.error('remote service call failed', {event: 'remote.failed', service: serviceName, error: err});
     return res.status(500).json({
       result: 'error',
     });
   }
+
+  let body;
+  let violation;
+  try {
+    body = JSON.parse(text);
+    violation = healthContractViolation(body);
+  } catch {
+    violation = 'body is not valid JSON';
+  }
+  if (violation) {
+    logger.error('remote service broke the health contract', {
+      event: 'remote.invalid_response', service: serviceName, status: response.status, reason: violation,
+    });
+    return res.status(502).json({
+      result: 'error',
+    });
+  }
+  return res.status(response.status).json(body);
 }
 
 app.get('/node', async (req, res) => handleRemoteService(res, 'node'));
-app.get('/spring', async (req, res) => handleRemoteService(res, 'spring'));
-app.get('/tomcat', async (req, res) => handleRemoteService(res, 'tomcat'));
+app.get('/spring', async (req, res) => handleRemoteService(res, 'spring', {checkHealthContract: true}));
+app.get('/tomcat', async (req, res) => handleRemoteService(res, 'tomcat', {checkHealthContract: true}));
 
 app.get('/', async function (req, res) {
   logger.debug(`get /`);

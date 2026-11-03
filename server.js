@@ -4,13 +4,12 @@ const FAULT_RATE = parseFloat(process.env.FAULT_RATE) || 0;
 const HOSTNAME = process.env.HOSTNAME ?? 'default.svc.cluster.local';
 const LOOP_HOST = process.env.LOOP_HOST ?? `http://sample-node`;
 const MESSAGE = process.env.MESSAGE ?? '';
-const PORT = parseInt(process.env.PORT, 10) || 3000;
+const PORT = parsePort(process.env.PORT, DEFAULT_PORT);
 const PROFILE = process.env.PROFILE ?? 'default';
 const PROTOCOL = process.env.PROTOCOL ?? 'http';
-const REDIS_ENABLED = process.env.REDIS_ENABLED !== 'false';
-const REDIS_HOST = process.env.REDIS_HOST ?? 'redis';
-const REDIS_PORT = parseInt(process.env.REDIS_PORT, 10) || 6379;
-const REDIS_PASS = process.env.REDIS_PASS ?? '';
+// CACHE_VALKEY_* first, then the legacy REDIS_* settings; see lib/config.js.
+const REDIS_CONFIG = resolveRedisConfig(process.env);
+const REDIS_ENABLED = REDIS_CONFIG.enabled;
 const REDIS_TIMEOUT_MS = parseRedisTimeout(process.env.REDIS_TIMEOUT_MS);
 const VERSION = process.env.VERSION ?? 'v0.0.0';
 
@@ -20,6 +19,7 @@ import os from 'os';
 import { fileURLToPath } from 'url';
 import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
+import { DEFAULT_PORT, parsePort, resolveRedisConfig } from './lib/config.js';
 import { createLogger, runWithContext, secretsFromHeaders } from './lib/logger.js';
 import { createRedisAccess, parseRedisTimeout, RedisUnavailableError } from './lib/redis.js';
 import { createTelemetry } from './lib/telemetry.js';
@@ -39,8 +39,14 @@ const finalhandler = createRequire(require.resolve('express'))('finalhandler');
 
 // Request logs carry request_id from the async context set by the first
 // middleware. Process-level events use serviceLog, which never has one.
-const logger = createLogger({level: process.env.LOG_LEVEL, secrets: [REDIS_PASS]});
+const logger = createLogger({level: process.env.LOG_LEVEL, secrets: REDIS_CONFIG.secrets});
 const serviceLog = logger.detached();
+// Safe to log: never includes credentials.
+const redisTarget = {redis_source: REDIS_CONFIG.source, redis_host: REDIS_CONFIG.host, redis_port: REDIS_CONFIG.port, redis_tls: REDIS_CONFIG.tls};
+for (const {variable, reason} of REDIS_CONFIG.warnings) {
+  // The value itself is not logged; it can carry credentials.
+  serviceLog.warn(`ignoring ${variable}: ${reason}`, {event: 'redis.config_invalid', variable});
+}
 
 // Secret header values (Authorization, Cookie) of each request, removed from
 // every log of that request, including error messages and stacks.
@@ -54,8 +60,7 @@ function requestLogger(req) {
 
 // redis
 const client = REDIS_ENABLED ? redis.createClient({
-  url: `redis://${REDIS_HOST}:${REDIS_PORT}`,
-  ...(REDIS_PASS && {password: REDIS_PASS}),
+  ...REDIS_CONFIG.clientOptions,
   // A command issued while there is no ready connection fails at once
   // instead of waiting in the offline queue and running after recovery.
   disableOfflineQueue: true,
@@ -70,7 +75,7 @@ const client = REDIS_ENABLED ? redis.createClient({
 // The shared client's events belong to the process, not to the request that
 // happened to open the connection.
 client?.on('connect', () => {
-  serviceLog.info('connected to redis', {event: 'redis.connected', redis_host: REDIS_HOST, redis_port: REDIS_PORT});
+  serviceLog.info('connected to redis', {event: 'redis.connected', ...redisTarget});
 });
 client?.on('error', err => {
   serviceLog.error('redis client error', {event: 'redis.error', error: err});
@@ -728,7 +733,7 @@ export function startServer({port = PORT, exit = code => process.exit(code)} = {
   let stopPublisher = () => {};
   let publishing = null;
   if (REDIS_ENABLED) {
-    serviceLog.info('connecting to redis', {event: 'redis.connecting', redis_host: REDIS_HOST, redis_port: REDIS_PORT});
+    serviceLog.info('connecting to redis', {event: 'redis.connecting', ...redisTarget});
     stopPublisher = startTelemetryPublisher(() => {
       if (shutdownManager?.isShuttingDown) return undefined;
       // The publisher's stop only cancels the next tick, so shutdown waits on

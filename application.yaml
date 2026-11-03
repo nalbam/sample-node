@@ -1,0 +1,26 @@
+apiVersion: runway/v1
+kind: Application
+metadata:
+  name: sample-node
+  repository: https://github.com/nalbam/sample-node
+  owner: nalbam
+  description: Node.js sample app
+spec:
+  runtime:
+    port: 3000
+    health:
+      path: /health
+  build:
+    context: .
+    dockerfile: Dockerfile
+  test:
+    image: node:26-alpine
+    command: npm ci && npm test
+  installations:
+    - environment: dev
+      resources:
+        - name: cache
+          type: valkey
+    - environment: prod
+      env:
+        REDIS_ENABLED: "false"

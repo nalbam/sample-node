@@ -1,26 +1,24 @@
-apiVersion: runway/v1
+apiVersion: agent.opspresso.com/v1
 kind: Application
-metadata:
-  name: sample-node
-  repository: https://github.com/nalbam/sample-node
-  owner: nalbam
-  description: Node.js sample app
 spec:
-  runtime:
-    port: 3000
-    health:
-      path: /health
+  name: sample-node
+  repository: nalbam/sample-node
+  owner: dBT43yQ7DQIIIMlYbjiXsIr8tbuIgVJA
+  description: Node.js sample app
+runtime:
+  port: 3000
+  health: /health
   build:
     context: .
     dockerfile: Dockerfile
   test:
     image: node:26-alpine
-    command: npm ci && npm test
-  installations:
-    - environment: dev
-      resources:
-        - name: cache
-          type: valkey
-    - environment: prod
-      env:
-        REDIS_ENABLED: "false"
+    command: npm ci && npm test -- --runInBand
+environments:
+  dev:
+    resources:
+      - name: cache
+        class: valkey
+  prod:
+    env:
+      REDIS_ENABLED: "false"

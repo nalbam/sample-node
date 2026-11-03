@@ -647,12 +647,16 @@ replaced by `[REDACTED]` in every log record, as are URL credentials such as
 
 ## Runway
 
-[`application.yaml`](application.yaml) registers the app with Runway: it listens on
-port `3000` with `/health` as its health check, is built from `Dockerfile` with the
-repository root as context, and is tested in `node:26-alpine` with
-`npm ci && npm test`. The `dev` installation declares a Valkey `cache` resource,
-which provides the `CACHE_VALKEY_*` settings; the `prod` installation sets
-`REDIS_ENABLED=false`.
+[`application.yaml`](application.yaml) (`apiVersion: agent.opspresso.com/v1`,
+`kind: Application`) registers the app with Agent Runway:
+
+- `spec`: name `sample-node`, repository `nalbam/sample-node`, owner and description.
+- `runtime`: listens on port `3000` with `/health` as its health check, is built
+  from `Dockerfile` with the repository root as context, and is tested in
+  `node:26-alpine` with `npm ci && npm test -- --runInBand`.
+- `environments`: `dev` declares a `cache` resource of class `valkey`, which
+  provides the `CACHE_VALKEY_*` settings; `prod` sets `REDIS_ENABLED=false`, so it
+  runs without Redis.
 
 ## Environment
 

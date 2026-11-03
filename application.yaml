@@ -1,0 +1,23 @@
+apiVersion: agent.opspresso.com/v1
+kind: Application
+spec:
+  name: sample-node-2
+  repository: nalbam/sample-node
+  owner: dBT43yQ7DQIIIMlYbjiXsIr8tbuIgVJA
+  description: Node.js sample app
+runtime:
+  port: 3000
+  health: /health
+  build:
+    context: .
+    dockerfile: Dockerfile
+  test:
+    image: node:26-alpine
+    command: npm ci && npm test -- --runInBand
+environments:
+  dev:
+    env:
+      REDIS_ENABLED: "false"
+  prod:
+    env:
+      REDIS_ENABLED: "false"

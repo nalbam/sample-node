@@ -20,13 +20,25 @@ which pod answered, and `/drop` visualizes a rollout by version.
 docker pull nalbam/sample-node
 
 # POST /oom needs a memory limit to be killed by the kernel
-docker run -m 128m -p 3000:3000 nalbam/sample-node
+docker run -d --name sample-node -m 128m -p 3000:3000 nalbam/sample-node
+
+# wait longer than SHUTDOWN_TIMEOUT_MS (10s by default) before Docker sends SIGKILL
+docker stop --time 15 sample-node
+docker inspect -f '{{.State.ExitCode}}' sample-node   # 0 after a clean shutdown
+docker rm sample-node
 ```
+
+The image runs `node server.js` directly as the container's main process and sets
+`STOPSIGNAL SIGTERM`, so `docker stop` delivers `SIGTERM` to Node itself. The default
+`docker stop` wait is 10 seconds, the same as the app's default shutdown timeout,
+so pass a longer `--time`. See [Graceful shutdown](#graceful-shutdown).
 
 ## Kubernetes
 
 `requests` and `limits` set to the same memory makes the pod Guaranteed, so `POST /oom`
-kills that pod alone at exactly its limit.
+kills that pod alone at exactly its limit. `terminationGracePeriodSeconds` must be
+longer than `SHUTDOWN_TIMEOUT_MS` plus any other termination work, such as a
+`preStop` hook, because the kubelet sends `SIGKILL` when the grace period ends.
 
 ```yaml
 apiVersion: apps/v1
@@ -43,14 +55,18 @@ spec:
       labels:
         app: sample-node
     spec:
+      terminationGracePeriodSeconds: 30   # longer than SHUTDOWN_TIMEOUT_MS (10s)
       containers:
         - name: sample-node
           image: nalbam/sample-node
           ports:
             - containerPort: 3000
+          env:
+            - name: SHUTDOWN_TIMEOUT_MS
+              value: "10000"
           readinessProbe:
             httpGet:
-              path: /read
+              path: /ready
               port: 3000
           livenessProbe:
             httpGet:
@@ -64,6 +80,55 @@ spec:
               cpu: 100m
               memory: 128Mi
 ```
+
+## Graceful shutdown
+
+This section describes builds where `server.js` connects the shutdown coordinator in
+[`lib/shutdown.js`](lib/shutdown.js) to the process signals. Builds without that
+connection do not handle `SIGTERM` or `SIGINT` this way.
+
+On the first `SIGTERM` or `SIGINT` the app:
+
+1. Stops accepting new connections. Once the listener is closed, new TCP
+   connections are refused, including connections to `/live` and `/ready`.
+2. Stops the telemetry publisher.
+3. Lets requests already in progress finish.
+4. Closes the Redis connection.
+5. Exits with code `0` when all of these steps succeed.
+
+`SHUTDOWN_TIMEOUT_MS` (default `10000`) is one deadline counted from the first signal
+and covers waiting for requests and closing resources together. If shutdown has not
+finished by then, the app closes the remaining connections and exits with code `1`.
+A step that fails is reported, the remaining steps still run, and the app exits with
+code `1`. A second signal, `SIGTERM` or `SIGINT`, while shutdown is running does not
+start the steps again or extend the deadline.
+
+While shutting down, requests that still arrive on already open connections get
+`503` from `/ready` (not ready for new traffic) and `200` from `/live` (the process
+is still alive). Kubernetes probes open new connections, so once the listener is
+closed they are refused rather than answered; do not rely on reaching `/live` over a
+new connection during shutdown.
+
+Set the outer wait longer than `SHUTDOWN_TIMEOUT_MS`: `terminationGracePeriodSeconds`
+in Kubernetes (see [Kubernetes](#kubernetes)) and `docker stop --time` in Docker (see
+[Docker](#docker)). Otherwise `SIGKILL` can end the process before it finishes.
+
+To reproduce it locally, start `node` directly rather than through `npm start`, so
+the signal reaches the Node process:
+
+```bash
+REDIS_ENABLED=false node server.js &
+pid=$!
+sleep 1
+curl -s localhost:3000/delay/3 &      # a request in progress
+sleep 1
+kill -TERM "$pid"
+curl -s localhost:3000/live || echo "new connection refused"
+wait "$pid"; echo "exit code: $?"    # the /delay/3 response prints first, then exit code: 0
+```
+
+With `SHUTDOWN_TIMEOUT_MS=2000` and `/delay/5` instead, the request cannot finish
+before the deadline and the exit code is `1`.
 
 ## Development
 
@@ -330,7 +395,7 @@ outage. It is a browser page, so open it rather than curl it.
 | Method | Path        | Description                                 |
 | ------ | ----------- | ------------------------------------------- |
 | GET    | `/read`     | Readiness probe                             |
-| GET    | `/ready`    | Readiness check, returns `{"ready": true}` as JSON |
+| GET    | `/ready`    | Readiness check, returns `{"ready": true}` as JSON; `503` during [graceful shutdown](#graceful-shutdown) |
 | GET    | `/live`     | Liveness probe, returns `{"live": true}` as JSON |
 | GET    | `/version`  | Running version and Node.js version as JSON |
 | GET    | `/runtime`  | Node.js version and platform as JSON        |
@@ -451,6 +516,7 @@ curl localhost:3000/cache/foo
 | `REDIS_PORT`   | `6379`                       | Redis port                               |
 | `REDIS_PASS`   | -                            | Redis password; redacted from logs       |
 | `LOG_LEVEL`    | `info`                       | Lowest log level written: `debug`, `info`, `warn` or `error`; other values fall back to `info` with one warning. See [Logging](#logging) |
+| `SHUTDOWN_TIMEOUT_MS` | `10000`               | Deadline in milliseconds from the first `SIGTERM`/`SIGINT` for finishing requests and closing resources; exceeding it exits with code `1`. Must be a whole number from `1` to `2147483647` (digits only, surrounding spaces allowed); unset, empty, `0`, negative, fractional, exponent, unit-suffixed (`5s`) or out-of-range values use `10000`. See [Graceful shutdown](#graceful-shutdown) |
 
 ## License
 

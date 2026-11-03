@@ -22,4 +22,7 @@ COPY --chown=node:node . .
 
 USER node
 
+# Node runs as PID 1 through the exec-form CMD, so it receives this signal directly.
+STOPSIGNAL SIGTERM
+
 CMD ["node", "server.js"]

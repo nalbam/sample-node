@@ -244,6 +244,17 @@ describe('sensitive data', () => {
     expect(stdout.records()[0].message).toBe(`connecting to redis://${REDACTED}@redis:6379/0`);
   });
 
+  test('removes a password-only URL credential and values under password keys', () => {
+    const {logger, stdout} = setup();
+    logger.info('connecting to rediss://:url-secret-44@valkey:6380', {password: 'url-secret-45', valkey_password: 'url-secret-46'});
+
+    const text = stdout.text();
+    for (const secret of ['url-secret-44', 'url-secret-45', 'url-secret-46']) expect(text).not.toContain(secret);
+    expect(stdout.records()[0]).toMatchObject({
+      message: `connecting to rediss://${REDACTED}@valkey:6380`, password: REDACTED, valkey_password: REDACTED,
+    });
+  });
+
   test('errors keep only name, message, code, type, status and stack frames', () => {
     const {logger, stderr} = setup();
     const error = new SyntaxError('Unexpected token');

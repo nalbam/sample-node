@@ -33,6 +33,15 @@ The image runs `node server.js` directly as the container's main process and set
 `docker stop` wait is 10 seconds, the same as the app's default shutdown timeout,
 so pass a longer `--time`. See [Graceful shutdown](#graceful-shutdown).
 
+The image is built for `linux/amd64` and `linux/arm64` from the same Dockerfile
+(`node:26-alpine` base, no native modules) and runs as the non-root `node` user. It
+listens on `PORT` (`3000` by default); to use another port, set both:
+
+```bash
+docker run -d -e PORT=8080 -p 8080:8080 nalbam/sample-node
+docker buildx build --platform linux/arm64 -t sample-node:arm64 .   # local arm64 build
+```
+
 ## Kubernetes
 
 `requests` and `limits` set to the same memory makes the pod Guaranteed, so `POST /oom`
@@ -233,9 +242,10 @@ Sensitive values are kept out of the logs:
   OOM fill). The whole header value is always removed, and so are the
   credential after the auth scheme and each cookie value of 4 or more
   characters.
-- The value of `REDIS_PASS` is replaced by `[REDACTED]` wherever it appears,
+- The values of `REDIS_PASS`, `CACHE_VALKEY_PASSWORD` and `CACHE_VALKEY_URL` (and
+  the password inside it) are replaced by `[REDACTED]` wherever they appear,
   including error messages and stack frames. So are credentials in URLs
-  (`//user:pass@`) and values under keys such as `password`, `token`, `secret`,
+  (`//user:pass@`, `//:pass@`) and values under keys such as `password`, `token`, `secret`,
   `authorization` or `cookie`.
 - Errors are reduced to `name`, `message`, `code`, `type`, `status` and the stack
   frames. Other properties, such as the raw body that a JSON parse error carries,
@@ -611,11 +621,48 @@ the connection cannot be opened, `redis.timeout` with `stage` (`connect` or
 when the connection went away during a command. Records for a request carry its
 `request_id`; records for the publisher have none.
 
+### Redis and Valkey connection
+
+The connection is chosen in this order:
+
+1. `REDIS_ENABLED=false` turns Redis off, whatever else is set. No client is created.
+2. `CACHE_VALKEY_URL`, when it is a `redis://` or `rediss://` (TLS) URL, for example
+   `rediss://app:p%40ss@valkey.internal:6380/0`. Credentials must be percent-encoded.
+3. `CACHE_VALKEY_HOST` with `CACHE_VALKEY_PORT`, `CACHE_VALKEY_USERNAME` and
+   `CACHE_VALKEY_PASSWORD`. The app percent-encodes the username and password
+   itself, so any character can be used as-is.
+4. The legacy `REDIS_HOST`, `REDIS_PORT` and `REDIS_PASS`, unchanged, when neither
+   `CACHE_VALKEY_URL` nor `CACHE_VALKEY_HOST` is set.
+
+A `CACHE_VALKEY_URL` or `CACHE_VALKEY_HOST` that cannot be used (another scheme, a
+malformed URL or host) is skipped with one `redis.config_invalid` warning that names
+the variable but never its value, and the next source is used.
+
+`redis.connecting` and `redis.connected` records carry `redis_source` (the variable
+the connection came from), `redis_host`, `redis_port` and `redis_tls`, never
+credentials. The values of `CACHE_VALKEY_URL`, `CACHE_VALKEY_PASSWORD` (raw and
+percent-encoded), the password inside `CACHE_VALKEY_URL` and `REDIS_PASS` are
+replaced by `[REDACTED]` in every log record, as are URL credentials such as
+`//user:pass@` and `//:pass@`.
+
+## Runway
+
+[`application.yaml`](application.yaml) (`apiVersion: agent.opspresso.com/v1`,
+`kind: Application`) registers the app with Agent Runway:
+
+- `spec`: name `sample-node`, repository `nalbam/sample-node`, owner and description.
+- `runtime`: listens on port `3000` with `/health` as its health check, is built
+  from `Dockerfile` with the repository root as context, and is tested in
+  `node:26-alpine` with `npm ci && npm test -- --runInBand`.
+- `environments`: `dev` declares a `cache` resource of class `valkey`, which
+  provides the `CACHE_VALKEY_*` settings; `prod` sets `REDIS_ENABLED=false`, so it
+  runs without Redis.
+
 ## Environment
 
 | Variable       | Default                      | Description                             |
 | -------------- | ---------------------------- | --------------------------------------- |
-| `PORT`         | `3000`                       | Listen port                             |
+| `PORT`         | `3000`                       | Listen port, a whole number from `1` to `65535`; other values use `3000`. The Docker image sets `PORT=3000` |
 | `PROFILE`      | `default`                    | `default` calls `http://sample-<name>`, anything else calls `<PROTOCOL>://sample-<name>.<HOSTNAME>` |
 | `PROTOCOL`     | `http`                       | Protocol for non-default profiles       |
 | `HOSTNAME`     | `default.svc.cluster.local`  | Domain suffix for non-default profiles  |
@@ -624,10 +671,15 @@ when the connection went away during a command. Records for a request carry its
 | `VERSION`      | `v0.0.0`                     | Version reported in responses            |
 | `FAULT_RATE`   | `0`                          | Percentage of `/health` calls that fail  |
 | `LOOP_HOST`    | `http://sample-node`         | Target of `/loop/:count`                 |
-| `REDIS_ENABLED` | `true`                     | Set to `false` to disable Redis features and connections |
-| `REDIS_HOST`   | `redis`                      | Redis host                               |
-| `REDIS_PORT`   | `6379`                       | Redis port                               |
-| `REDIS_PASS`   | -                            | Redis password; redacted from logs       |
+| `REDIS_ENABLED` | `true`                     | Set to `false` (case-insensitive) to disable Redis features and connections; overrides every setting below. See [Redis and Valkey connection](#redis-and-valkey-connection) |
+| `CACHE_VALKEY_URL` | -                        | `redis://` or `rediss://` URL of the Valkey cache, with percent-encoded credentials and an optional database (`/0`). Takes priority over every other connection setting; redacted from logs |
+| `CACHE_VALKEY_HOST` | -                       | Valkey host, used when `CACHE_VALKEY_URL` is unset or unusable |
+| `CACHE_VALKEY_PORT` | `6379`                  | Valkey port, with `CACHE_VALKEY_HOST`    |
+| `CACHE_VALKEY_USERNAME` | -                   | Valkey ACL user, with `CACHE_VALKEY_HOST` |
+| `CACHE_VALKEY_PASSWORD` | -                   | Valkey password, with `CACHE_VALKEY_HOST`; redacted from logs |
+| `REDIS_HOST`   | `redis`                      | Legacy Redis host, used when no `CACHE_VALKEY_*` connection is set |
+| `REDIS_PORT`   | `6379`                       | Legacy Redis port                        |
+| `REDIS_PASS`   | -                            | Legacy Redis password; redacted from logs |
 | `REDIS_TIMEOUT_MS` | `2000`                   | Time budget in milliseconds of one Redis operation: connecting when needed plus every command. Must be a whole number from `1` to `60000` (digits only, surrounding spaces allowed); unset, empty, `0`, negative, fractional, exponent, unit-suffixed (`2s`) or out-of-range values use `2000`. See [Redis outages](#redis-outages) |
 | `LOG_LEVEL`    | `info`                       | Lowest log level written: `debug`, `info`, `warn` or `error`; other values fall back to `info` with one warning. See [Logging](#logging) |
 | `SHUTDOWN_TIMEOUT_MS` | `10000`               | Deadline in milliseconds from the first `SIGTERM`/`SIGINT` for finishing requests and closing resources; exceeding it exits with code `1`. Must be a whole number from `1` to `2147483647` (digits only, surrounding spaces allowed); unset, empty, `0`, negative, fractional, exponent, unit-suffixed (`5s`) or out-of-range values use `10000`. See [Graceful shutdown](#graceful-shutdown) |

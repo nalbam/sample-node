@@ -86,3 +86,25 @@ test('enabled cache and telemetry retain their Redis operations', async () => {
   expect(telemetry.body).toMatchObject({source: 'redis', samples: []});
   expect(client.connect).toHaveBeenCalledTimes(1);
 });
+
+test('a cached value that is not JSON stays an internal error, not unavailable', async () => {
+  client.get.mockResolvedValueOnce('not json');
+  const response = await request(app).get('/cache/broken');
+  expect(response.status).toBe(500);
+  expect(response.body).toEqual({status: 500, message: 'internal server error'});
+  expect(logs.records().filter(record => record.event === 'cache.failed')).toHaveLength(1);
+});
+
+test('a failed connect answers the documented 503 bodies', async () => {
+  client.connect.mockRejectedValue(new Error('unreachable'));
+  const [get, put, telemetry, ready, health] = await Promise.all([
+    request(app).get('/cache/demo'), request(app).put('/cache/demo').send({value: 1}),
+    request(app).get('/telemetry'), request(app).get('/ready'), request(app).get('/health'),
+  ]);
+  expect(get.body).toEqual({status: 503, message: 'redis unavailable'});
+  expect(put.body).toEqual({status: 503, message: 'redis unavailable'});
+  expect([telemetry.status, telemetry.body]).toEqual([503, {result: 'error', message: 'Telemetry storage unavailable'}]);
+  expect([ready.status, ready.body]).toEqual([200, {ready: true}]);
+  expect(health.status).toBe(200);
+  expect(client.set).not.toHaveBeenCalled();
+});

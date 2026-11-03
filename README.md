@@ -93,7 +93,10 @@ On the first `SIGTERM` or `SIGINT` the app:
    connections are refused, including connections to `/live` and `/ready`.
 2. Stops the telemetry publisher.
 3. Lets requests already in progress finish.
-4. Closes the Redis connection.
+4. Closes the Redis connection. It waits for a connection attempt still in progress
+   and for replies still pending; Redis requests and publishes already end within
+   `REDIS_TIMEOUT_MS`, so a stalled Redis is waited for at most until
+   `SHUTDOWN_TIMEOUT_MS`. No new Redis connection is opened from here on.
 5. Exits with code `0` when all of these steps succeed.
 
 `SHUTDOWN_TIMEOUT_MS` (default `10000`) is one deadline counted from the first signal
@@ -139,8 +142,9 @@ return `404`.
 The dashboard reads CPU and memory from `/status` every second while visible.
 It samples whichever pod answers each request and keeps five minutes of history
 in the current tab; reloads clear this history. CPU load and OOM controls, probes,
-and metrics still work. When Redis is enabled but unreachable, the page uses the
-same direct sampling; Redis-backed endpoints answer `503`.
+and metrics still work. When Redis is enabled but unreachable or not answering, the
+page uses the same direct sampling; Redis-backed endpoints answer `503` within
+`REDIS_TIMEOUT_MS` (see [Redis outages](#redis-outages)).
 Reload after Redis recovers to restore shared telemetry history.
 
 ```bash
@@ -214,8 +218,10 @@ not repeat the value. Completion records are `info`, so `LOG_LEVEL=warn` or `err
 drops them along with the rest of the request traffic, for example when the load
 switch sends many `/work` requests. Aborted requests and errors are still written.
 Redis client events (`redis.connected`, `redis.error`), the telemetry publisher
-(`telemetry.publish_failed`) and startup records belong to the process and never
-have `request_id`.
+(`telemetry.publish_failed`, and Redis outage records written for a publish) and
+startup records belong to the process and never have `request_id`. Redis outage
+records (`redis.connect_failed`, `redis.timeout`, `redis.connection_lost`) written for
+a request carry its `request_id`; see [Redis outages](#redis-outages).
 
 Sensitive values are kept out of the logs:
 
@@ -395,7 +401,7 @@ outage. It is a browser page, so open it rather than curl it.
 | Method | Path        | Description                                 |
 | ------ | ----------- | ------------------------------------------- |
 | GET    | `/read`     | Readiness probe                             |
-| GET    | `/ready`    | Readiness check, returns `{"ready": true}` as JSON; `503` during [graceful shutdown](#graceful-shutdown) |
+| GET    | `/ready`    | Readiness check, returns `{"ready": true}` as JSON; `503` during [graceful shutdown](#graceful-shutdown). Does not check Redis, see [Redis outages](#redis-outages) |
 | GET    | `/live`     | Liveness probe, returns `{"live": true}` as JSON |
 | GET    | `/version`  | Running version and Node.js version as JSON |
 | GET    | `/runtime`  | Node.js version and platform as JSON        |
@@ -413,7 +419,9 @@ outage. It is a browser page, so open it rather than curl it.
 
 `/status` is not affected by `FAULT_RATE` and sends `Cache-Control: no-store`.
 `/health` is the probe and fails at `FAULT_RATE`: `200` with `result` `ok`, or `500`
-with `result` `error`. Both responses follow the [health contract](#health-contract). On Linux, cgroup v2/v1 counters
+with `result` `error`. Both responses follow the [health contract](#health-contract).
+`/ready`, `/health`, `/live`, `/status` and static files never wait for Redis, so
+they answer at once during a Redis outage too. On Linux, cgroup v2/v1 counters
 measure the app container rather than the whole node or its sidecars. Memory usage
 includes cgroup-charged cache; `memory.rss` separately reports process RSS. CPU is
 the change in cumulative CPU time over a monotonic sample interval (at least 500ms).
@@ -423,7 +431,10 @@ be measured. `instanceId` changes on every process start, and `oom` reports whet
 the kill switch is allocating, its start time, allocated bytes, and safety-cap state.
 
 `/telemetry` returns at most 500 records per response and sets `more` when the next
-page should be requested immediately. Stream IDs order recordings across pods;
+page should be requested immediately. An invalid `after` cursor answers `400`; when
+Redis is unavailable it answers `503` with
+`{"result":"error","message":"Telemetry storage unavailable"}`, see
+[Redis outages](#redis-outages). Stream IDs order recordings across pods;
 the UI uses recording times, not fetch arrival times, to draw the chart. Storage
 uses the `sample-node:telemetry:<cluster>:<profile>` stream as an index. Each sample
 payload is stored under its own `:sample:<id>` key, expiring exactly 300 seconds
@@ -541,6 +552,65 @@ curl -X PUT localhost:3000/cache/foo -H 'Content-Type: application/json' -d '{"a
 curl localhost:3000/cache/foo
 ```
 
+`GET` answers `200` with the stored JSON value, or `{}` when the key is missing.
+`PUT` answers `200` with `"OK"`. A stored value that is not valid JSON answers `500`
+with `{"status":500,"message":"internal server error"}`, as does any other error
+that Redis reports while the connection stays usable.
+
+#### Redis outages
+
+Redis is an optional feature dependency of this sample. Probes, the info page,
+static files, `/status` and the demo controls do not need it, so a Redis outage
+fails only the Redis features and never takes the pod out of traffic.
+
+Every Redis operation has one time budget, `REDIS_TIMEOUT_MS` (default `2000`). It
+starts when the request begins to wait for Redis and covers opening the connection
+when one is needed and every command of the operation. `/telemetry` sends two
+commands (`XRANGE`, then `MGET`) inside the same budget; it does not get a second one.
+
+| Redis state | `GET`/`PUT /cache/:name` | `GET /telemetry` | `/ready` | `/health` |
+| ----------- | ------------------------ | ---------------- | -------- | --------- |
+| Answering | `200` with the value | `200` with `result` `ok` | `200` `{"ready":true}` | `200`, or `500` at `FAULT_RATE` |
+| Connection fails (refused, DNS, closed) | `503` `{"status":503,"message":"redis unavailable"}` as soon as the attempt fails, at most `REDIS_TIMEOUT_MS` | `503` `{"result":"error","message":"Telemetry storage unavailable"}`, same limit | unchanged | unchanged |
+| Connected, but no answer (handshake or command) | the same `503` after `REDIS_TIMEOUT_MS` | the same `503` after `REDIS_TIMEOUT_MS` | unchanged | unchanged |
+| Recovered | `200` again from the next request | `200` again from the next request | unchanged | unchanged |
+
+`/ready` keeps answering `200` `{"ready":true}` and `503` `{"ready":false}` only during
+[graceful shutdown](#graceful-shutdown). Failing readiness for Redis would remove
+every pod from the service at once, including the features that work without Redis.
+`/health` does not call Redis and keeps its `result`, `version`, `uptime` and
+`FAULT_RATE` behaviour. The info page `/` sends no command; it only checks for a
+ready connection and opens one when needed, within the same limit. When the
+connection cannot be opened in time, the page renders after at most
+`REDIS_TIMEOUT_MS` and falls back to direct `/status` sampling. When an open
+connection has stopped answering, the page renders at once and its `/telemetry`
+reads show telemetry as unavailable.
+
+When the budget runs out, the app destroys the connection. redis 6.x cannot cancel
+a command that is already sent, and Redis answers a connection in order, so the
+other requests waiting on the same connection would stall behind it anyway: they
+fail with the same `503` at once instead of at their own limit. The client does not
+reconnect in the background (its handshake would have no time limit) and does not
+queue commands while disconnected, so a failed command is never replayed after
+recovery. The next request, or the next one-second publish tick, opens one new
+connection; concurrent requests share that attempt. Recovery needs no restart and
+no reload of the pod.
+
+A `PUT` that times out after the `SET` was sent may or may not have been applied by
+Redis: the `503` only means the app did not get an answer. The app never retries it.
+Read the key back, or repeat the `PUT`, which replaces the whole value.
+
+The telemetry publisher uses the same budget for each publish. A stalled publish
+ends at the limit and the next tick starts right after it, on a new connection;
+publishes still never overlap, and the five-minute retention is unchanged. Samples during the outage are not
+recorded and are not written later.
+
+Each unavailable operation writes one `error` record: `redis.connect_failed` when
+the connection cannot be opened, `redis.timeout` with `stage` (`connect` or
+`command`) and `timeout_ms` when the budget runs out, or `redis.connection_lost`
+when the connection went away during a command. Records for a request carry its
+`request_id`; records for the publisher have none.
+
 ## Environment
 
 | Variable       | Default                      | Description                             |
@@ -558,6 +628,7 @@ curl localhost:3000/cache/foo
 | `REDIS_HOST`   | `redis`                      | Redis host                               |
 | `REDIS_PORT`   | `6379`                       | Redis port                               |
 | `REDIS_PASS`   | -                            | Redis password; redacted from logs       |
+| `REDIS_TIMEOUT_MS` | `2000`                   | Time budget in milliseconds of one Redis operation: connecting when needed plus every command. Must be a whole number from `1` to `60000` (digits only, surrounding spaces allowed); unset, empty, `0`, negative, fractional, exponent, unit-suffixed (`2s`) or out-of-range values use `2000`. See [Redis outages](#redis-outages) |
 | `LOG_LEVEL`    | `info`                       | Lowest log level written: `debug`, `info`, `warn` or `error`; other values fall back to `info` with one warning. See [Logging](#logging) |
 | `SHUTDOWN_TIMEOUT_MS` | `10000`               | Deadline in milliseconds from the first `SIGTERM`/`SIGINT` for finishing requests and closing resources; exceeding it exits with code `1`. Must be a whole number from `1` to `2147483647` (digits only, surrounding spaces allowed); unset, empty, `0`, negative, fractional, exponent, unit-suffixed (`5s`) or out-of-range values use `10000`. See [Graceful shutdown](#graceful-shutdown) |
 

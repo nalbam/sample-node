@@ -406,13 +406,14 @@ outage. It is a browser page, so open it rather than curl it.
 | GET    | `/random`   | Random number in [0, 1) as `{"value": ...}` |
 | GET    | `/uuid`     | Random UUID v4 as `{"uuid": ...}` |
 | GET    | `/hostname` | Host name of the answering pod as `{"hostname": ...}` |
-| GET    | `/health`   | Health check with `result`, `version` and `uptime` (integer seconds); fails at `FAULT_RATE` percent |
+| GET    | `/health`   | Health check with `result`, `version` and `uptime` (integer seconds), see [health contract](#health-contract); fails at `FAULT_RATE` percent |
 | GET    | `/status`   | Process identity, uptime, app-container CPU/memory, limits, and OOM allocation state |
 | GET    | `/telemetry` | Shared pod history; use the returned `cursor` as `?after=<cursor>` for subsequent records |
 | GET    | `/metrics`  | Prometheus metrics                          |
 
 `/status` is not affected by `FAULT_RATE` and sends `Cache-Control: no-store`.
-`/health` is the probe and fails at `FAULT_RATE`. Both the 200 and the 500 response include `uptime` in integer seconds. On Linux, cgroup v2/v1 counters
+`/health` is the probe and fails at `FAULT_RATE`: `200` with `result` `ok`, or `500`
+with `result` `error`. Both responses follow the [health contract](#health-contract). On Linux, cgroup v2/v1 counters
 measure the app container rather than the whole node or its sidecars. Memory usage
 includes cgroup-charged cache; `memory.rss` separately reports process RSS. CPU is
 the change in cumulative CPU time over a monotonic sample interval (at least 500ms).
@@ -481,10 +482,52 @@ curl localhost:3000/fault/50
 | Method | Path      | Description                                |
 | ------ | --------- | ------------------------------------------ |
 | GET    | `/node`   | Calls `/health` of a remote sample service |
-| GET    | `/spring` | Calls `/health` of a remote sample service |
-| GET    | `/tomcat` | Calls `/health` of a remote sample service |
+| GET    | `/spring` | Calls `/health` of sample-spring and checks the health contract |
+| GET    | `/tomcat` | Calls `/health` of sample-tomcat and checks the health contract |
 
 `PROFILE` decides how those services are addressed — see [Environment](#environment).
+
+`/spring` and `/tomcat` check the remote body against the
+[health contract](#health-contract) before answering:
+
+| Remote answer | Response |
+| ------------- | -------- |
+| JSON object that follows the contract, with `result` `ok` or `error` | The remote status code and the whole JSON body, unchanged, including `type` and any other field |
+| Body that is not valid JSON | `502` with `{"result":"error"}` |
+| JSON that breaks the contract: a missing field, `result` other than lowercase `ok`/`error` (such as `OK`), a `version` that is not a string, an `uptime` that is a string, negative or fractional, or a body that is `null`, an array or a primitive | `502` with `{"result":"error"}` |
+| No answer: connection refused, DNS failure, or the body could not be read | `500` with `{"result":"error"}` |
+
+A valid `error` body is passed through with its status (for example `500`); it is not
+treated as a contract violation. Values are never converted and missing fields are
+never filled in. Only these four fields are checked: `version` may be any string,
+and `type` is not required. A `502` logs one error record with
+`event` `remote.invalid_response`, `service`, the remote `status` and a `reason`; a
+`500` logs `event` `remote.failed` with the error, as before. Both carry the
+`request_id` of the request that made the call.
+
+`/node` uses the same call without the check: it answers with the remote status and
+JSON body as they are, and with `500` when the call fails or the body is not JSON.
+
+### Health contract
+
+`GET /health` of sample-node, sample-spring and sample-tomcat returns the same fields:
+
+| Field     | Type    | Value |
+| --------- | ------- | ----- |
+| `result`  | string  | lowercase `ok` or `error` |
+| `version` | string  | the running version (`VERSION`, default `v0.0.0` here) |
+| `uptime`  | integer | whole seconds since the process started, `0` or more |
+| `type`    | string  | kept from the existing response of sample-spring and sample-tomcat (`health`) |
+
+sample-node's own `/health` has no `type`, as before; it never had one. Other
+services may add fields, such as `artifactId` from sample-spring.
+
+```bash
+$ curl -s localhost:3000/health
+{"result":"ok","version":"v0.0.0","uptime":12}
+$ curl -s localhost:3000/spring    # sample-spring's body, passed through
+{"result":"ok","artifactId":"sample-spring","type":"health","version":"v0.0.0","uptime":4}
+```
 
 ### Redis
 

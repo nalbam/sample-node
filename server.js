@@ -22,6 +22,7 @@ import { createRequire } from 'node:module';
 import { createLogger, runWithContext, runWithoutContext, secretsFromHeaders } from './lib/logger.js';
 import { createTelemetry } from './lib/telemetry.js';
 import { createTelemetryStore, startTelemetryPublisher, validCursor } from './lib/telemetry-store.js';
+import { createShutdownManager, parseShutdownTimeout } from './lib/shutdown.js';
 
 import cors from 'cors';
 import express from 'express';
@@ -75,14 +76,22 @@ client?.on('error', err => {
 // request context.
 let connecting = null;
 
+// Set once shutdown starts closing Redis. From then on no new connection is
+// opened, and an attempt that completes late is torn down again.
+let redisClosed = false;
+
 async function ensureRedisConnection() {
-  if (!client) return false;
+  if (!client || redisClosed) return false;
   if (client.isReady) return true;
   // An open socket can still be reconnecting or authenticating.
   if (!connecting && client.isOpen) return false;
   if (!connecting) {
     connecting = runWithoutContext(() => client.connect())
-      .then(() => null, err => err)
+      .then(() => {
+        if (!redisClosed) return null;
+        client.destroy();
+        return new Error('redis closed during shutdown');
+      }, err => err)
       .finally(() => {
         connecting = null;
       });
@@ -235,9 +244,16 @@ app.get('/read', async function (req, res) {
   });
 });
 
+// Set by startServer. Once shutdown begins, /ready fails so the load balancer
+// stops routing here while in-flight requests finish; /live keeps answering.
+let shutdownManager = null;
+
 app.get('/ready', function (req, res) {
   logger.debug(`get /ready`);
 
+  if (shutdownManager?.isShuttingDown) {
+    return res.status(503).json({ ready: false });
+  }
   return res.status(200).json({ ready: true });
 });
 
@@ -477,7 +493,7 @@ const oomState = {active: false, startedAt: null, allocatedBytes: 0, capped: fal
 // `log` is bound to the request that started the fill, so the plan and every
 // timer line keep its request_id; later POSTs return here without touching it.
 function startOomAllocation(log) {
-  if (oomTimer) {
+  if (oomTimer || shutdownManager?.isShuttingDown) {
     return;
   }
   oomState.active = true;
@@ -684,15 +700,126 @@ app.use((err, req, res, next) => {
 
 export default app;
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+// Starts the HTTP server, the telemetry publisher (when Redis is enabled) and
+// the shutdown coordinator. It registers no signal listeners: the entry point
+// below does that, so importing this module stays free of process-wide effects.
+//
+// Returns {server, shutdown(signal)}. shutdown() is idempotent: every call
+// returns the same Promise of the exit code. It stops accepting connections,
+// stops the publisher and the OOM fill, waits for in-flight requests and the
+// in-flight publish, then closes Redis and calls exit(0). Past
+// SHUTDOWN_TIMEOUT_MS it destroys the remaining connections and Redis and
+// calls exit(1).
+export function startServer({port = PORT, exit = code => process.exit(code)} = {}) {
+  const timeoutMs = parseShutdownTimeout(process.env.SHUTDOWN_TIMEOUT_MS);
+
+  let stopPublisher = () => {};
+  let publishing = null;
   if (REDIS_ENABLED) {
     serviceLog.info('connecting to redis', {event: 'redis.connecting', redis_host: REDIS_HOST, redis_port: REDIS_PORT});
-    startTelemetryPublisher(async () => {
-      if (await ensureRedisConnection()) await telemetryStore.publish(statusSnapshot());
+    stopPublisher = startTelemetryPublisher(() => {
+      if (shutdownManager?.isShuttingDown) return undefined;
+      // The publisher's stop only cancels the next tick, so shutdown waits on
+      // this Promise for a publish that is already running.
+      const run = (async () => {
+        if (await ensureRedisConnection()) await telemetryStore.publish(statusSnapshot());
+      })();
+      publishing = run.finally(() => { publishing = null; });
+      return run;
     }, error => serviceLog.error('telemetry publish failed', {event: 'telemetry.publish_failed', error}));
   }
 
-  app.listen(PORT, function () {
-    serviceLog.info(`[${PROFILE}] Listening on port ${PORT}!`, {event: 'server.listening', port: PORT, profile: PROFILE, version: VERSION, log_level: logger.level});
+  // In-flight requests, counted from 'request' until the response closes
+  // (finished or aborted), including requests pipelined on open connections.
+  let activeRequests = 0;
+  let requestsDone = null;
+  let resolveRequestsDone = () => {};
+
+  const server = app.listen(port, function (error) {
+    if (error) {
+      serviceLog.error('server failed to listen', {event: 'server.listen_failed', port, error});
+      return;
+    }
+    const actualPort = server.address().port;
+    serviceLog.info(`[${PROFILE}] Listening on port ${actualPort}!`, {event: 'server.listening', port: actualPort, profile: PROFILE, version: VERSION, log_level: logger.level});
   });
+  server.on('request', (req, res) => {
+    activeRequests++;
+    res.once('close', () => {
+      activeRequests--;
+      if (activeRequests === 0) resolveRequestsDone();
+    });
+  });
+
+  let serverClosed = null;
+
+  function stopOom() {
+    clearInterval(oomTimer);
+    oomTimer = null;
+    oomState.active = false;
+  }
+
+  shutdownManager = createShutdownManager({
+    timeoutMs,
+    onStart(signal) {
+      serviceLog.info('shutdown started', {event: 'shutdown.started', signal, timeout_ms: timeoutMs, active_requests: activeRequests});
+      serverClosed = new Promise((resolve, reject) => {
+        server.close(error => (error ? reject(error) : resolve()));
+      });
+      stopPublisher();
+      stopOom();
+    },
+    async drain() {
+      if (activeRequests > 0) {
+        requestsDone = new Promise(resolve => { resolveRequestsDone = resolve; });
+        await requestsDone;
+      }
+      await publishing;
+    },
+    async cleanup() {
+      // Only idle keep-alive connections remain; drop them so close() settles.
+      server.closeIdleConnections();
+      await serverClosed;
+      if (!client) return;
+      redisClosed = true;
+      await connecting;
+      // close() waits for pending replies and rejects when the socket is not open.
+      if (client.isOpen) await client.close();
+    },
+    forceClose() {
+      server.closeAllConnections();
+      stopOom();
+      if (client) {
+        redisClosed = true;
+        client.destroy();
+      }
+    },
+    onError(error, {phase, signal}) {
+      serviceLog.error('shutdown failed', {event: 'shutdown.failed', phase, signal, error});
+    },
+    exit(code) {
+      const level = code === 0 ? 'info' : 'error';
+      serviceLog[level]('shutdown completed', {event: 'shutdown.completed', exit_code: code});
+      exit(code);
+    },
+  });
+
+  return {
+    server,
+    shutdown: signal => shutdownManager.begin(signal),
+  };
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const {shutdown} = startServer();
+  for (const signal of ['SIGTERM', 'SIGINT']) {
+    // A repeated signal reaches the same begin(), which neither restarts the
+    // cleanup nor extends the deadline.
+    process.on(signal, () => {
+      if (shutdownManager.isShuttingDown) {
+        serviceLog.warn('shutdown already in progress', {event: 'shutdown.signal_repeated', signal});
+      }
+      shutdown(signal);
+    });
+  }
 }

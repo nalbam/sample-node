@@ -788,10 +788,14 @@ export function startServer({port = PORT, exit = code => process.exit(code)} = {
   shutdownManager = createShutdownManager({
     timeoutMs,
     onStart(signal) {
-      serviceLog.info('shutdown started', {event: 'shutdown.started', signal, timeout_ms: timeoutMs, active_requests: activeRequests});
+      // The listener is closed before the shutdown is announced. Closing it
+      // takes a moment, and until the listening socket is gone the port still
+      // accepts connections, so a client that reacts to the 'shutdown started'
+      // record must already find the port closed.
       serverClosed = new Promise((resolve, reject) => {
         server.close(error => (error ? reject(error) : resolve()));
       });
+      serviceLog.info('shutdown started', {event: 'shutdown.started', signal, timeout_ms: timeoutMs, active_requests: activeRequests});
       stopPublisher();
       stopOom();
     },

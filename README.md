@@ -1,13 +1,7 @@
 # sample-node
 
-[![CI](https://img.shields.io/github/actions/workflow/status/nalbam/sample-node/push.yml?branch=main&style=for-the-badge&logo=github)](https://github.com/nalbam/sample-node/actions/workflows/push.yml)
+[![ci](https://img.shields.io/github/actions/workflow/status/nalbam/sample-node/ci.yml?branch=main&label=ci&style=for-the-badge&logo=github)](https://github.com/nalbam/sample-node/actions/workflows/ci.yml)
 [![release](https://img.shields.io/github/v/release/nalbam/sample-node?style=for-the-badge&logo=github)](https://github.com/nalbam/sample-node/releases)
-
-[![Docker Image Version (latest by date)](https://img.shields.io/docker/v/nalbam/sample-node?label=Docker%20Hub&style=for-the-badge&logo=docker)](https://hub.docker.com/r/nalbam/sample-node)
-[![Docker Image Size (latest by date)](https://img.shields.io/docker/image-size/nalbam/sample-node?style=for-the-badge&logo=docker)](https://hub.docker.com/r/nalbam/sample-node)
-[![Docker Pulls](https://img.shields.io/docker/pulls/nalbam/sample-node?style=for-the-badge&logo=docker)](https://hub.docker.com/r/nalbam/sample-node)
-
-<!-- [![DockerHub Badge](http://dockeri.co/image/nalbam/sample-node)](https://hub.docker.com/r/nalbam/sample-node/) -->
 
 A sample Node.js app for Kubernetes demos. It serves liveness and readiness probes,
 exports Prometheus metrics, and offers chaos endpoints that burn CPU, inject faults,
@@ -17,10 +11,8 @@ which pod answered, and `/drop` visualizes a rollout by version.
 ## Docker
 
 ```bash
-docker pull nalbam/sample-node
-
 # POST /oom needs a memory limit to be killed by the kernel
-docker run -d --name sample-node -m 128m -p 3000:3000 nalbam/sample-node
+docker run -d --name sample-node -m 128m -p 3000:3000 -e REDIS_ENABLED=false ghcr.io/nalbam/sample-node
 
 # wait longer than SHUTDOWN_TIMEOUT_MS (10s by default) before Docker sends SIGKILL
 docker stop --time 15 sample-node
@@ -33,14 +25,9 @@ The image runs `node server.js` directly as the container's main process and set
 `docker stop` wait is 10 seconds, the same as the app's default shutdown timeout,
 so pass a longer `--time`. See [Graceful shutdown](#graceful-shutdown).
 
-The image is built for `linux/amd64` and `linux/arm64` from the same Dockerfile
-(`node:26-alpine` base, no native modules) and runs as the non-root `node` user. It
-listens on `PORT` (`3000` by default); to use another port, set both:
-
-```bash
-docker run -d -e PORT=8080 -p 8080:8080 nalbam/sample-node
-docker buildx build --platform linux/arm64 -t sample-node:arm64 .   # local arm64 build
-```
+The image is built for `linux/amd64` and `linux/arm64` (`node:26-alpine` base, no
+native modules) and runs as the non-root `node` user. It listens on `PORT`
+(`3000` by default). A release image sets `VERSION` to its tag.
 
 ## Kubernetes
 
@@ -67,7 +54,7 @@ spec:
       terminationGracePeriodSeconds: 30   # longer than SHUTDOWN_TIMEOUT_MS (10s)
       containers:
         - name: sample-node
-          image: nalbam/sample-node
+          image: ghcr.io/nalbam/sample-node
           ports:
             - containerPort: 3000
           env:
@@ -163,24 +150,18 @@ npm test -- --runInBand
 npm start                  # http://localhost:3000
 ```
 
-`npm run smoke -- <base-url> <version>` checks a running app that was started with
-`REDIS_ENABLED=false`. It waits up to 30 seconds for `/live`, then checks the status,
-`Content-Type` and key values of `/`, `/live`, `/ready`, `/read`, `/health`, `/version`
-and `/metrics`, the `404` from `/telemetry` and `/cache/*`, and the `X-Request-Id` echo.
-It prints one line per path and exits `1` when the app does not start or a response
-differs. Pass the same version as `VERSION`:
+To build the image, run the lint and the tests in its build stage, and smoke-test it
+(needs Docker with Buildx and `jq`):
 
 ```bash
-REDIS_ENABLED=false VERSION=v0.0.0-smoke npm start &
-npm run smoke -- http://localhost:3000 v0.0.0-smoke
-kill %1
-
-docker build --pull -t sample-node:local .
-docker run -d --name sample-node-smoke -e REDIS_ENABLED=false -e VERSION=v0.0.0-smoke \
-  -p 3000:3000 sample-node:local
-npm run smoke -- http://localhost:3000 v0.0.0-smoke
-docker rm -f sample-node-smoke
+docker buildx build --load -t sample-node:dev .
+scripts/smoke.sh sample-node:dev
 ```
+
+`scripts/smoke.sh` starts the image with `REDIS_ENABLED=false` and checks `/health`,
+`/`, `/live`, `/ready`, `/read`, `/version`, `/metrics`, the `404` from `/telemetry`
+and `/cache/*`, the `X-Request-Id` echo, the non-root user, a clean `docker stop`
+and a custom `PORT`.
 
 ### Logging
 
@@ -256,88 +237,14 @@ Sensitive values are kept out of the logs:
   repeats it (for example `Authorization: Bearer http.request.completed`) cannot
   hide a request from event-based filtering.
 
-## Release
+## CI/CD
 
-Pull requests and pushes to `main` or `master` run `npm ci`, lint and tests on
-Node.js 26, build the Docker image with `--pull`, and run `scripts/smoke.mjs` against
-the container with `REDIS_ENABLED=false`. A failed check fails the `verify` job; the
-container logs are printed and the container is removed in every case. The
-`platforms` job builds `linux/amd64` and `linux/arm64` without pushing. Branch pushes only run CI; versions are released by pushing a `v*`
-SemVer tag such as `v0.16.10` or `v0.17.0-rc.1`.
-Tags must fit Docker's 128-character limit and omit `+build` metadata so the Git,
-image, and deployment versions stay identical.
+Pull requests and pushes to `main` run CI. A `v*` tag releases the image
+`ghcr.io/nalbam/sample-node:<tag>` and a GitHub Release with the app archive
+(production `node_modules` included). Jenkins can run the same pipeline with Nexus and
+Harbor or ECR. See [docs/pipeline.md](docs/pipeline.md).
 
-```bash
-git tag v0.16.10
-git push origin v0.16.10
-```
-
-These commands tag the local `HEAD`. To tag a commit whose CI you checked, use the
-SHA form in [Verify a release](#verify-a-release).
-
-The [release workflow](.github/workflows/release.yml) runs the same checks, then:
-
-1. Builds and pushes `nalbam/sample-node:<tag>` for `linux/amd64` and `linux/arm64`.
-   Stable versions also update `latest`; prereleases only publish their version tag.
-2. Creates a GitHub Release with commit notes since the previous reachable version
-   tag, excluding merge commits and `chore: release` commits. Reruns update the
-   existing release. Tags with a prerelease suffix create GitHub prereleases.
-3. Sends a GitOps dispatch to `opspresso/argocd-env-demo` for the `sample-node`
-   project's `app` container in `alpha`.
-4. For stable tags, sends the same version to `prod` through the GitHub `prod`
-   environment, with `auto_merge=true` so GitOps updates its main branch directly.
-   Prereleases stop at alpha. Configure required reviewers on the `prod`
-   environment if production deployment requires manual approval.
-
-Each stage requires the previous stage to succeed. Release runs are serialized
-because they share `latest` and the deployment targets. A successful alpha dispatch
-allows the prod job to proceed; it does not wait for the alpha rollout to finish.
-GitOps dispatches request deployment; their success does not confirm that the
-rollouts have completed.
-
-Repository secrets: `DOCKER_USERNAME` and `DOCKER_PASSWORD` must allow pushing to
-`nalbam/sample-node`; `GHP_TOKEN` must allow repository dispatches to
-`opspresso/argocd-env-demo`. The workflow's `GITHUB_TOKEN` has write access only in
-the GitHub Release job. Git tags are the release version source; the legacy
-`VERSION` file is not used by this workflow.
-
-### Verify a release
-
-The image tag does not set the `VERSION` environment variable. A container started
-without `VERSION` reports `v0.0.0`; the deployment must pass the tag as `VERSION`.
-
-Before tagging, pick the commit and confirm that CI succeeded on it. Tag that
-exact SHA: `git tag "$tag"` without a commit argument tags the local `HEAD`,
-which `git fetch` does not move.
-
-```bash
-git fetch origin
-sha=$(git rev-parse origin/main)   # or the full SHA of the commit you chose
-gh run list --workflow push.yml --commit "$sha" --json databaseId,status,conclusion
-# continue only when the run shows status "completed" and conclusion "success"
-
-tag=v0.16.10
-git tag "$tag" "$sha"
-git push origin "$tag"
-git rev-parse "$tag^{commit}"      # must print $sha
-```
-
-Then check each stage for that tag:
-
-```bash
-gh run list --workflow release.yml --branch "$tag" --limit 1
-gh run view <run-id>                    # every job succeeded; prod is skipped for prereleases
-gh release view "$tag" --json tagName,isPrerelease,targetCommitish,body
-docker buildx imagetools inspect "nalbam/sample-node:$tag"   # lists linux/amd64 and linux/arm64
-
-docker run -d --name sample-node-release -e REDIS_ENABLED=false -e VERSION="$tag" \
-  -p 3000:3000 "nalbam/sample-node:$tag"
-npm run smoke -- http://localhost:3000 "$tag"
-docker rm -f sample-node-release
-```
-
-For a stable tag, also confirm that `docker buildx imagetools inspect nalbam/sample-node:latest`
-shows the same digest as `nalbam/sample-node:$tag`.
+[Runway](#runway) builds and deploys from `application.yaml` on its own; it does not use this pipeline.
 
 ## Endpoints
 
@@ -650,13 +557,12 @@ replaced by `[REDACTED]` in every log record, as are URL credentials such as
 [`application.yaml`](application.yaml) (`apiVersion: agent.opspresso.com/v1`,
 `kind: Application`) registers the app with Agent Runway:
 
-- `spec`: name `sample-node`, repository `nalbam/sample-node`, owner and description.
+- `spec`: name `sample-node-5`, repository `nalbam/sample-node`, owner and description.
 - `runtime`: listens on port `3000` with `/health` as its health check, is built
   from `Dockerfile` with the repository root as context, and is tested in
   `node:26-alpine` with `npm ci && npm test -- --runInBand`.
-- `environments`: `dev` declares a `cache` resource of class `valkey`, which
-  provides the `CACHE_VALKEY_*` settings; `prod` sets `REDIS_ENABLED=false`, so it
-  runs without Redis.
+- `environments`: `dev` and `prod` each declare a `cache` resource of class `valkey`,
+  which provides the `CACHE_VALKEY_*` settings.
 
 ## Environment
 
@@ -668,7 +574,7 @@ replaced by `[REDACTED]` in every log record, as are URL credentials such as
 | `HOSTNAME`     | `default.svc.cluster.local`  | Domain suffix for non-default profiles  |
 | `CLUSTER_NAME` | `local`                      | Cluster name shown on the info page      |
 | `MESSAGE`      | -                            | Message shown on the info page           |
-| `VERSION`      | `v0.0.0`                     | Version reported in responses            |
+| `VERSION`      | `v0.0.0`                     | Version reported in responses. The image sets the release tag |
 | `FAULT_RATE`   | `0`                          | Percentage of `/health` calls that fail  |
 | `LOOP_HOST`    | `http://sample-node`         | Target of `/loop/:count`                 |
 | `REDIS_ENABLED` | `true`                     | Set to `false` (case-insensitive) to disable Redis features and connections; overrides every setting below. See [Redis and Valkey connection](#redis-and-valkey-connection) |

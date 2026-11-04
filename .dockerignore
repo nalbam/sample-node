@@ -1,7 +1,9 @@
-charts/
-.git/
-.github/
-node_modules/
-reports/
-scripts/
-test/
+.git
+.github
+dist
+docs
+scripts
+Jenkinsfile
+*.md
+node_modules
+reports

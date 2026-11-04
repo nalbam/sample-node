@@ -5,12 +5,11 @@ export default [
   {
     ignores: [
       'node_modules/',
-      'reports/',
     ],
   },
   js.configs.recommended,
   {
-    files: ['server.js', 'lib/**/*.js', 'scripts/**/*.mjs', 'test/**/*.js', 'eslint.config.js'],
+    files: ['server.js', 'lib/**/*.js', 'test/**/*.js', 'eslint.config.js'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',

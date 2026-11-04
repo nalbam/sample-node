@@ -1,7 +1,7 @@
 apiVersion: agent.opspresso.com/v1
 kind: Application
 spec:
-  name: sample-node-4
+  name: sample-node-5
   repository: nalbam/sample-node
   owner: dBT43yQ7DQIIIMlYbjiXsIr8tbuIgVJA
   description: Node.js sample app
@@ -20,5 +20,6 @@ environments:
       - name: cache
         class: valkey
   prod:
-    env:
-      REDIS_ENABLED: "false"
+    resources:
+      - name: cache
+        class: valkey

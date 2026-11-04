@@ -1,6 +1,7 @@
 {
   "name": "sample-node",
-  "version": "v0.16.0",
+  "version": "0.0.0",
+  "private": true,
   "description": "Node.js sample app",
   "type": "module",
   "main": "server.js",
@@ -8,13 +9,9 @@
     "node": ">=26"
   },
   "scripts": {
-    "clean": "rm -rf node_modules package-lock.json",
-    "build": "npm ci",
     "start": "node server.js",
     "lint": "eslint .",
-    "smoke": "node scripts/smoke.mjs",
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
-    "sonar": "sonar-scanner-npm"
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest"
   },
   "dependencies": {
     "cors": "^2.8.6",
@@ -29,8 +26,6 @@
     "eslint": "^10.0.0",
     "globals": "^17.0.0",
     "jest": "^30.5.2",
-    "jest-sonar-reporter": "^2.0.0",
-    "sonarqube-scanner": "^5.0.2",
     "supertest": "^7.3.1"
   },
   "jest": {
@@ -38,12 +33,6 @@
     "transform": {},
     "setupFiles": [
       "<rootDir>/test/setup-env.js"
-    ],
-    "testResultsProcessor": "jest-sonar-reporter"
-  },
-  "jestSonar": {
-    "reportPath": "reports",
-    "reportFile": "test-reporter.xml",
-    "indent": 4
+    ]
   }
 }

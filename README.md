@@ -557,7 +557,7 @@ replaced by `[REDACTED]` in every log record, as are URL credentials such as
 [`application.yaml`](application.yaml) (`apiVersion: agent.opspresso.com/v1`,
 `kind: Application`) registers the app with Agent Runway:
 
-- `spec`: name `sample-node-5`, repository `nalbam/sample-node`, owner and description.
+- `spec`: the Runway project name, repository `nalbam/sample-node`, owner and description.
 - `runtime`: listens on port `3000` with `/health` as its health check, is built
   from `Dockerfile` with the repository root as context, and is tested in
   `node:26-alpine` with `npm ci && npm test -- --runInBand`.

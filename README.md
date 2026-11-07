@@ -260,7 +260,10 @@ for that request instead. Every log record written for the request carries the s
 | Method | Path           | Description                                                  |
 | ------ | -------------- | ------------------------------------------------------------ |
 | GET    | `/`            | Info page: host, date, cluster, profile, message, version, and the kill switch |
-| GET    | `/drop`        | Rollout visualization, `/drop/:rate` sets the success rate    |
+| GET    | `/drop`        | Rollout visualization, `/drop/:rate` sets the success rate (0 to 100, default 100) |
+
+`/drop/:rate` takes the same `rate` as `/success/:rate`; see [Chaos](#chaos). An invalid
+`rate` answers 400 with `{"result": "error", "message": "Invalid rate value"}`.
 
 `/` renders the pod that answered, and shows the local time in the reader's own zone.
 The dashboard fills the viewport, with CPU and the HPA load test on the left and
@@ -365,10 +368,18 @@ trimmed on publish; the index itself expires after five minutes without a publis
 | ------ | ---------------- | ------------------------------------------------------ |
 | GET    | `/work/:ms`      | Burns `ms` milliseconds of CPU answering this one request, up to 1000 |
 | POST   | `/oom`           | Kill switch, allocates memory at a 30s fill target until the kernel OOM kills it (exit 137) |
-| GET    | `/delay/:sec`    | Responds after `sec` seconds                           |
-| GET    | `/success/:rate` | Returns 200 at `rate` percent                          |
-| GET    | `/fault/:rate`   | Returns 500 at `rate` percent                          |
+| GET    | `/delay/:sec`    | Responds after `sec` seconds, from 0 to 2147483.647    |
+| GET    | `/success/:rate` | Returns 200 at `rate` percent, from 0 to 100           |
+| GET    | `/fault/:rate`   | Returns 500 at `rate` percent, from 0 to 100           |
 | GET    | `/loop/:count`   | Calls `LOOP_HOST` recursively `count` times            |
+
+`sec` and `rate` must be a whole finite decimal number, such as `5`, `0.1`, `12.5` or `1e1`.
+Both ends of the range are included. `sec` stops at 2147483.647 seconds (about 24.8 days)
+because a Node timer longer than 2147483647ms fires after 1ms. The server refuses a value
+that is out of range, not finite (`Infinity`, `NaN`, `1e400`), blank, hexadecimal or only
+partly a number (`5abc`, `50x`), and does not round or clamp it. A refused `sec` answers
+400 with `{"result": "error", "message": "Invalid sec value"}` and starts no delay; a
+refused `rate` answers 400 with `{"result": "error", "message": "Invalid rate value"}`.
 
 `POST /oom` reads the memory limit and sizes each 500ms allocation from the gap
 between current RSS and 110% of the limit, using a 30-second fill target. Actual

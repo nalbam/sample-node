@@ -149,6 +149,29 @@ function sleep(sec) {
   return new Promise(resolve => setTimeout(resolve, sec * 1000));
 }
 
+// Node fires a timer longer than 2147483647ms (about 24.8 days) after 1ms, so
+// /delay accepts no more than MAX_DELAY_SEC seconds.
+const MAX_TIMER_MS = 2147483647;
+const MAX_DELAY_SEC = MAX_TIMER_MS / 1000;
+
+// A decimal number such as 5, -0.5, .5 or 1e2. Hex, Infinity, NaN, blanks and
+// partial numbers such as 5abc are not numbers here. Each digit run has one
+// way to match, so a long partial number fails in linear time.
+const DECIMAL_PATTERN = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i;
+
+// Returns the number the whole of value spells when it is finite and within
+// min..max inclusive, else null.
+function parseNumberInRange(value, min, max) {
+  if (!DECIMAL_PATTERN.test(value)) {
+    return null;
+  }
+  const number = Number(value);
+  if (!Number.isFinite(number) || number < min || number > max) {
+    return null;
+  }
+  return number;
+}
+
 const sampleTelemetry = createTelemetry();
 const INSTANCE_ID = randomUUID();
 const STARTED_AT = new Date(Date.now() - process.uptime() * 1000).toISOString();
@@ -240,11 +263,11 @@ app.get('/drop', async function (req, res) {
 });
 
 app.get('/drop/:rate', async function (req, res) {
-  const rate = parseFloat(req.params.rate);
+  const rate = parseNumberInRange(req.params.rate, 0, 100);
 
   logger.debug(`get /drop/${req.params.rate}`);
 
-  if (Number.isNaN(rate)) {
+  if (rate === null) {
     return res.status(400).json({
       result: 'error',
       message: 'Invalid rate value',
@@ -591,11 +614,11 @@ function handleRateBasedResponse(res, rate, successCondition) {
 }
 
 app.get('/success/:rate', async function (req, res) {
-  const rate = parseFloat(req.params.rate);
+  const rate = parseNumberInRange(req.params.rate, 0, 100);
 
   logger.debug(`get /success/${req.params.rate}`);
 
-  if (Number.isNaN(rate)) {
+  if (rate === null) {
     return res.status(400).json({
       result: 'error',
       message: 'Invalid rate value',
@@ -606,11 +629,11 @@ app.get('/success/:rate', async function (req, res) {
 });
 
 app.get('/fault/:rate', async function (req, res) {
-  const rate = parseFloat(req.params.rate);
+  const rate = parseNumberInRange(req.params.rate, 0, 100);
 
   logger.debug(`get /fault/${req.params.rate}`);
 
-  if (Number.isNaN(rate)) {
+  if (rate === null) {
     return res.status(400).json({
       result: 'error',
       message: 'Invalid rate value',
@@ -621,11 +644,11 @@ app.get('/fault/:rate', async function (req, res) {
 });
 
 app.get('/delay/:sec', async function (req, res) {
-  const sec = parseFloat(req.params.sec);
+  const sec = parseNumberInRange(req.params.sec, 0, MAX_DELAY_SEC);
 
   logger.debug(`get /delay/${req.params.sec}`);
 
-  if (Number.isNaN(sec) || sec < 0) {
+  if (sec === null || sec * 1000 > MAX_TIMER_MS) {
     return res.status(400).json({
       result: 'error',
       message: 'Invalid sec value',

@@ -143,6 +143,32 @@ describe('rate endpoints', () => {
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ result: 'ok', rate: 0 });
   });
+
+  describe('with a fixed random draw', () => {
+    let random;
+    afterEach(() => random.mockRestore());
+
+    test.each([
+      ['/success/0', 0, 200],
+      ['/success/0', 0.5, 500],
+      ['/success/100', 0.999, 200],
+      ['/success/12.5', 0.1, 200],
+      ['/success/12.5', 0.2, 500],
+      ['/success/1e1', 0.05, 200],
+      ['/fault/100', 0.5, 500],
+      ['/fault/0', 0.5, 200],
+      ['/fault/12.5', 0.2, 200],
+      ['/fault/12.5', 0.1, 500],
+    ])('GET %s with Math.random() = %d answers %d', async (path, draw, status) => {
+      random = jest.spyOn(Math, 'random').mockReturnValue(draw);
+      const rate = Number(path.split('/')[2]);
+
+      const res = await request(app).get(path);
+
+      expect(res.status).toBe(status);
+      expect(res.body).toMatchObject({ result: status === 200 ? 'ok' : 'error', rate });
+    });
+  });
 });
 
 describe('parameter validation', () => {
@@ -162,6 +188,40 @@ describe('parameter validation', () => {
     expect(res.status).toBe(400);
     expect(res.body.result).toBe('error');
   });
+
+  // A rate is a whole finite number from 0 to 100. Partial numbers such as
+  // 50x, non-finite values and out-of-range values are refused, not coerced.
+  test.each(['/success', '/fault', '/drop'].flatMap((base) => [
+    '-10', '150', '100.0001', '-0.1', 'Infinity', '-Infinity', 'NaN', '1e400',
+    '50x', '0x10', '5e', '%20', '%2050', '50%20',
+  ].map((rate) => [`${base}/${rate}`])))('GET %s is rejected as an invalid rate', async (path) => {
+    const res = await request(app).get(path);
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ result: 'error', message: 'Invalid rate value' });
+  });
+});
+
+// A long partial number must be refused in linear time. A pattern whose
+// repeats can split the same digits backtracks quadratically, and 15000
+// digits then hold the event loop for hundreds of milliseconds per request.
+describe('long partial numbers', () => {
+  const digits = '0'.repeat(15000);
+
+  test.each([
+    ['/success', 'Invalid rate value'],
+    ['/fault', 'Invalid rate value'],
+    ['/drop', 'Invalid rate value'],
+    ['/delay', 'Invalid sec value'],
+  ])('GET %s/<15000 digits>x is rejected quickly', async (base, message) => {
+    const started = process.hrtime.bigint();
+    const res = await request(app).get(`${base}/${digits}x`);
+    const elapsedMs = Number(process.hrtime.bigint() - started) / 1e6;
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ result: 'error', message });
+    expect(elapsedMs).toBeLessThan(150);
+  });
 });
 
 describe('GET /loop/:count', () => {
@@ -179,6 +239,69 @@ describe('GET /delay/:sec', () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ result: 'ok', sec: 0 });
+  });
+
+  test('GET /delay/0.1 waits 100ms', async () => {
+    const timeout = jest.spyOn(global, 'setTimeout');
+
+    try {
+      const res = await request(app).get('/delay/0.1');
+
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({ result: 'ok', sec: 0.1 });
+      expect(timeout).toHaveBeenCalledWith(expect.any(Function), 100);
+    } finally {
+      timeout.mockRestore();
+    }
+  });
+
+  // Long delays fire at once instead of waiting, so a test of the 24.8-day
+  // limit or of a value that the old parser read as 5 seconds stays fast.
+  // Short timers used by supertest and the HTTP stack keep the real clock.
+  describe('with long timers fired immediately', () => {
+    const realSetTimeout = global.setTimeout;
+    let delays;
+    let timeout;
+
+    beforeEach(() => {
+      delays = [];
+      timeout = jest.spyOn(global, 'setTimeout').mockImplementation((fn, ms, ...args) => {
+        if (!(ms <= 1000)) {
+          delays.push(ms);
+          return realSetTimeout(fn, 0, ...args);
+        }
+        return realSetTimeout(fn, ms, ...args);
+      });
+    });
+    afterEach(() => timeout.mockRestore());
+
+    test('accepts the Node timer limit of 2147483.647 seconds', async () => {
+      const res = await request(app).get('/delay/2147483.647');
+
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({ result: 'ok', sec: 2147483.647 });
+      expect(delays).toEqual([2147483647]);
+    });
+
+    test.each([
+      ['/delay/2147483.648'],
+      ['/delay/1e7'],
+      ['/delay/Infinity'],
+      ['/delay/-Infinity'],
+      ['/delay/NaN'],
+      ['/delay/1e400'],
+      ['/delay/5abc'],
+      ['/delay/0x10'],
+      ['/delay/%20'],
+      ['/delay/%205'],
+      ['/delay/-0.1'],
+    ])('GET %s is rejected without scheduling a delay', async (path) => {
+      const res = await request(app).get(path);
+
+      expect(res.status).toBe(400);
+      expect(res.body).toEqual({ result: 'error', message: 'Invalid sec value' });
+      expect(delays).toEqual([]);
+    });
   });
 });
 
@@ -261,7 +384,15 @@ describe('view rendering', () => {
     expect(res.text).not.toContain('<%');
   });
 
-  test.each([['/drop', '100'], ['/drop/25', '25']])('GET %s renders the rate', async (path, rate) => {
+  test.each([
+    ['/drop', '100'],
+    ['/drop/25', '25'],
+    ['/drop/50', '50'],
+    ['/drop/0', '0'],
+    ['/drop/100', '100'],
+    ['/drop/12.5', '12.5'],
+    ['/drop/1e1', '10'],
+  ])('GET %s renders the rate', async (path, rate) => {
     const res = await request(app).get(path);
 
     expect(res.status).toBe(200);

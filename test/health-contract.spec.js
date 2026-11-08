@@ -4,7 +4,8 @@ import {captureLogs, settle} from './log-capture.js';
 
 // The /health contract shared by sample-node, sample-spring and sample-tomcat:
 // result is lowercase "ok" or "error", version is a string and uptime is whole
-// seconds since the process started, 0 or more.
+// seconds since the process started, 0 or more, and service is the exact name
+// of the service that answered.
 //
 // FAULT_RATE is read when server.js loads. At 50 the fault path depends only on
 // Math.random, which the tests below pin to reach each branch.
@@ -48,7 +49,9 @@ describe('own GET /health', () => {
 
     expect(res.status).toBe(status);
     expect(res.headers['content-type']).toContain('application/json');
-    expect(res.body).toEqual({result, version: process.env.VERSION ?? 'v0.0.0', uptime: expect.any(Number)});
+    expect(res.body).toEqual({
+      result, version: process.env.VERSION ?? 'v0.0.0', uptime: expect.any(Number), service: 'sample-node',
+    });
     expect(Number.isInteger(res.body.uptime)).toBe(true);
     expect(res.body.uptime).toBeGreaterThanOrEqual(0);
     // Node's own response has never had type.
@@ -56,9 +59,14 @@ describe('own GET /health', () => {
   });
 });
 
-describe.each(['spring', 'tomcat'])('GET /%s', service => {
+describe.each([
+  ['spring', 'tomcat'],
+  ['tomcat', 'spring'],
+])('GET /%s', (service, other) => {
+  const expected = `sample-${service}`;
+
   test('calls /health of the remote service', async () => {
-    await withRemote(200, JSON.stringify({result: 'ok', version: 'v1.0.0', uptime: 1}), async fetchMock => {
+    await withRemote(200, JSON.stringify({result: 'ok', version: 'v1.0.0', uptime: 1, service: expected}), async fetchMock => {
       await request(app).get(`/${service}`);
       expect(fetchMock).toHaveBeenCalledTimes(1);
       expect(String(fetchMock.mock.calls[0][0])).toBe(`http://sample-${service}/health`);
@@ -67,12 +75,12 @@ describe.each(['spring', 'tomcat'])('GET /%s', service => {
 
   test.each([
     ['ok with type and extra fields', 200,
-      {result: 'ok', type: 'health', version: 'v1.2.3', uptime: 42, artifactId: `sample-${service}`, nested: {a: [1, null]}}],
-    ['ok without type', 200, {result: 'ok', version: 'v0.0.0', uptime: 0}],
-    ['ok with an empty version', 200, {result: 'ok', type: 'health', version: '', uptime: 3}],
-    ['error with a 500 status', 500, {result: 'error', type: 'health', version: 'v1.2.3', uptime: 7}],
-    ['error with a 200 status', 200, {result: 'error', version: 'v1.2.3', uptime: 7}],
-    ['ok with a 503 status', 503, {result: 'ok', version: 'v1.2.3', uptime: 7}],
+      {result: 'ok', type: 'health', version: 'v1.2.3', uptime: 42, artifactId: expected, service: expected, nested: {a: [1, null]}}],
+    ['ok without type', 200, {result: 'ok', version: 'v0.0.0', uptime: 0, service: expected}],
+    ['ok with an empty version', 200, {result: 'ok', type: 'health', version: '', uptime: 3, service: expected}],
+    ['error with a 500 status', 500, {result: 'error', type: 'health', version: 'v1.2.3', uptime: 7, service: expected}],
+    ['error with a 200 status', 200, {result: 'error', version: 'v1.2.3', uptime: 7, service: expected}],
+    ['ok with a 503 status', 503, {result: 'ok', version: 'v1.2.3', uptime: 7, service: expected}],
   ])('passes a valid body through unchanged: %s', async (_label, status, body) => {
     await withRemote(status, JSON.stringify(body), async () => {
       const res = await request(app).get(`/${service}`).set('X-Request-Id', `valid-${service}`);
@@ -85,7 +93,7 @@ describe.each(['spring', 'tomcat'])('GET /%s', service => {
     });
   });
 
-  const valid = {result: 'ok', type: 'health', version: 'v1.2.3', uptime: 42};
+  const valid = {result: 'ok', type: 'health', version: 'v1.2.3', uptime: 42, service: expected};
   const without = field => Object.fromEntries(Object.entries(valid).filter(([key]) => key !== field));
 
   test.each([
@@ -120,6 +128,37 @@ describe.each(['spring', 'tomcat'])('GET /%s', service => {
       const records = byId(`invalid-${service}`);
       expect(records.filter(record => record.event === 'remote.invalid_response')).toEqual([
         expect.objectContaining({level: 'error', service, status: 200, reason: expect.any(String)}),
+      ]);
+      expect(records.filter(record => record.event === 'remote.failed')).toEqual([]);
+    });
+  });
+
+  // The reason is a fixed string, so a remote value never reaches the log.
+  test.each([
+    ['missing service', 200, without('service')],
+    ['the other target service', 200, {...valid, service: `sample-${other}`}],
+    ['sample-node', 200, {...valid, service: 'sample-node'}],
+    ['a different case', 200, {...valid, service: `Sample-${service[0].toUpperCase()}${service.slice(1)}`}],
+    ['an uppercase name', 200, {...valid, service: expected.toUpperCase()}],
+    ['surrounding spaces', 200, {...valid, service: ` ${expected} `}],
+    ['the bare name', 200, {...valid, service: service}],
+    ['an empty string', 200, {...valid, service: ''}],
+    ['a number', 200, {...valid, service: 1}],
+    ['null', 200, {...valid, service: null}],
+    ['an array', 200, {...valid, service: [expected]}],
+    ['an error body from the other service with 500', 500, {...valid, result: 'error', service: `sample-${other}`}],
+    ['an error body without service with 500', 500, {result: 'error', version: 'v1.2.3', uptime: 7}],
+  ])('answers 502 when service is %s', async (_label, status, body) => {
+    await withRemote(status, JSON.stringify(body), async () => {
+      const res = await request(app).get(`/${service}`).set('X-Request-Id', `service-${service}`);
+      await settle();
+
+      expect(res.status).toBe(502);
+      expect(res.headers['content-type']).toContain('application/json');
+      expect(res.body).toEqual({result: 'error'});
+      const records = byId(`service-${service}`);
+      expect(records.filter(record => record.event === 'remote.invalid_response')).toEqual([
+        expect.objectContaining({level: 'error', service, status, reason: `service is not "${expected}"`}),
       ]);
       expect(records.filter(record => record.event === 'remote.failed')).toEqual([]);
     });
@@ -168,7 +207,9 @@ describe.each(['spring', 'tomcat'])('GET /%s', service => {
 describe('GET /node', () => {
   // /node shares the remote call but is not checked against the contract.
   test.each([
-    ['a contract body', 200, {result: 'ok', version: 'v1.2.3', uptime: 1}],
+    ['a contract body', 200, {result: 'ok', version: 'v1.2.3', uptime: 1, service: 'sample-node'}],
+    ['a contract body without service', 200, {result: 'ok', version: 'v1.2.3', uptime: 1}],
+    ['a body naming another service', 200, {result: 'ok', version: 'v1.2.3', uptime: 1, service: 'sample-spring'}],
     ['a body outside the contract', 200, {result: 'OK', type: 'health'}],
     ['an array', 503, [1, 2]],
     ['null', 200, null],

@@ -180,19 +180,25 @@ const telemetryStore = client ? createTelemetryStore(client, `sample-node:teleme
 
 // The /health contract shared by sample-node, sample-spring and sample-tomcat:
 // result is lowercase "ok" or "error", version is a string and uptime is whole
-// seconds since the process started. Other fields such as type are allowed.
-// Returns why a body breaks the contract, or null when it follows it.
-function healthContractViolation(body) {
+// seconds since the process started, and service is the exact name of the
+// service that answered ("sample-node", "sample-spring" or "sample-tomcat").
+// Other fields such as type are allowed.
+// Returns why a body breaks the contract for expectedService, or null when it
+// follows it. The reason is a fixed string and never contains remote values.
+function healthContractViolation(body, expectedService) {
   if (body === null || typeof body !== 'object' || Array.isArray(body)) return 'body is not a JSON object';
   if (body.result !== 'ok' && body.result !== 'error') return 'result is not "ok" or "error"';
   if (typeof body.version !== 'string') return 'version is not a string';
   if (!Number.isInteger(body.uptime) || body.uptime < 0) return 'uptime is not a non-negative integer';
+  if (body.service !== expectedService) return `service is not "${expectedService}"`;
   return null;
 }
 
 // Calls /health of a remote sample service and answers with its status and body.
-// With checkHealthContract, a body that is not JSON or breaks the health contract
-// is answered with 502 instead, and a valid "error" body still passes through.
+// With checkHealthContract, a body that is not JSON, breaks the health contract
+// or names a service other than sample-<serviceName> is answered with 502
+// instead, and a valid "error" body from that service still passes through.
+// Without it (/node), the body is passed through without any check.
 // A failed call (connection, or reading the body) is answered with 500.
 async function handleRemoteService(res, serviceName, {checkHealthContract = false} = {}) {
   logger.debug(`get /${serviceName}`);
@@ -218,7 +224,7 @@ async function handleRemoteService(res, serviceName, {checkHealthContract = fals
   let violation;
   try {
     body = JSON.parse(text);
-    violation = healthContractViolation(body);
+    violation = healthContractViolation(body, `sample-${serviceName}`);
   } catch {
     violation = 'body is not valid JSON';
   }
@@ -382,12 +388,14 @@ app.get('/health', async function (req, res) {
       result: 'ok',
       version: VERSION,
       uptime: Math.round(process.uptime()),
+      service: 'sample-node',
     });
   } else {
     return res.status(500).json({
       result: 'error',
       version: VERSION,
       uptime: Math.round(process.uptime()),
+      service: 'sample-node',
     });
   }
 });

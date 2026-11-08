@@ -102,6 +102,10 @@ check_port() {
 
 start -e REDIS_ENABLED=false
 check_health
+health="$(http -f "http://localhost:$PORT/health")" || fail "GET /health"
+jq -e '.service == "sample-node"' <<< "$health" > /dev/null ||
+  fail "GET /health returned $health, expected service sample-node"
+echo "ok: GET /health service is sample-node"
 check_get / "$VERSION"
 check_get /live '"live":true'
 check_get /ready '"ready":true'

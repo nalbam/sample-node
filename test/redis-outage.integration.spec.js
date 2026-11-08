@@ -107,7 +107,7 @@ function expectIndependentHealthy(results) {
     expect({path, fast: results[path].elapsed < FAST_MS}).toEqual({path, fast: true});
   }
   expect(results['/ready'].body).toEqual({ready: true});
-  expect(results['/health'].body).toEqual({result: 'ok', version: 'v9.9.9-redis', uptime: expect.any(Number)});
+  expect(results['/health'].body).toEqual({result: 'ok', version: 'v9.9.9-redis', uptime: expect.any(Number), service: 'sample-node'});
 }
 
 // Recovery: the same process writes and reads the cache again.

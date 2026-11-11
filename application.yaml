@@ -1,25 +1,16 @@
-apiVersion: agent.opspresso.com/v1
+apiVersion: agent.opspresso.com/v4
 kind: Application
 spec:
   name: sample-node-10
-  repository: nalbam/sample-node
+  repository: github.com/nalbam/sample-node
   owner: dBT43yQ7DQIIIMlYbjiXsIr8tbuIgVJA
   description: Node.js sample app for Kubernetes demos
 runtime:
   port: 3000
   health: /health
-  build:
-    context: .
-    dockerfile: Dockerfile
-  test:
-    image: node:26-alpine
-    command: npm ci && npm test -- --runInBand
-environments:
-  dev:
-    resources:
-      - name: cache
-        class: valkey
-  prod:
-    resources:
-      - name: cache
-        class: valkey
+build:
+  context: .
+  dockerfile: Dockerfile
+test:
+  image: node:26-alpine
+  command: npm ci && npm test -- --runInBand

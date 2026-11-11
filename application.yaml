@@ -1,4 +1,4 @@
-apiVersion: agent.opspresso.com/v1
+apiVersion: agent.opspresso.com/v3
 kind: Application
 spec:
   name: sample-node-10
@@ -6,20 +6,28 @@ spec:
   owner: dBT43yQ7DQIIIMlYbjiXsIr8tbuIgVJA
   description: Node.js sample app for Kubernetes demos
 runtime:
+  type: k8s
+  architecture: arm64
   port: 3000
   health: /health
+pipeline:
+  trigger:
+    branch: main
   build:
     context: .
     dockerfile: Dockerfile
   test:
     image: node:26-alpine
     command: npm ci && npm test -- --runInBand
+# Promotion order: a push to main deploys to dev; prod receives a Release only by promotion.
 environments:
-  dev:
+  - name: dev
+    size: small
     resources:
       - name: cache
-        class: valkey
-  prod:
+        template: valkey
+  - name: prod
+    size: small
     resources:
       - name: cache
-        class: valkey
+        template: valkey

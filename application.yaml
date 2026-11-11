@@ -7,6 +7,7 @@ spec:
   description: Node.js sample app for Kubernetes demos
 runtime:
   type: k8s
+  architecture: arm64
   port: 3000
   health: /health
 pipeline:

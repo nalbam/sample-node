@@ -608,4 +608,4 @@ replaced by `[REDACTED]` in every log record, as are URL credentials such as
 
 ## License
 
-GPL-3.0. See [LICENSE](LICENSE).
+GPL-3.0. See [LICENSE](LICENSE)

@@ -1,7 +1,7 @@
 apiVersion: agent.opspresso.com/v4
 kind: Application
 spec:
-  name: "sample-node"
+  name: "sample-node-11"
   repository: "github.com/nalbam/sample-node"
   owner: "dBT43yQ7DQIIIMlYbjiXsIr8tbuIgVJA"
 runtime:
